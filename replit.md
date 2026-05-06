@@ -1,44 +1,66 @@
-# [Project name]
+# HeartSpace
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A warm, role-based counselling platform by Vaishnavi Saxena for students and counsellors.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
+- `pnpm --filter @workspace/heartspace run dev` — run the frontend (port 19808)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 
+## Demo Credentials
+
+All users use password: `password123`
+
+- Counsellor: `vaishnavi@heartspace.com` (Vaishnavi Saxena)
+- Counsellor: `counsellor@heartspace.com` (Dr. Priya Sharma)
+- Student: `student1@heartspace.com` (Arjun Mehta)
+- Student: `student2@heartspace.com` (Sneha Kapoor)
+- Student: `student3@heartspace.com` (Rohan Verma)
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
+- Frontend: React + Vite + Tailwind CSS (artifact: `heartspace`)
+- API: Express 5 (artifact: `api-server`, path: `/api`)
 - DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
+- Validation: Zod, drizzle-zod
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — source of truth for all API contracts
+- `lib/api-client-react/src/generated/` — React Query hooks (generated)
+- `lib/api-zod/src/generated/api.ts` — Zod schemas (generated)
+- `lib/db/src/schema/` — DB schema: users.ts, sessions.ts, moods.ts
+- `artifacts/api-server/src/routes/` — auth.ts, users.ts, sessions.ts, moods.ts, dashboard.ts
+- `artifacts/heartspace/src/` — React frontend
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Auth is token-based (base64 userId:timestamp) stored in localStorage — simple for a counselling MVP
+- Password hashing uses SHA-256 + a static salt (not bcrypt) for simplicity; upgrade to bcrypt for production
+- Counsellors see all students; students only see their own data — enforced at the API route level
+- The codegen script patches `lib/api-zod/src/index.ts` after orval runs to avoid duplicate export conflicts between Zod schemas and TypeScript types
+- Role-based routing is handled in the React frontend via AuthContext reading from localStorage
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- **Login page**: Branded HeartSpace login with Student/Counsellor toggle
+- **Student dashboard**: Upcoming sessions, mood tracker (1–5), recent mood history, session stats
+- **Counsellor dashboard**: Overview of all students with mood status and upcoming sessions
+- **Sessions page**: Unified session list; counsellors can create sessions and update status/notes
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- After any OpenAPI spec change: run `pnpm --filter @workspace/api-spec run codegen` before using new types
+- The codegen script uses `echo` to overwrite `lib/api-zod/src/index.ts` — do not manually add exports there
+- Zod must be declared in `artifacts/api-server/package.json` dependencies (not just workspace root)
 
 ## Pointers
 

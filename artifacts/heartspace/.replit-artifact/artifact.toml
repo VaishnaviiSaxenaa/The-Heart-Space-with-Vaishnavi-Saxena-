@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "HeartSpace"
+version = "1.0.0"
+id = "artifacts/heartspace"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19808
+
+[services.development]
+run = "pnpm --filter @workspace/heartspace run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/heartspace", "run", "build" ]
+publicDir = "artifacts/heartspace/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19808"
+BASE_PATH = "/"

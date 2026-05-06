@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: HeartSpace Counselling Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User operations
+  - name: sessions
+    description: Counselling session operations
+  - name: moods
+    description: Mood check-in operations
+  - name: dashboard
+    description: Dashboard summary operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,272 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (counsellor only)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [student, counsellor]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List counselling sessions
+      parameters:
+        - name: studentId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, completed, cancelled]
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Create a new counselling session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionBody"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get a session by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+    patch:
+      operationId: updateSession
+      tags: [sessions]
+      summary: Update a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSessionBody"
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /moods:
+    get:
+      operationId: listMoods
+      tags: [moods]
+      summary: List mood check-ins for a student
+      parameters:
+        - name: studentId
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Mood check-ins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MoodEntry"
+    post:
+      operationId: createMood
+      tags: [moods]
+      summary: Submit a mood check-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMoodBody"
+      responses:
+        "201":
+          description: Mood entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoodEntry"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      parameters:
+        - name: studentId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/students-overview:
+    get:
+      operationId: getStudentsOverview
+      tags: [dashboard]
+      summary: Get all students overview for counsellor
+      responses:
+        "200":
+          description: Students overview
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudentOverview"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +309,225 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        role:
+          type: string
+          enum: [student, counsellor]
+      required:
+        - email
+        - password
+        - role
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [student, counsellor]
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - name
+        - role
+        - createdAt
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        counsellorId:
+          type: integer
+        student:
+          $ref: "#/components/schemas/User"
+        counsellor:
+          $ref: "#/components/schemas/User"
+        scheduledAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: integer
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+        notes:
+          type: string
+          nullable: true
+        topic:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - studentId
+        - counsellorId
+        - scheduledAt
+        - durationMinutes
+        - status
+        - createdAt
+
+    CreateSessionBody:
+      type: object
+      properties:
+        studentId:
+          type: integer
+        counsellorId:
+          type: integer
+        scheduledAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: integer
+        topic:
+          type: string
+      required:
+        - studentId
+        - counsellorId
+        - scheduledAt
+        - durationMinutes
+
+    UpdateSessionBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+        notes:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+
+    MoodEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        mood:
+          type: integer
+          minimum: 1
+          maximum: 5
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - studentId
+        - mood
+        - createdAt
+
+    CreateMoodBody:
+      type: object
+      properties:
+        studentId:
+          type: integer
+        mood:
+          type: integer
+          minimum: 1
+          maximum: 5
+        note:
+          type: string
+      required:
+        - studentId
+        - mood
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+        upcomingSessions:
+          type: integer
+        completedSessions:
+          type: integer
+        averageMood:
+          type: number
+          nullable: true
+        recentSessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+        totalStudents:
+          type: integer
+      required:
+        - totalSessions
+        - upcomingSessions
+        - completedSessions
+        - recentSessions
+        - totalStudents
+
+    StudentOverview:
+      type: object
+      properties:
+        student:
+          $ref: "#/components/schemas/User"
+        totalSessions:
+          type: integer
+        lastSession:
+          type: string
+          format: date-time
+          nullable: true
+        latestMood:
+          type: integer
+          nullable: true
+        upcomingSession:
+          $ref: "#/components/schemas/Session"
+          nullable: true
+      required:
+        - student
+        - totalSessions
