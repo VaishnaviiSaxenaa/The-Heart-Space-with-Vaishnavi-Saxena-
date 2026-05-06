@@ -1,0 +1,196 @@
+Build a responsive mental wellness + productivity dashboard called "HeartSpace".
+
+STYLE & DESIGN SYSTEM:
+- Overall aesthetic: calm, premium, minimal, emotionally safe (NOT feminine-coded)
+- Inspiration: modern wellness apps + productivity dashboards
+- Use soft shadows, rounded cards, and clean spacing
+
+COLOR PALETTE:
+- Background: warm cream (#FAF7F2)
+- Primary text: warm charcoal (#3D3530)
+- Accent gold: #E6A756 (buttons, highlights)
+- Soft sage green: #A8BFA3
+- Muted olive: #6E8B6B
+- Dusty rose (very subtle): #D4A5A5
+- Soft beige cards: #F3EDE6
+
+- Mood colors:
+  1 (Struggling): muted soft red #E7B4A8
+  2 (Low): warm sand #EBCB9A
+  3 (Okay): neutral beige #E8D8B5
+  4 (Good): sage green #B7C9B0
+  5 (Great): deeper olive green #8FAF87
+
+TYPOGRAPHY:
+- Headings: elegant serif (Playfair Display or similar)
+- Body: clean sans-serif (Inter / SF Pro)
+- Use medium contrast, not harsh black
+
+---
+
+LAYOUT:
+
+### 1. LEFT SIDEBAR (FIXED)
+- Soft beige gradient background (slightly darker than main background)
+- Logo at top:
+  "The Heart Space"
+  Below: "with Vaishnavi Saxena"
+  Add a minimal gold line-art heart with 3–4 leaves beside it
+
+- Menu items with icons:
+  Dashboard (active)
+  My Planner
+  Academics
+  PhD Journey
+  Health & Wellness
+  Habits
+  Mood & Mind
+  Finances
+  Resources
+  Notes
+  Reports
+
+- Bottom cards:
+  1. Quote card:
+     "Discipline today, freedom tomorrow."
+  2. Small profile/affirmation card:
+     "Stay aligned. Grow consistently. Create impact."
+
+---
+
+### 2. TOP HEADER (MAIN AREA)
+- Greeting: "Good morning, Vaishnavi ✨"
+- Subtext: "You're building your dream life, one intentional day at a time."
+- Right side:
+  - Focus Mode button (gold gradient)
+  - Icons: calendar, notifications, profile avatar
+
+---
+
+### 3. STATS CARDS (ROW)
+Create 5 cards:
+- Daily Progress (with progress bar)
+- Academic Focus (time)
+- Business Hours
+- Wellness Score
+- Tasks Completed
+
+Each card:
+- White/beige background
+- Rounded corners
+- Soft shadow
+- Small colored icon badge (use palette accents, not bright colors)
+
+---
+
+### 4. TODAY’S PLAN SECTION
+Timeline layout with time on left:
+- Deep Work Session
+- Content Creation
+- Movement Break
+- PhD Proposal Work
+- Sunday Reset
+
+Each item:
+- Tag (Academics / Business / Wellness / Personal)
+- Minimal icon
+- Soft divider lines
+
+---
+
+### 5. PROGRESS OVERVIEW (RIGHT PANEL)
+- Horizontal progress bars:
+  Academics
+  PhD Journey
+  Business
+  Health & Wellness
+
+- Circular progress chart:
+  "Overall Progress: 69%"
+
+---
+
+### 6. MOOD CHECK-IN
+- Question: "How are you feeling today?"
+- 5 rounded buttons with soft colors (as defined above)
+- Labels:
+  Struggling, Low, Okay, Good, Great
+
+- Add CTA button: "Log My Mood"
+
+---
+
+### 7. FOCUS MODE CARD
+- Minimal gradient circle graphic
+- Text: "Deep work. No distractions. Just you and your goals."
+- Button: "Start Focus Session"
+
+---
+
+### 8. HABITS SECTION
+Show habit streaks:
+- Meditation
+- Reading
+- Workout
+- Water Intake
+- No Sugar
+
+Use small icons + streak counters
+
+---
+
+### 9. WEEKLY RHYTHM
+- Days of week (M–S)
+- Checkmarks for completed days
+- Sunday marked as "Free"
+
+---
+
+### 10. GROWTH INSIGHTS
+- Line chart with 4 categories:
+  Academics
+  PhD Journey
+  Business
+  Health & Wellness
+
+---
+
+### 11. QUOTE CARD (BOTTOM RIGHT)
+- Minimal design with gold leaf illustration
+- Text:
+  "You don’t have to do it all today. Just don’t stop showing up."
+
+---
+
+### 12. MOBILE SCREEN (SECOND PAGE)
+Create a mobile version:
+- Top bar: HeartSpace
+- Card layout stacked
+- Sections:
+  - Next Session
+  - Mood Check-in
+  - Recent Mood History (list with colored tags)
+
+---
+
+FUNCTIONALITY (BASIC):
+- Mood buttons clickable (highlight selected)
+- Progress bars static (for now)
+- Responsive layout (sidebar collapses on mobile)
+
+---
+
+IMPORTANT DESIGN RULES:
+- Avoid overly bright or neon colors
+- Avoid pink-heavy or “cute” UI
+- Keep it neutral, grounded, slightly premium
+- Use spacing generously (breathing room)
+- Keep icons minimal and line-based
+
+---
+
+TECH:
+- Use React + Tailwind CSS
+- Clean component structure
+- Reusable card components
+- Mobile responsive

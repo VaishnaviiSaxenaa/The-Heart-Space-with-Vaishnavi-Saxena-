@@ -4,35 +4,33 @@ import {
   useListSessions, useListUsers, useCreateSession, useUpdateSession,
   getListSessionsQueryKey, UpdateSessionBodyStatus,
 } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { Loader2, Plus, Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Plus, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 
-/* Brand tokens */
-const BROWN   = "hsl(20, 33%, 27%)";
-const BROWN_D = "hsl(20, 33%, 20%)";
-const GOLD    = "hsl(43, 89%, 38%)";
-const DUST    = "hsl(27, 46%, 59%)";
-const IVORY   = "hsl(38, 78%, 95%)";
-const TEXT    = "hsl(15, 47%, 12%)";
-const MUTED   = "hsl(20, 20%, 45%)";
-const BORDER  = "hsl(32, 35%, 86%)";
-const CREAM   = "hsl(37, 86%, 96%)";
+const CREAM    = "#FAF7F2";
+const CHARCOAL = "#3D3530";
+const GOLD     = "#E6A756";
+const CARD     = "#F3EDE6";
+const MUTED    = "#8C7B70";
+const BORDER   = "#D8CFC4";
+const SAGE     = "#A8BFA3";
+const OLIVE    = "#6E8B6B";
+const SIDEBAR  = "#5C3D2E";
 
-const STATUS = {
-  scheduled: { label: "Scheduled", bg: "hsl(43,89%,91%)", text: "hsl(43,89%,30%)", border: "hsl(43,89%,78%)" },
-  completed:  { label: "Completed", bg: "hsl(99,57%,91%)", text: "hsl(99,57%,22%)", border: "hsl(99,57%,72%)" },
-  cancelled:  { label: "Cancelled", bg: "hsl(25,40%,93%)", text: "hsl(25,40%,38%)", border: "hsl(25,40%,78%)" },
+const STATUS_CFG = {
+  scheduled: { label: "Scheduled", bg: `${GOLD}22`,  text: "#8A5A10",  border: `${GOLD}55` },
+  completed:  { label: "Completed", bg: "#DFF0DA",    text: "#2A5020",  border: `${OLIVE}55` },
+  cancelled:  { label: "Cancelled", bg: "#EDE4D8",    text: "#7A5A40",  border: "#C8B8A8" },
 };
 
 const schema = z.object({
@@ -43,6 +41,15 @@ const schema = z.object({
   topic: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
+
+function SCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-2xl overflow-hidden ${className}`}
+      style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 8px rgba(61,53,48,.06)" }}>
+      {children}
+    </div>
+  );
+}
 
 export default function Sessions() {
   const { user } = useAuth();
@@ -60,12 +67,12 @@ export default function Sessions() {
 
   const createMutation = useCreateSession({
     mutation: {
-      onSuccess: () => { toast({ title: "Session scheduled" }); setOpen(false); qc.invalidateQueries({ queryKey: getListSessionsQueryKey() }); },
-      onError: () => toast({ title: "Failed to schedule session", variant: "destructive" }),
+      onSuccess: () => { toast({ title: "Session scheduled ✓" }); setOpen(false); qc.invalidateQueries({ queryKey: getListSessionsQueryKey() }); },
+      onError: () => toast({ title: "Failed to schedule", variant: "destructive" }),
     },
   });
   const updateMutation = useUpdateSession({
-    mutation: { onSuccess: () => { toast({ title: "Session updated" }); qc.invalidateQueries({ queryKey: getListSessionsQueryKey() }); } },
+    mutation: { onSuccess: () => { toast({ title: "Updated" }); qc.invalidateQueries({ queryKey: getListSessionsQueryKey() }); } },
   });
 
   const form = useForm<FormValues>({
@@ -77,56 +84,49 @@ export default function Sessions() {
     if (!user) return;
     createMutation.mutate({
       data: {
-        studentId: parseInt(v.studentId),
-        counsellorId: user.id,
+        studentId: parseInt(v.studentId), counsellorId: user.id,
         scheduledAt: new Date(`${v.scheduledAtDate}T${v.scheduledAtTime}`).toISOString(),
-        durationMinutes: parseInt(v.durationMinutes),
-        topic: v.topic,
+        durationMinutes: parseInt(v.durationMinutes), topic: v.topic,
       },
     });
   };
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">
-      <Loader2 className="w-8 h-8 animate-spin" style={{ color: GOLD }} />
+      <Loader2 className="w-7 h-7 animate-spin" style={{ color: GOLD }} />
     </div>
   );
 
   const upcoming = sessions?.filter((s) => s.status === "scheduled") ?? [];
-  const past      = sessions?.filter((s) => s.status !== "scheduled") ?? [];
+  const past     = sessions?.filter((s) => s.status !== "scheduled") ?? [];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-7 animate-in fade-in duration-500">
 
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <div
-          className="flex-1 rounded-2xl p-7"
-          style={{ background: `linear-gradient(135deg, ${BROWN_D} 0%, ${BROWN} 100%)`, boxShadow: "0 8px 24px rgba(44,24,16,0.22)" }}
-        >
-          <h1 className="text-3xl font-serif font-bold" style={{ color: "hsl(37,86%,96%)" }}>Sessions</h1>
-          <p className="mt-1 text-sm" style={{ color: DUST }}>Your counselling schedule and history.</p>
+      <div className="flex items-start gap-4 justify-between flex-wrap">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-serif font-bold" style={{ color: CHARCOAL }}>Sessions</h1>
+          <p className="mt-1.5 text-sm" style={{ color: MUTED }}>Your counselling schedule and history.</p>
         </div>
 
         {user?.role === "counsellor" && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button
-                className="h-auto py-3 px-5 rounded-xl font-semibold flex items-center gap-2 shadow-md flex-shrink-0 mt-1"
-                style={{ background: `linear-gradient(135deg, hsl(43,89%,32%) 0%, hsl(43,85%,44%) 100%)`, color: "hsl(37,86%,97%)", border: "none" }}
-              >
+              <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02] shadow-md"
+                style={{ background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`, color: CREAM }}>
                 <Plus className="w-4 h-4" />Schedule
-              </Button>
+              </button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md rounded-2xl" style={{ background: IVORY, border: `1px solid ${BORDER}` }}>
+            <DialogContent className="sm:max-w-md rounded-2xl" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
               <DialogHeader>
-                <DialogTitle className="font-serif text-xl" style={{ color: TEXT }}>Schedule New Session</DialogTitle>
+                <DialogTitle className="font-serif text-xl" style={{ color: CHARCOAL }}>Schedule New Session</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-2">
                   <FormField control={form.control} name="studentId" render={({ field }) => (
                     <FormItem>
-                      <FormLabel style={{ color: BROWN }}>Student</FormLabel>
+                      <FormLabel style={{ color: SIDEBAR }}>Student</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger style={{ background: CREAM, borderColor: BORDER }}>
@@ -140,11 +140,11 @@ export default function Sessions() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     {(["scheduledAtDate", "scheduledAtTime"] as const).map((name) => (
                       <FormField key={name} control={form.control} name={name} render={({ field }) => (
                         <FormItem>
-                          <FormLabel style={{ color: BROWN }}>{name === "scheduledAtDate" ? "Date" : "Time"}</FormLabel>
+                          <FormLabel style={{ color: SIDEBAR }}>{name === "scheduledAtDate" ? "Date" : "Time"}</FormLabel>
                           <FormControl>
                             <Input type={name === "scheduledAtDate" ? "date" : "time"} {...field}
                               style={{ background: CREAM, borderColor: BORDER }} />
@@ -156,7 +156,7 @@ export default function Sessions() {
                   </div>
                   <FormField control={form.control} name="durationMinutes" render={({ field }) => (
                     <FormItem>
-                      <FormLabel style={{ color: BROWN }}>Duration (minutes)</FormLabel>
+                      <FormLabel style={{ color: SIDEBAR }}>Duration (minutes)</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} style={{ background: CREAM, borderColor: BORDER }} />
                       </FormControl>
@@ -165,7 +165,7 @@ export default function Sessions() {
                   )} />
                   <FormField control={form.control} name="topic" render={({ field }) => (
                     <FormItem>
-                      <FormLabel style={{ color: BROWN }}>Topic (Optional)</FormLabel>
+                      <FormLabel style={{ color: SIDEBAR }}>Topic (Optional)</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. Initial Consultation" {...field} style={{ background: CREAM, borderColor: BORDER }} />
                       </FormControl>
@@ -173,10 +173,11 @@ export default function Sessions() {
                     </FormItem>
                   )} />
                   <DialogFooter className="pt-2">
-                    <Button type="submit" disabled={createMutation.isPending} className="w-full h-11 rounded-xl font-semibold"
-                      style={{ background: `linear-gradient(135deg, hsl(43,89%,32%) 0%, hsl(43,85%,44%) 100%)`, color: "hsl(37,86%,97%)", border: "none" }}>
+                    <button type="submit" disabled={createMutation.isPending}
+                      className="w-full h-11 rounded-xl font-semibold text-sm disabled:opacity-50"
+                      style={{ background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`, color: CREAM }}>
                       {createMutation.isPending ? "Scheduling…" : "Schedule Session"}
-                    </Button>
+                    </button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -185,37 +186,32 @@ export default function Sessions() {
         )}
       </div>
 
-      {/* Upcoming */}
+      {/* Sessions list */}
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-lg font-serif font-semibold mb-4" style={{ color: TEXT }}>Upcoming Sessions</h2>
+          <h2 className="font-serif text-lg font-semibold mb-4" style={{ color: CHARCOAL }}>Upcoming</h2>
           <div className="space-y-3">
-            {upcoming.map((s) => (
-              <SessionCard key={s.id} session={s} user={user}
-                onStatus={(id, st) => updateMutation.mutate({ id, data: { status: st } })}
-                isPending={updateMutation.isPending} />
-            ))}
+            {upcoming.map((s) => <SessionCard key={s.id} session={s} user={user}
+              onStatus={(id, st) => updateMutation.mutate({ id, data: { status: st } })}
+              isPending={updateMutation.isPending} />)}
           </div>
         </section>
       )}
 
-      {/* Past */}
       {past.length > 0 && (
         <section>
-          <h2 className="text-lg font-serif font-semibold mb-4" style={{ color: TEXT }}>Past Sessions</h2>
+          <h2 className="font-serif text-lg font-semibold mb-4" style={{ color: CHARCOAL }}>Past</h2>
           <div className="space-y-3">
-            {past.map((s) => (
-              <SessionCard key={s.id} session={s} user={user}
-                onStatus={(id, st) => updateMutation.mutate({ id, data: { status: st } })}
-                isPending={updateMutation.isPending} />
-            ))}
+            {past.map((s) => <SessionCard key={s.id} session={s} user={user}
+              onStatus={(id, st) => updateMutation.mutate({ id, data: { status: st } })}
+              isPending={updateMutation.isPending} />)}
           </div>
         </section>
       )}
 
       {sessions?.length === 0 && (
         <div className="text-center py-20 rounded-2xl"
-          style={{ background: "hsl(37,60%,97%)", border: `1.5px dashed ${BORDER}`, color: MUTED }}>
+          style={{ background: CREAM, border: `1.5px dashed ${BORDER}`, color: MUTED }}>
           No sessions found.
         </div>
       )}
@@ -228,91 +224,79 @@ function SessionCard({ session, user, onStatus, isPending }: {
   onStatus: (id: number, s: UpdateSessionBodyStatus) => void;
   isPending: boolean;
 }) {
-  const cfg = STATUS[session.status as keyof typeof STATUS] ?? STATUS.scheduled;
+  const cfg = STATUS_CFG[session.status as keyof typeof STATUS_CFG] ?? STATUS_CFG.scheduled;
   const isUpcoming = session.status === "scheduled";
 
-  const BROWN   = "hsl(20, 33%, 27%)";
-  const BROWN_D = "hsl(20, 33%, 20%)";
-  const GOLD    = "hsl(43, 89%, 38%)";
-  const IVORY   = "hsl(38, 78%, 95%)";
-  const TEXT    = "hsl(15, 47%, 12%)";
-  const MUTED   = "hsl(20, 20%, 45%)";
-  const BORDER  = "hsl(32, 35%, 86%)";
-
   return (
-    <Card className="border-none shadow-sm overflow-hidden" style={{ background: IVORY, border: `1px solid ${BORDER}` }}>
-      <div className="flex flex-col md:flex-row">
-        {/* Date panel */}
-        <div
-          className="p-5 md:w-44 flex flex-col items-center justify-center text-center shrink-0"
-          style={{
-            background: isUpcoming
-              ? `linear-gradient(135deg, ${BROWN_D} 0%, ${BROWN} 100%)`
-              : "hsl(35,25%,92%)",
-            borderRight: `1px solid ${BORDER}`,
-          }}
-        >
-          <div className="text-xs font-semibold uppercase tracking-widest mb-0.5"
-            style={{ color: isUpcoming ? "rgba(253,246,236,0.65)" : MUTED }}>
-            {format(new Date(session.scheduledAt), "EEEE")}
-          </div>
-          <div className="text-3xl font-serif font-bold"
-            style={{ color: isUpcoming ? "hsl(43,80%,70%)" : "hsl(20,33%,40%)" }}>
-            {format(new Date(session.scheduledAt), "d")}
-          </div>
-          <div className="text-sm font-medium"
-            style={{ color: isUpcoming ? "rgba(253,246,236,0.85)" : MUTED }}>
-            {format(new Date(session.scheduledAt), "MMM yyyy")}
-          </div>
-          <div className="flex items-center gap-1 text-xs mt-2"
-            style={{ color: isUpcoming ? "rgba(253,246,236,0.55)" : MUTED }}>
-            <Clock className="w-3 h-3" />
-            {format(new Date(session.scheduledAt), "h:mm a")}
-          </div>
+    <div className="rounded-2xl overflow-hidden flex flex-col md:flex-row"
+      style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 8px rgba(61,53,48,.06)" }}>
+      {/* Date panel */}
+      <div
+        className="p-5 md:w-40 flex flex-col items-center justify-center text-center flex-shrink-0"
+        style={{
+          background: isUpcoming ? `linear-gradient(160deg, ${SIDEBAR} 0%, #3A2518 100%)` : "#EDE4D8",
+          borderRight: `1px solid ${BORDER}`,
+        }}
+      >
+        <div className="text-[10px] font-semibold uppercase tracking-widest"
+          style={{ color: isUpcoming ? "rgba(250,247,242,.55)" : MUTED }}>
+          {format(new Date(session.scheduledAt), "EEEE")}
         </div>
+        <div className="text-4xl font-serif font-bold my-0.5"
+          style={{ color: isUpcoming ? GOLD : "#8C7B70" }}>
+          {format(new Date(session.scheduledAt), "d")}
+        </div>
+        <div className="text-xs" style={{ color: isUpcoming ? "rgba(250,247,242,.7)" : MUTED }}>
+          {format(new Date(session.scheduledAt), "MMM yyyy")}
+        </div>
+        <div className="flex items-center gap-1 text-[11px] mt-1.5"
+          style={{ color: isUpcoming ? "rgba(250,247,242,.45)" : MUTED }}>
+          <Clock className="w-3 h-3" />{format(new Date(session.scheduledAt), "h:mm a")}
+        </div>
+      </div>
 
-        {/* Body */}
-        <div className="p-5 flex-1 flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <h3 className="font-serif text-lg font-semibold" style={{ color: TEXT }}>
-                {session.topic || "Counselling Session"}
-              </h3>
-              <span className="flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-full"
-                style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
-                {cfg.label}
-              </span>
-            </div>
-            <p className="text-sm" style={{ color: MUTED }}>
-              {user?.role === "counsellor"
-                ? <>Student: <span style={{ color: TEXT, fontWeight: 600 }}>{session.student?.name}</span></>
-                : <>Counsellor: <span style={{ color: TEXT, fontWeight: 600 }}>{session.counsellor?.name}</span></>}
-            </p>
-            <p className="text-xs mt-1" style={{ color: MUTED }}>{session.durationMinutes} minutes</p>
-            {session.notes && (
-              <div className="mt-3 p-3 rounded-lg text-sm italic"
-                style={{ background: "hsl(27,46%,94%)", color: "hsl(27,40%,38%)", borderLeft: "3px solid hsl(27,46%,72%)" }}>
-                {session.notes}
-              </div>
-            )}
+      {/* Body */}
+      <div className="p-5 flex-1 flex flex-col justify-between">
+        <div>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>
+              {session.topic || "Counselling Session"}
+            </h3>
+            <span className="flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-full"
+              style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
+              {cfg.label}
+            </span>
           </div>
-
-          {user?.role === "counsellor" && session.status === "scheduled" && (
-            <div className="flex gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
-              <Button size="sm" onClick={() => onStatus(session.id, "completed")} disabled={isPending}
-                className="rounded-lg font-medium text-xs flex items-center gap-1.5"
-                style={{ background: "hsl(99,57%,91%)", color: "hsl(99,57%,22%)", border: "1px solid hsl(99,57%,75%)" }}>
-                <CheckCircle className="w-3.5 h-3.5" />Mark Completed
-              </Button>
-              <Button size="sm" onClick={() => onStatus(session.id, "cancelled")} disabled={isPending}
-                className="rounded-lg font-medium text-xs flex items-center gap-1.5"
-                style={{ background: "hsl(25,40%,93%)", color: "hsl(25,40%,36%)", border: "1px solid hsl(25,40%,76%)" }}>
-                <XCircle className="w-3.5 h-3.5" />Cancel
-              </Button>
+          <p className="text-sm" style={{ color: MUTED }}>
+            {user?.role === "counsellor"
+              ? <>Student: <span style={{ color: CHARCOAL, fontWeight: 600 }}>{session.student?.name}</span></>
+              : <>Counsellor: <span style={{ color: CHARCOAL, fontWeight: 600 }}>{session.counsellor?.name}</span></>}
+            <span className="mx-2">·</span>
+            <span>{session.durationMinutes} min</span>
+          </p>
+          {session.notes && (
+            <div className="mt-3 p-3 rounded-xl text-sm italic"
+              style={{ background: `${GOLD}12`, color: "#7A5520", borderLeft: `3px solid ${GOLD}66` }}>
+              {session.notes}
             </div>
           )}
         </div>
+
+        {user?.role === "counsellor" && session.status === "scheduled" && (
+          <div className="flex gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+            <button onClick={() => onStatus(session.id, "completed")} disabled={isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-50 transition-all hover:scale-[1.02]"
+              style={{ background: "#DFF0DA", color: "#2A5020", border: `1px solid ${OLIVE}55` }}>
+              <CheckCircle className="w-3.5 h-3.5" />Mark Completed
+            </button>
+            <button onClick={() => onStatus(session.id, "cancelled")} disabled={isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-50 transition-all hover:scale-[1.02]"
+              style={{ background: "#EDE4D8", color: "#7A5A40", border: `1px solid #C8B8A8` }}>
+              <XCircle className="w-3.5 h-3.5" />Cancel
+            </button>
+          </div>
+        )}
       </div>
-    </Card>
+    </div>
   );
 }

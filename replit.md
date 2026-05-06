@@ -51,10 +51,11 @@ All users use password: `password123`
 
 ## Product
 
-- **Login page**: Branded HeartSpace login with Student/Counsellor toggle
-- **Student dashboard**: Upcoming sessions, mood tracker (1–5), recent mood history, session stats
-- **Counsellor dashboard**: Overview of all students with mood status and upcoming sessions
-- **Sessions page**: Unified session list; counsellors can create sessions and update status/notes
+- **Login page**: Branded HeartSpace login with heart SVG, Student/Counsellor toggle, warm cream/brown palette
+- **Layout**: Fixed 260px left sidebar with logo, 11 nav items (Dashboard + Sessions functional, rest "soon"), quote cards, user profile + logout
+- **Student dashboard**: Time-based greeting, 5 stat cards, Today's Plan timeline (real sessions or demo), Progress bars + circular chart, Mood check-in (1–5 with real API), Focus Mode card, Habit streaks, Weekly rhythm, Growth insights SVG line chart, motivational quote
+- **Counsellor dashboard**: Greeting, 4 stat cards, student grid with mood badges
+- **Sessions page**: Upcoming + past split view, schedule dialog (counsellors only), status actions
 
 ## Gotchas
 
