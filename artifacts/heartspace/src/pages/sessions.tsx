@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useAuth } from "../lib/auth";
-import { useListSessions, useListUsers, useCreateSession, useUpdateSession, getListSessionsQueryKey, SessionStatus, UpdateSessionBodyStatus } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  useListSessions, useListUsers, useCreateSession, useUpdateSession,
+  getListSessionsQueryKey, UpdateSessionBodyStatus,
+} from "@workspace/api-client-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
-import { Loader2, Plus, Calendar, Clock, FileText } from "lucide-react";
+import { Loader2, Plus, Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -27,13 +29,19 @@ const createSessionSchema = z.object({
 
 type CreateSessionValues = z.infer<typeof createSessionSchema>;
 
+const statusConfig = {
+  scheduled:  { label: "Scheduled",  bg: "hsl(38,65%,93%)",  text: "hsl(38,65%,38%)",  border: "hsl(38,65%,80%)"  },
+  completed:  { label: "Completed",  bg: "hsl(99,57%,92%)",  text: "hsl(99,57%,22%)",  border: "hsl(99,57%,75%)"  },
+  cancelled:  { label: "Cancelled",  bg: "hsl(0,65%,95%)",   text: "hsl(0,65%,42%)",   border: "hsl(0,65%,80%)"   },
+};
+
 export default function Sessions() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const { data: sessions, isLoading: isLoadingSessions } = useListSessions(
+  const { data: sessions, isLoading } = useListSessions(
     user?.role === "student" ? { studentId: user.id } : undefined,
     { query: { enabled: !!user?.id } }
   );
@@ -43,173 +51,156 @@ export default function Sessions() {
     { query: { enabled: user?.role === "counsellor" } }
   );
 
-  const createSessionMutation = useCreateSession({
+  const createMutation = useCreateSession({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Session created successfully" });
+        toast({ title: "Session scheduled successfully" });
         setIsCreateOpen(false);
         queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey() });
       },
-      onError: (error) => {
-        toast({ title: "Failed to create session", variant: "destructive" });
-      }
-    }
+      onError: () => toast({ title: "Failed to schedule session", variant: "destructive" }),
+    },
   });
 
-  const updateSessionMutation = useUpdateSession({
+  const updateMutation = useUpdateSession({
     mutation: {
       onSuccess: () => {
         toast({ title: "Session updated" });
         queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey() });
-      }
-    }
+      },
+    },
   });
 
   const form = useForm<CreateSessionValues>({
     resolver: zodResolver(createSessionSchema),
-    defaultValues: {
-      studentId: "",
-      scheduledAtDate: "",
-      scheduledAtTime: "",
-      durationMinutes: "60",
-      topic: "",
-    },
+    defaultValues: { studentId: "", scheduledAtDate: "", scheduledAtTime: "", durationMinutes: "60", topic: "" },
   });
 
   const onSubmitCreate = (values: CreateSessionValues) => {
     if (!user) return;
-    const scheduledAt = new Date(`${values.scheduledAtDate}T${values.scheduledAtTime}`).toISOString();
-    createSessionMutation.mutate({
+    createMutation.mutate({
       data: {
         studentId: parseInt(values.studentId),
         counsellorId: user.id,
-        scheduledAt,
+        scheduledAt: new Date(`${values.scheduledAtDate}T${values.scheduledAtTime}`).toISOString(),
         durationMinutes: parseInt(values.durationMinutes),
-        topic: values.topic
-      }
+        topic: values.topic,
+      },
     });
   };
 
-  const handleStatusUpdate = (id: number, status: UpdateSessionBodyStatus) => {
-    updateSessionMutation.mutate({ id, data: { status } });
+  const handleStatus = (id: number, status: UpdateSessionBodyStatus) => {
+    updateMutation.mutate({ id, data: { status } });
   };
 
-  if (isLoadingSessions) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "hsl(351,57%,35%)" }} />
+      </div>
+    );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "scheduled": return "bg-primary/20 text-primary hover:bg-primary/30";
-      case "completed": return "bg-green-100 text-green-800 hover:bg-green-200";
-      case "cancelled": return "bg-destructive/10 text-destructive hover:bg-destructive/20";
-      default: return "bg-secondary text-secondary-foreground";
-    }
-  };
+  const upcoming = sessions?.filter((s) => s.status === "scheduled") ?? [];
+  const past = sessions?.filter((s) => s.status !== "scheduled") ?? [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-serif font-semibold text-foreground">Sessions</h1>
-          <p className="text-muted-foreground mt-2">Your counselling schedule and history.</p>
+      {/* Header */}
+      <div className="flex justify-between items-start gap-4">
+        <div
+          className="flex-1 rounded-2xl p-7"
+          style={{
+            background: "linear-gradient(135deg, hsl(351,57%,30%) 0%, hsl(351,57%,40%) 100%)",
+            boxShadow: "0 8px 24px rgba(139,38,53,0.25)",
+          }}
+        >
+          <h1 className="text-3xl font-serif font-bold" style={{ color: "hsl(37,86%,96%)" }}>Sessions</h1>
+          <p className="mt-1 text-sm" style={{ color: "hsl(355,43%,81%)" }}>Your counselling schedule and history.</p>
         </div>
 
         {user?.role === "counsellor" && (
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
-                <Plus className="w-4 h-4 mr-2" />
-                Schedule Session
+              <Button
+                className="h-auto py-3 px-5 rounded-xl font-semibold flex items-center gap-2 shadow-md"
+                style={{ background: "linear-gradient(135deg,hsl(38,65%,42%),hsl(38,65%,54%))", color: "hsl(37,86%,97%)", border: "none" }}
+              >
+                <Plus className="w-4 h-4" />
+                Schedule
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-card border-border">
+            <DialogContent
+              className="sm:max-w-md rounded-2xl"
+              style={{ background: "hsl(38,100%,98%)", border: "1px solid hsl(35,40%,88%)" }}
+            >
               <DialogHeader>
-                <DialogTitle className="font-serif text-xl">Schedule New Session</DialogTitle>
+                <DialogTitle className="font-serif text-xl" style={{ color: "hsl(25,94%,12%)" }}>Schedule New Session</DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmitCreate)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="studentId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Student</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-background">
-                              <SelectValue placeholder="Select a student" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {students?.map(student => (
-                              <SelectItem key={student.id} value={student.id.toString()}>{student.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="scheduledAtDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} className="bg-background" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="scheduledAtTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Time</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} className="bg-background" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="durationMinutes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Duration (min)</FormLabel>
-                          <FormControl>
-                            <Input type="number" {...field} className="bg-background" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="topic"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Topic (Optional)</FormLabel>
+                <form onSubmit={form.handleSubmit(onSubmitCreate)} className="space-y-4 mt-2">
+                  <FormField control={form.control} name="studentId" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel style={{ color: "hsl(25,60%,22%)" }}>Student</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <Input placeholder="e.g. Initial Consultation" {...field} className="bg-background" />
+                          <SelectTrigger style={{ background: "hsl(37,86%,98%)", borderColor: "hsl(35,40%,86%)" }}>
+                            <SelectValue placeholder="Select a student" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {students?.map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="scheduledAtDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel style={{ color: "hsl(25,60%,22%)" }}>Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} style={{ background: "hsl(37,86%,98%)", borderColor: "hsl(35,40%,86%)" }} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type="submit" disabled={createSessionMutation.isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground mt-4 w-full">
-                      {createSessionMutation.isPending ? "Scheduling..." : "Schedule Session"}
+                    )} />
+                    <FormField control={form.control} name="scheduledAtTime" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel style={{ color: "hsl(25,60%,22%)" }}>Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} style={{ background: "hsl(37,86%,98%)", borderColor: "hsl(35,40%,86%)" }} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <FormField control={form.control} name="durationMinutes" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel style={{ color: "hsl(25,60%,22%)" }}>Duration (minutes)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} style={{ background: "hsl(37,86%,98%)", borderColor: "hsl(35,40%,86%)" }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="topic" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel style={{ color: "hsl(25,60%,22%)" }}>Topic (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Initial Consultation" {...field} style={{ background: "hsl(37,86%,98%)", borderColor: "hsl(35,40%,86%)" }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <DialogFooter className="pt-2">
+                    <Button
+                      type="submit"
+                      disabled={createMutation.isPending}
+                      className="w-full h-11 rounded-xl font-semibold"
+                      style={{ background: "linear-gradient(135deg,hsl(38,65%,42%),hsl(38,65%,54%))", color: "hsl(37,86%,97%)", border: "none" }}
+                    >
+                      {createMutation.isPending ? "Scheduling…" : "Schedule Session"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -219,68 +210,149 @@ export default function Sessions() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {sessions?.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground bg-card rounded-2xl border border-dashed">
-            No sessions found.
+      {/* Upcoming */}
+      {upcoming.length > 0 && (
+        <section>
+          <h2 className="text-lg font-serif font-semibold mb-4" style={{ color: "hsl(25,94%,12%)" }}>Upcoming Sessions</h2>
+          <div className="space-y-3">
+            {upcoming.map((session) => <SessionCard key={session.id} session={session} user={user} onStatus={handleStatus} isPending={updateMutation.isPending} />)}
           </div>
-        )}
-        {sessions?.map((session) => (
-          <Card key={session.id} className="bg-card border-none shadow-sm overflow-hidden">
-            <div className="flex flex-col md:flex-row">
-              <div className="bg-muted/30 p-6 md:w-64 flex flex-col justify-center border-b md:border-b-0 md:border-r border-border">
-                <div className="text-lg font-medium">{format(new Date(session.scheduledAt), "EEEE")}</div>
-                <div className="text-3xl font-serif text-primary my-1">{format(new Date(session.scheduledAt), "MMM d")}</div>
-                <div className="flex items-center text-sm text-muted-foreground mt-2">
-                  <Clock className="w-4 h-4 mr-2" />
-                  {format(new Date(session.scheduledAt), "h:mm a")} ({session.durationMinutes}m)
-                </div>
-              </div>
-              <div className="p-6 flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-serif text-xl font-medium mb-2">{session.topic || "Counselling Session"}</h3>
-                    <Badge variant="secondary" className={`capitalize ${getStatusColor(session.status)}`}>
-                      {session.status}
-                    </Badge>
-                  </div>
-                  
-                  <div className="text-muted-foreground text-sm space-y-1 mb-4">
-                    {user?.role === "counsellor" ? (
-                      <p>Student: <span className="font-medium text-foreground">{session.student?.name}</span></p>
-                    ) : (
-                      <p>Counsellor: <span className="font-medium text-foreground">{session.counsellor?.name}</span></p>
-                    )}
-                  </div>
-                </div>
+        </section>
+      )}
 
-                {user?.role === "counsellor" && session.status === "scheduled" && (
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
-                      onClick={() => handleStatusUpdate(session.id, "completed")}
-                      disabled={updateSessionMutation.isPending}
-                    >
-                      Mark Completed
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                      onClick={() => handleStatusUpdate(session.id, "cancelled")}
-                      disabled={updateSessionMutation.isPending}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {/* Past */}
+      {past.length > 0 && (
+        <section>
+          <h2 className="text-lg font-serif font-semibold mb-4" style={{ color: "hsl(25,94%,12%)" }}>Past Sessions</h2>
+          <div className="space-y-3">
+            {past.map((session) => <SessionCard key={session.id} session={session} user={user} onStatus={handleStatus} isPending={updateMutation.isPending} />)}
+          </div>
+        </section>
+      )}
+
+      {sessions?.length === 0 && (
+        <div
+          className="text-center py-20 rounded-2xl"
+          style={{ background: "hsl(37,60%,97%)", border: "1.5px dashed hsl(35,40%,82%)", color: "hsl(25,40%,55%)" }}
+        >
+          No sessions found.
+        </div>
+      )}
     </div>
+  );
+}
+
+function SessionCard({ session, user, onStatus, isPending }: {
+  session: any; user: any;
+  onStatus: (id: number, s: UpdateSessionBodyStatus) => void;
+  isPending: boolean;
+}) {
+  const cfg = statusConfig[session.status as keyof typeof statusConfig] ?? statusConfig.scheduled;
+
+  return (
+    <Card
+      className="border-none shadow-sm overflow-hidden"
+      style={{ background: "hsl(38,100%,98%)", border: "1px solid hsl(35,40%,88%)" }}
+    >
+      <div className="flex flex-col md:flex-row">
+        {/* Date panel */}
+        <div
+          className="p-5 md:w-48 flex flex-col items-center justify-center text-center shrink-0"
+          style={{
+            background: session.status === "scheduled"
+              ? "linear-gradient(135deg,hsl(351,57%,30%),hsl(351,57%,40%))"
+              : "hsl(35,30%,93%)",
+            borderRight: "1px solid hsl(35,40%,88%)",
+          }}
+        >
+          <div
+            className="text-xs font-semibold uppercase tracking-widest mb-0.5"
+            style={{ color: session.status === "scheduled" ? "hsl(355,43%,80%)" : "hsl(25,40%,55%)" }}
+          >
+            {format(new Date(session.scheduledAt), "EEEE")}
+          </div>
+          <div
+            className="text-3xl font-serif font-bold"
+            style={{ color: session.status === "scheduled" ? "hsl(38,65%,72%)" : "hsl(25,50%,35%)" }}
+          >
+            {format(new Date(session.scheduledAt), "d")}
+          </div>
+          <div
+            className="text-sm font-medium"
+            style={{ color: session.status === "scheduled" ? "hsl(37,86%,90%)" : "hsl(25,40%,55%)" }}
+          >
+            {format(new Date(session.scheduledAt), "MMM yyyy")}
+          </div>
+          <div
+            className="flex items-center gap-1 text-xs mt-2"
+            style={{ color: session.status === "scheduled" ? "hsl(355,43%,75%)" : "hsl(25,40%,60%)" }}
+          >
+            <Clock className="w-3 h-3" />
+            {format(new Date(session.scheduledAt), "h:mm a")}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-5 flex-1 flex flex-col justify-between">
+          <div>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h3 className="font-serif text-lg font-semibold" style={{ color: "hsl(25,94%,12%)" }}>
+                {session.topic || "Counselling Session"}
+              </h3>
+              <span
+                className="flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-full"
+                style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}
+              >
+                {cfg.label}
+              </span>
+            </div>
+
+            <p className="text-sm" style={{ color: "hsl(25,40%,50%)" }}>
+              {user?.role === "counsellor"
+                ? <>Student: <span style={{ color: "hsl(25,94%,12%)", fontWeight: 600 }}>{session.student?.name}</span></>
+                : <>Counsellor: <span style={{ color: "hsl(25,94%,12%)", fontWeight: 600 }}>{session.counsellor?.name}</span></>}
+            </p>
+
+            <p className="text-xs mt-1" style={{ color: "hsl(25,40%,60%)" }}>
+              {session.durationMinutes} minutes
+            </p>
+
+            {session.notes && (
+              <div
+                className="mt-3 p-3 rounded-lg text-sm italic"
+                style={{ background: "hsl(355,43%,96%)", color: "hsl(351,40%,40%)", borderLeft: "3px solid hsl(355,43%,78%)" }}
+              >
+                {session.notes}
+              </div>
+            )}
+          </div>
+
+          {user?.role === "counsellor" && session.status === "scheduled" && (
+            <div className="flex gap-2 mt-4 pt-4" style={{ borderTop: "1px solid hsl(35,40%,88%)" }}>
+              <Button
+                size="sm"
+                onClick={() => onStatus(session.id, "completed")}
+                disabled={isPending}
+                className="rounded-lg font-medium text-xs flex items-center gap-1.5"
+                style={{ background: "hsl(99,57%,92%)", color: "hsl(99,57%,22%)", border: "1px solid hsl(99,57%,78%)" }}
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                Mark Completed
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => onStatus(session.id, "cancelled")}
+                disabled={isPending}
+                className="rounded-lg font-medium text-xs flex items-center gap-1.5"
+                style={{ background: "hsl(0,65%,95%)", color: "hsl(0,65%,42%)", border: "1px solid hsl(0,65%,82%)" }}
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }

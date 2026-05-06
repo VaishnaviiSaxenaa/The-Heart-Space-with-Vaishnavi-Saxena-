@@ -1,11 +1,35 @@
 import { useAuth } from "../lib/auth";
-import { useGetDashboardSummary, useListMoods, useCreateMood, getGetDashboardSummaryQueryKey, getListMoodsQueryKey } from "@workspace/api-client-react";
+import {
+  useGetDashboardSummary,
+  useListMoods,
+  useCreateMood,
+  getGetDashboardSummaryQueryKey,
+  getListMoodsQueryKey,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Calendar, Clock, Smile, Frown, Meh, Loader2 } from "lucide-react";
+import { Calendar, Clock, Loader2, TrendingUp, Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+
+const moodLabels = ["", "Struggling", "Low", "Okay", "Good", "Great"];
+const moodColors = [
+  "",
+  "hsl(0, 65%, 52%)",
+  "hsl(20, 70%, 52%)",
+  "hsl(38, 65%, 47%)",
+  "hsl(99, 45%, 38%)",
+  "hsl(99, 57%, 28%)",
+];
+const moodBg = [
+  "",
+  "hsl(0, 65%, 96%)",
+  "hsl(20, 70%, 95%)",
+  "hsl(38, 65%, 94%)",
+  "hsl(99, 45%, 93%)",
+  "hsl(99, 57%, 91%)",
+];
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -25,11 +49,11 @@ export default function StudentDashboard() {
   const createMoodMutation = useCreateMood({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Mood logged", description: "Thank you for checking in." });
+        toast({ title: "Mood logged", description: "Thank you for checking in today." });
         queryClient.invalidateQueries({ queryKey: getListMoodsQueryKey({ studentId: user?.id, limit: 5 }) });
         queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey({ studentId: user?.id }) });
-      }
-    }
+      },
+    },
   });
 
   const handleMoodSubmit = (mood: number) => {
@@ -37,118 +61,175 @@ export default function StudentDashboard() {
     createMoodMutation.mutate({ data: { studentId: user.id, mood } });
   };
 
-  const getMoodIcon = (moodValue: number, className?: string) => {
-    if (moodValue >= 4) return <Smile className={className} />;
-    if (moodValue === 3) return <Meh className={className} />;
-    return <Frown className={className} />;
-  };
-
   if (isLoadingSummary || isLoadingMoods) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "hsl(351, 57%, 35%)" }} />
+      </div>
+    );
   }
 
-  const upcomingSession = summary?.recentSessions?.find(s => s.status === "scheduled");
+  const upcomingSession = summary?.recentSessions?.find((s) => s.status === "scheduled");
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-serif font-semibold text-foreground">Welcome back, {user?.name?.split(' ')[0]}</h1>
-        <p className="text-muted-foreground mt-2">Take a deep breath. You're in a safe space.</p>
+      {/* Page header */}
+      <div
+        className="rounded-2xl p-7"
+        style={{
+          background: "linear-gradient(135deg, hsl(351, 57%, 30%) 0%, hsl(351, 57%, 40%) 100%)",
+          boxShadow: "0 8px 24px rgba(139,38,53,0.25)",
+        }}
+      >
+        <h1 className="text-3xl font-serif font-bold" style={{ color: "hsl(37, 86%, 96%)" }}>
+          Welcome back, {user?.name?.split(" ")[0]}
+        </h1>
+        <p className="mt-1 text-sm" style={{ color: "hsl(355, 43%, 81%)" }}>
+          Take a deep breath. You're in a safe space.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="col-span-1 md:col-span-2 bg-card border-none shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-serif text-xl">Your Next Session</CardTitle>
+      {/* Stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Total Sessions", value: summary?.totalSessions ?? 0, icon: Calendar, color: "hsl(351, 57%, 35%)", bg: "hsl(351, 57%, 96%)" },
+          { label: "Upcoming", value: summary?.upcomingSessions ?? 0, icon: Clock, color: "hsl(38, 65%, 47%)", bg: "hsl(38, 65%, 95%)" },
+          { label: "Completed", value: summary?.completedSessions ?? 0, icon: TrendingUp, color: "hsl(99, 57%, 20%)", bg: "hsl(99, 57%, 94%)" },
+          {
+            label: "Avg Mood",
+            value: summary?.averageMood ? summary.averageMood.toFixed(1) : "—",
+            icon: Heart,
+            color: "hsl(355, 43%, 50%)",
+            bg: "hsl(355, 43%, 95%)",
+          },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <Card
+            key={label}
+            className="border-none shadow-sm"
+            style={{ background: "hsl(38, 100%, 98%)", border: "1px solid hsl(35, 40%, 88%)" }}
+          >
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "hsl(25, 40%, 50%)" }}>{label}</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: bg }}>
+                  <Icon className="w-4 h-4" style={{ color }} />
+                </div>
+              </div>
+              <div className="text-3xl font-serif font-bold" style={{ color: "hsl(25, 94%, 12%)" }}>{value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Next session + mood tracker row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Next session */}
+        <Card className="border-none shadow-md" style={{ background: "hsl(38, 100%, 98%)", border: "1px solid hsl(35, 40%, 88%)" }}>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-serif text-xl" style={{ color: "hsl(25, 94%, 12%)" }}>Your Next Session</CardTitle>
           </CardHeader>
           <CardContent>
             {upcomingSession ? (
-              <div className="bg-background rounded-2xl p-6 border border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h3 className="font-medium text-lg mb-1">{upcomingSession.topic || "Counselling Session"}</h3>
-                  <p className="text-muted-foreground flex items-center gap-2">
-                    <Calendar className="w-4 h-4" /> {format(new Date(upcomingSession.scheduledAt), "EEEE, MMMM d, yyyy")}
+              <div
+                className="rounded-xl p-5"
+                style={{
+                  background: "linear-gradient(135deg, hsl(351, 57%, 97%) 0%, hsl(355, 43%, 95%) 100%)",
+                  border: "1px solid hsl(355, 43%, 88%)",
+                }}
+              >
+                <h3 className="font-semibold text-base mb-3" style={{ color: "hsl(351, 57%, 30%)" }}>
+                  {upcomingSession.topic || "Counselling Session"}
+                </h3>
+                <div className="space-y-1.5 text-sm" style={{ color: "hsl(25, 40%, 42%)" }}>
+                  <p className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" style={{ color: "hsl(38, 65%, 47%)" }} />
+                    {format(new Date(upcomingSession.scheduledAt), "EEEE, MMMM d, yyyy")}
                   </p>
-                  <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                    <Clock className="w-4 h-4" /> {format(new Date(upcomingSession.scheduledAt), "h:mm a")} ({upcomingSession.durationMinutes} min)
+                  <p className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" style={{ color: "hsl(38, 65%, 47%)" }} />
+                    {format(new Date(upcomingSession.scheduledAt), "h:mm a")} ({upcomingSession.durationMinutes} min)
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-primary">with {upcomingSession.counsellor?.name}</p>
+                <div
+                  className="mt-3 pt-3 text-xs font-semibold"
+                  style={{ borderTop: "1px solid hsl(355, 43%, 85%)", color: "hsl(351, 57%, 40%)" }}
+                >
+                  with {upcomingSession.counsellor?.name}
                 </div>
               </div>
             ) : (
-              <div className="bg-background/50 rounded-2xl p-8 border border-dashed border-border text-center">
-                <p className="text-muted-foreground mb-4">You have no upcoming sessions scheduled.</p>
+              <div
+                className="rounded-xl p-8 text-center"
+                style={{ background: "hsl(37, 60%, 97%)", border: "1.5px dashed hsl(35, 40%, 82%)" }}
+              >
+                <p className="text-sm" style={{ color: "hsl(25, 40%, 55%)" }}>No upcoming sessions scheduled.</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-none shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-serif text-xl">Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-background rounded-xl">
-              <span className="text-muted-foreground">Total Sessions</span>
-              <span className="font-semibold text-xl">{summary?.totalSessions || 0}</span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-background rounded-xl">
-              <span className="text-muted-foreground">Average Mood</span>
-              <span className="font-semibold text-xl flex items-center gap-1">
-                {summary?.averageMood ? summary.averageMood.toFixed(1) : '-'} 
-                {summary?.averageMood && getMoodIcon(summary.averageMood, "w-5 h-5 text-primary")}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-card border-none shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-serif text-xl">How are you feeling today?</CardTitle>
-            <CardDescription>Select a number from 1 to 5</CardDescription>
+        {/* Mood tracker */}
+        <Card className="border-none shadow-md" style={{ background: "hsl(38, 100%, 98%)", border: "1px solid hsl(35, 40%, 88%)" }}>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-serif text-xl" style={{ color: "hsl(25, 94%, 12%)" }}>How are you feeling today?</CardTitle>
+            <CardDescription style={{ color: "hsl(25, 40%, 55%)" }}>Tap your mood to log a check-in</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-between items-center bg-background p-6 rounded-2xl">
+            <div className="flex justify-between gap-2">
               {[1, 2, 3, 4, 5].map((val) => (
-                <Button
+                <button
                   key={val}
-                  variant="outline"
-                  className="w-12 h-12 rounded-full flex flex-col items-center justify-center hover:bg-primary/10 hover:text-primary border-border bg-card transition-all"
                   onClick={() => handleMoodSubmit(val)}
                   disabled={createMoodMutation.isPending}
+                  className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50"
+                  style={{
+                    background: moodBg[val],
+                    border: `1.5px solid ${moodColors[val]}22`,
+                  }}
                 >
-                  {val}
-                </Button>
+                  <span className="text-xl font-bold font-serif" style={{ color: moodColors[val] }}>{val}</span>
+                  <span className="text-[10px] font-medium" style={{ color: moodColors[val] }}>{moodLabels[val]}</span>
+                </button>
               ))}
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        <Card className="bg-card border-none shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-serif text-xl">Recent Moods</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {moods?.length ? moods.map((mood) => (
-                <div key={mood.id} className="flex justify-between items-center p-3 bg-background rounded-xl">
-                  <span className="text-sm text-muted-foreground">{format(new Date(mood.createdAt), "MMM d")}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{mood.mood}/5</span>
-                    {getMoodIcon(mood.mood, "w-4 h-4 text-primary")}
+      {/* Recent moods */}
+      <Card className="border-none shadow-md" style={{ background: "hsl(38, 100%, 98%)", border: "1px solid hsl(35, 40%, 88%)" }}>
+        <CardHeader className="pb-3">
+          <CardTitle className="font-serif text-xl" style={{ color: "hsl(25, 94%, 12%)" }}>Recent Mood History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {moods?.length ? (
+            <div className="space-y-2">
+              {moods.map((mood) => (
+                <div
+                  key={mood.id}
+                  className="flex items-center justify-between px-5 py-3 rounded-xl"
+                  style={{ background: moodBg[mood.mood], border: `1px solid ${moodColors[mood.mood]}22` }}
+                >
+                  <span className="text-sm font-medium" style={{ color: "hsl(25, 40%, 42%)" }}>
+                    {format(new Date(mood.createdAt), "MMM d, yyyy")}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm" style={{ color: moodColors[mood.mood] }}>{moodLabels[mood.mood]}</span>
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center font-bold font-serif text-sm"
+                      style={{ background: moodColors[mood.mood], color: "white" }}
+                    >
+                      {mood.mood}
+                    </div>
                   </div>
                 </div>
-              )) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No recent moods logged.</p>
-              )}
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : (
+            <p className="text-sm text-center py-6" style={{ color: "hsl(25, 40%, 55%)" }}>No mood history yet. Log your first check-in above.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
