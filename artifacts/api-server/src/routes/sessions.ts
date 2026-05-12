@@ -3,19 +3,9 @@ import { db } from "@workspace/db";
 import { sessionsTable, usersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { userToResponse } from "./auth";
 
 const router = Router();
-
-function userToResponse(user: typeof usersTable.$inferSelect) {
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    avatarUrl: user.avatarUrl ?? null,
-    createdAt: user.createdAt.toISOString(),
-  };
-}
 
 async function sessionWithUsers(session: typeof sessionsTable.$inferSelect) {
   const [student] = await db.select().from(usersTable).where(eq(usersTable.id, session.studentId)).limit(1);

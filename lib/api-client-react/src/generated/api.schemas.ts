@@ -37,11 +37,19 @@ export const UserRole = {
   counsellor: "counsellor",
 } as const;
 
+export type UserSpace = (typeof UserSpace)[keyof typeof UserSpace] | null;
+
+export const UserSpace = {
+  prep: "prep",
+  self: "self",
+} as const;
+
 export interface User {
   id: number;
   email: string;
   name: string;
   role: UserRole;
+  space?: UserSpace;
   avatarUrl?: string | null;
   createdAt: string;
 }
@@ -132,6 +140,9 @@ export interface StudentOverview {
   totalSessions: number;
   lastSession?: string | null;
   latestMood?: number | null;
+  moodAvg?: number | null;
+  sleepAvg?: number | null;
+  riskFlag: boolean;
   upcomingSession?: Session | null;
 }
 

@@ -364,6 +364,10 @@ components:
         role:
           type: string
           enum: [student, counsellor]
+        space:
+          type: string
+          enum: [prep, self]
+          nullable: true
         avatarUrl:
           type: string
           nullable: true
@@ -525,9 +529,18 @@ components:
         latestMood:
           type: integer
           nullable: true
+        moodAvg:
+          type: number
+          nullable: true
+        sleepAvg:
+          type: number
+          nullable: true
+        riskFlag:
+          type: boolean
         upcomingSession:
           $ref: "#/components/schemas/Session"
           nullable: true
       required:
         - student
         - totalSessions
+        - riskFlag

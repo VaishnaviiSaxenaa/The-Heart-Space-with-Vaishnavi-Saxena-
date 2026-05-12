@@ -3,19 +3,20 @@ import { useLocation } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLogin, LoginBodyRole } from "@workspace/api-client-react";
+import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "../lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-const CREAM    = "#FAF7F2";
+const CREAM   = "#FAF7F2";
 const CHARCOAL = "#3D3530";
-const GOLD     = "#E6A756";
-const CARD     = "#F3EDE6";
-const SIDEBAR  = "#5C3D2E";
-const MUTED    = "#8C7B70";
+const GOLD    = "#E6A756";
+const SIDEBAR = "#5C3D2E";
+const MUTED   = "#8C7B70";
+
+type Tab = "prep" | "self" | "counsellor";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -23,11 +24,17 @@ const loginSchema = z.object({
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+const TAB_CONFIG: { id: Tab; label: string; sub: string }[] = [
+  { id: "prep",       label: "Prep Space",  sub: "Exam prep tracking" },
+  { id: "self",       label: "Self Space",  sub: "Wellness journey"   },
+  { id: "counsellor", label: "Counsellor",  sub: "Student oversight"  },
+];
+
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login } = useAuth();
   const { toast } = useToast();
-  const [role, setRole] = useState<LoginBodyRole>("student");
+  const [tab, setTab] = useState<Tab>("prep");
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -38,12 +45,25 @@ export default function Login() {
     mutation: {
       onSuccess: (data) => {
         login(data.user, data.token);
-        setLocation(data.user.role === "student" ? "/dashboard" : "/counsellor");
+        const space = (data.user as any).space as string | null;
+        if (data.user.role === "counsellor") setLocation("/counsellor");
+        else if (space === "self")            setLocation("/self-dashboard");
+        else                                  setLocation("/dashboard");
       },
       onError: () =>
-        toast({ title: "Login failed", description: "Please check your credentials and selected role.", variant: "destructive" }),
+        toast({
+          title: "Login failed",
+          description: "Please check your credentials and selected role.",
+          variant: "destructive",
+        }),
     },
   });
+
+  function onSubmit(v: LoginFormValues) {
+    loginMutation.mutate({
+      data: { ...v, role: tab === "counsellor" ? "counsellor" : "student" },
+    });
+  }
 
   return (
     <div
@@ -57,28 +77,25 @@ export default function Login() {
         <div className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full opacity-10 blur-2xl" style={{ background: "#A8BFA3" }} />
       </div>
 
-      <div className="w-full max-w-[400px] z-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+      <div className="w-full max-w-[420px] z-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
         {/* Brand */}
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-3 mb-2">
             <svg width="28" height="26" viewBox="0 0 22 20" fill="none">
               <path d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
                 stroke={GOLD} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="8" y1="7" x2="6" y2="4" stroke={GOLD} strokeWidth="1" strokeLinecap="round"/>
+              <line x1="8"  y1="7"   x2="6"  y2="4" stroke={GOLD} strokeWidth="1" strokeLinecap="round"/>
               <line x1="11" y1="5.5" x2="11" y2="2" stroke={GOLD} strokeWidth="1" strokeLinecap="round"/>
-              <line x1="14" y1="7" x2="16" y2="4" stroke={GOLD} strokeWidth="1" strokeLinecap="round"/>
+              <line x1="14" y1="7"   x2="16" y2="4" stroke={GOLD} strokeWidth="1" strokeLinecap="round"/>
             </svg>
-            <h1 className="text-5xl font-serif font-bold tracking-tight" style={{ color: SIDEBAR }}>
-              HeartSpace
-            </h1>
+            <h1 className="text-5xl font-serif font-bold tracking-tight" style={{ color: SIDEBAR }}>HeartSpace</h1>
           </div>
           <p className="font-serif italic" style={{ color: GOLD }}>with Vaishnavi Saxena</p>
           <div className="mt-3 mx-auto w-12 h-px rounded-full" style={{ background: GOLD }} />
         </div>
 
         {/* Card */}
-        <div
-          className="rounded-2xl p-8"
+        <div className="rounded-2xl p-8"
           style={{
             background: "rgba(243,237,230,0.96)",
             backdropFilter: "blur(20px)",
@@ -86,28 +103,36 @@ export default function Login() {
             boxShadow: "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
           }}
         >
-          {/* Role toggle */}
-          <div className="flex gap-1.5 p-1 rounded-xl mb-7" style={{ background: "rgba(61,53,48,.07)" }}>
-            {(["student", "counsellor"] as LoginBodyRole[]).map((r) => (
-              <button key={r} onClick={() => setRole(r)}
-                className="flex-1 py-2.5 text-sm font-semibold rounded-lg capitalize transition-all duration-200"
-                style={role === r
+          {/* 3-way tab */}
+          <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl mb-7" style={{ background: "rgba(61,53,48,.07)" }}>
+            {TAB_CONFIG.map(({ id, label, sub }) => (
+              <button key={id} onClick={() => setTab(id)}
+                className="flex flex-col items-center py-2.5 px-1 rounded-xl transition-all duration-200 text-center"
+                style={tab === id
                   ? { background: SIDEBAR, color: CREAM, boxShadow: "0 2px 8px rgba(92,61,46,.30)" }
                   : { background: "transparent", color: MUTED }
                 }
               >
-                {r}
+                <span className="text-xs font-bold leading-tight">{label}</span>
+                <span className="text-[10px] leading-tight mt-0.5 opacity-75">{sub}</span>
               </button>
             ))}
           </div>
 
+          {/* Demo hint */}
+          <p className="text-[11px] mb-5 px-3 py-2 rounded-lg" style={{ background: `${GOLD}15`, color: SIDEBAR }}>
+            {tab === "prep"       ? "Try: student1@heartspace.com / password123"
+             : tab === "self"     ? "Try: student3@heartspace.com / password123"
+             : "Try: vaishnavi@heartspace.com / password123"}
+          </p>
+
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((v) => loginMutation.mutate({ data: { ...v, role } }))} className="space-y-5">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               {(["email", "password"] as const).map((name) => (
                 <FormField key={name} control={form.control} name={name}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-semibold capitalize" style={{ color: "#5C3D2E" }}>{name}</FormLabel>
+                      <FormLabel className="text-sm font-semibold capitalize" style={{ color: SIDEBAR }}>{name}</FormLabel>
                       <FormControl>
                         <Input
                           type={name === "password" ? "password" : "email"}
@@ -123,13 +148,11 @@ export default function Login() {
                 />
               ))}
 
-              <Button
-                type="submit"
-                disabled={loginMutation.isPending}
+              <Button type="submit" disabled={loginMutation.isPending}
                 className="w-full h-12 rounded-xl font-semibold text-base mt-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
-                  color: "#FAF7F2", border: "none",
+                  color: CREAM, border: "none",
                   boxShadow: "0 4px 16px rgba(230,167,86,.40)",
                 }}
               >

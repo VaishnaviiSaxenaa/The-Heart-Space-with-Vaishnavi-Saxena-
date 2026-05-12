@@ -9,10 +9,20 @@ import Login from "./pages/login";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import Sessions from "./pages/sessions";
+import Syllabus from "./pages/syllabus";
+import Assignments from "./pages/assignments";
+import DailyTracker from "./pages/daily-tracker";
+import StudentDetail from "./pages/student-detail";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ component: Component, allowedRole }: { component: any, allowedRole?: "student" | "counsellor" }) {
+function ProtectedRoute({
+  component: Component,
+  allowedRole,
+}: {
+  component: React.ComponentType;
+  allowedRole?: "student" | "counsellor";
+}) {
   const { isAuthenticated, user } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -22,7 +32,10 @@ function ProtectedRoute({ component: Component, allowedRole }: { component: any,
   }
 
   if (allowedRole && user?.role !== allowedRole) {
-    setLocation(user?.role === "counsellor" ? "/counsellor" : "/dashboard");
+    const space = (user as any)?.space as string | null;
+    if (user?.role === "counsellor") setLocation("/counsellor");
+    else if (space === "self")        setLocation("/self-dashboard");
+    else                              setLocation("/dashboard");
     return null;
   }
 
@@ -34,15 +47,43 @@ function Router() {
     <Layout>
       <Switch>
         <Route path="/" component={Login} />
+
+        {/* Prep Space student dashboard */}
         <Route path="/dashboard">
           <ProtectedRoute component={StudentDashboard} allowedRole="student" />
         </Route>
+
+        {/* Self Space student dashboard (reuses same component, adapts via user.space) */}
+        <Route path="/self-dashboard">
+          <ProtectedRoute component={StudentDashboard} allowedRole="student" />
+        </Route>
+
+        {/* Counsellor */}
         <Route path="/counsellor">
           <ProtectedRoute component={CounsellorDashboard} allowedRole="counsellor" />
         </Route>
+
+        {/* Student detail (counsellor only) */}
+        <Route path="/student/:id">
+          <ProtectedRoute component={StudentDetail} allowedRole="counsellor" />
+        </Route>
+
+        {/* Shared */}
         <Route path="/sessions">
           <ProtectedRoute component={Sessions} />
         </Route>
+        <Route path="/daily-tracker">
+          <ProtectedRoute component={DailyTracker} />
+        </Route>
+
+        {/* Prep Space only */}
+        <Route path="/syllabus">
+          <ProtectedRoute component={Syllabus} allowedRole="student" />
+        </Route>
+        <Route path="/assignments">
+          <ProtectedRoute component={Assignments} allowedRole="student" />
+        </Route>
+
         <Route component={NotFound} />
       </Switch>
     </Layout>

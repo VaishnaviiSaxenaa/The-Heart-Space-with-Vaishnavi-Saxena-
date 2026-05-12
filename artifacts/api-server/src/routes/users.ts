@@ -2,19 +2,9 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq, ilike, or } from "drizzle-orm";
+import { userToResponse } from "./auth";
 
 const router = Router();
-
-function userToResponse(user: typeof usersTable.$inferSelect) {
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    avatarUrl: user.avatarUrl ?? null,
-    createdAt: user.createdAt.toISOString(),
-  };
-}
 
 router.get("/users", async (req, res) => {
   const { role, search } = req.query as { role?: string; search?: string };

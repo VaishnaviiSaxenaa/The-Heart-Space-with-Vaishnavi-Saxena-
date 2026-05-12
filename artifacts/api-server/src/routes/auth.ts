@@ -15,12 +15,13 @@ function makeToken(userId: number): string {
   return Buffer.from(`${userId}:${Date.now()}:heartspace`).toString("base64");
 }
 
-function userToResponse(user: typeof usersTable.$inferSelect) {
+export function userToResponse(user: typeof usersTable.$inferSelect) {
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
+    space: user.space ?? null,
     avatarUrl: user.avatarUrl ?? null,
     createdAt: user.createdAt.toISOString(),
   };

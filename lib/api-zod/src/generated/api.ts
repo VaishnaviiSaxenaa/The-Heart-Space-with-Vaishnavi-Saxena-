@@ -29,6 +29,7 @@ export const LoginResponse = zod.object({
     email: zod.string(),
     name: zod.string(),
     role: zod.enum(["student", "counsellor"]),
+    space: zod.enum(["prep", "self"]).nullish(),
     avatarUrl: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   }),
@@ -50,6 +51,7 @@ export const GetMeResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   role: zod.enum(["student", "counsellor"]),
+  space: zod.enum(["prep", "self"]).nullish(),
   avatarUrl: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -67,6 +69,7 @@ export const ListUsersResponseItem = zod.object({
   email: zod.string(),
   name: zod.string(),
   role: zod.enum(["student", "counsellor"]),
+  space: zod.enum(["prep", "self"]).nullish(),
   avatarUrl: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -84,6 +87,7 @@ export const GetUserResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   role: zod.enum(["student", "counsellor"]),
+  space: zod.enum(["prep", "self"]).nullish(),
   avatarUrl: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -106,6 +110,7 @@ export const ListSessionsResponseItem = zod.object({
       email: zod.string(),
       name: zod.string(),
       role: zod.enum(["student", "counsellor"]),
+      space: zod.enum(["prep", "self"]).nullish(),
       avatarUrl: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -116,6 +121,7 @@ export const ListSessionsResponseItem = zod.object({
       email: zod.string(),
       name: zod.string(),
       role: zod.enum(["student", "counsellor"]),
+      space: zod.enum(["prep", "self"]).nullish(),
       avatarUrl: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -157,6 +163,7 @@ export const GetSessionResponse = zod.object({
       email: zod.string(),
       name: zod.string(),
       role: zod.enum(["student", "counsellor"]),
+      space: zod.enum(["prep", "self"]).nullish(),
       avatarUrl: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -167,6 +174,7 @@ export const GetSessionResponse = zod.object({
       email: zod.string(),
       name: zod.string(),
       role: zod.enum(["student", "counsellor"]),
+      space: zod.enum(["prep", "self"]).nullish(),
       avatarUrl: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -202,6 +210,7 @@ export const UpdateSessionResponse = zod.object({
       email: zod.string(),
       name: zod.string(),
       role: zod.enum(["student", "counsellor"]),
+      space: zod.enum(["prep", "self"]).nullish(),
       avatarUrl: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -212,6 +221,7 @@ export const UpdateSessionResponse = zod.object({
       email: zod.string(),
       name: zod.string(),
       role: zod.enum(["student", "counsellor"]),
+      space: zod.enum(["prep", "self"]).nullish(),
       avatarUrl: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     })
@@ -277,6 +287,7 @@ export const GetDashboardSummaryResponse = zod.object({
           email: zod.string(),
           name: zod.string(),
           role: zod.enum(["student", "counsellor"]),
+          space: zod.enum(["prep", "self"]).nullish(),
           avatarUrl: zod.string().nullish(),
           createdAt: zod.coerce.date(),
         })
@@ -287,6 +298,7 @@ export const GetDashboardSummaryResponse = zod.object({
           email: zod.string(),
           name: zod.string(),
           role: zod.enum(["student", "counsellor"]),
+          space: zod.enum(["prep", "self"]).nullish(),
           avatarUrl: zod.string().nullish(),
           createdAt: zod.coerce.date(),
         })
@@ -311,12 +323,16 @@ export const GetStudentsOverviewResponseItem = zod.object({
     email: zod.string(),
     name: zod.string(),
     role: zod.enum(["student", "counsellor"]),
+    space: zod.enum(["prep", "self"]).nullish(),
     avatarUrl: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   }),
   totalSessions: zod.number(),
   lastSession: zod.coerce.date().nullish(),
   latestMood: zod.number().nullish(),
+  moodAvg: zod.number().nullish(),
+  sleepAvg: zod.number().nullish(),
+  riskFlag: zod.boolean(),
   upcomingSession: zod
     .object({
       id: zod.number(),
@@ -328,6 +344,7 @@ export const GetStudentsOverviewResponseItem = zod.object({
           email: zod.string(),
           name: zod.string(),
           role: zod.enum(["student", "counsellor"]),
+          space: zod.enum(["prep", "self"]).nullish(),
           avatarUrl: zod.string().nullish(),
           createdAt: zod.coerce.date(),
         })
@@ -338,6 +355,7 @@ export const GetStudentsOverviewResponseItem = zod.object({
           email: zod.string(),
           name: zod.string(),
           role: zod.enum(["student", "counsellor"]),
+          space: zod.enum(["prep", "self"]).nullish(),
           avatarUrl: zod.string().nullish(),
           createdAt: zod.coerce.date(),
         })

@@ -13,5 +13,8 @@ export interface StudentOverview {
   totalSessions: number;
   lastSession?: Date | null;
   latestMood?: number | null;
+  moodAvg?: number | null;
+  sleepAvg?: number | null;
+  riskFlag: boolean;
   upcomingSession?: Session | null;
 }

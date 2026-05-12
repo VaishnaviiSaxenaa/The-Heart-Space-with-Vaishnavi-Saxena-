@@ -29,3 +29,4 @@ export * from "./updateSessionBody";
 export * from "./updateSessionBodyStatus";
 export * from "./user";
 export * from "./userRole";
+export * from "./userSpace";

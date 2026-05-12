@@ -6,12 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UserRole } from "./userRole";
+import type { UserSpace } from "./userSpace";
 
 export interface User {
   id: number;
   email: string;
   name: string;
   role: UserRole;
+  space?: UserSpace;
   avatarUrl?: string | null;
   createdAt: Date;
 }
