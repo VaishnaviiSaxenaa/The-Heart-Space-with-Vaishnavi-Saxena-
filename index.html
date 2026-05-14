@@ -1,10 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <title>HeartSpace</title>
-</head>
-<body>
-  <h1>Welcome to HeartSpace 💖</h1>
-  <p>Your app is now live 🚀</p>
-</body>
+  <head>
+    <title>HeartSpace</title>
+  </head>
+  <body>
+    <h1>HeartSpace 💖</h1>
+    <button onclick="getData()">Fetch Data</button>
+
+    <script type="module">
+      import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+      const supabase = createClient(
+        "https://nrpheeyumpldxpikfrup.supabase.co",
+        "sb_publishable_5vhmSWRHuUSa2qKHzea3zw_k75joFRz",
+      );
+
+      async function getData() {
+        const { data, error } = await supabase.from("test").select("*");
+
+        console.log(data, error);
+        alert(JSON.stringify(data));
+      }
+
+      window.getData = getData;
+    </script>
+  </body>
 </html>

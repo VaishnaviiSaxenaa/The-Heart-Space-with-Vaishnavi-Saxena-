@@ -34,8 +34,8 @@ function ProtectedRoute({
   if (allowedRole && user?.role !== allowedRole) {
     const space = (user as any)?.space as string | null;
     if (user?.role === "counsellor") setLocation("/counsellor");
-    else if (space === "self")        setLocation("/self-dashboard");
-    else                              setLocation("/dashboard");
+    else if (space === "self") setLocation("/self-dashboard");
+    else setLocation("/dashboard");
     return null;
   }
 
@@ -60,7 +60,10 @@ function Router() {
 
         {/* Counsellor */}
         <Route path="/counsellor">
-          <ProtectedRoute component={CounsellorDashboard} allowedRole="counsellor" />
+          <ProtectedRoute
+            component={CounsellorDashboard}
+            allowedRole="counsellor"
+          />
         </Route>
 
         {/* Student detail (counsellor only) */}
@@ -95,7 +98,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <WouterRouter>
             <Router />
           </WouterRouter>
         </AuthProvider>
