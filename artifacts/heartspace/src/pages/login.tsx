@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLogin } from "../lib/api-client-react";
 import { useAuth } from "../lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,37 +36,93 @@ const TAB_CONFIG: { id: Tab; label: string; sub: string }[] = [
   { id: "counsellor", label: "Counsellor", sub: "Student oversight" },
 ];
 
+const DEMO_HINTS: Record<Tab, string> = {
+  prep: "prep@heartspace.com · academy@heartspace.com",
+  self: "counseling@heartspace.com",
+  counsellor: "vaishnavi@heartspace.com",
+};
+
+interface DemoAccount {
+  email: string;
+  name: string;
+  role: "student" | "counsellor";
+  space: "prep" | "self" | null;
+  redirect: string;
+}
+
+const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
+  "vaishnavi@heartspace.com": {
+    email: "vaishnavi@heartspace.com",
+    name: "Vaishnavi Saxena",
+    role: "counsellor",
+    space: null,
+    redirect: "/counsellor",
+  },
+  "prep@heartspace.com": {
+    email: "prep@heartspace.com",
+    name: "Prep Space Student",
+    role: "student",
+    space: "prep",
+    redirect: "/dashboard",
+  },
+  "counseling@heartspace.com": {
+    email: "counseling@heartspace.com",
+    name: "Counseling Client",
+    role: "student",
+    space: "self",
+    redirect: "/self-dashboard",
+  },
+  "academy@heartspace.com": {
+    email: "academy@heartspace.com",
+    name: "Academy Student",
+    role: "student",
+    space: "prep",
+    redirect: "/dashboard",
+  },
+};
+
+const DEMO_PASSWORD = "heartspace123";
+
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("prep");
+  const [isPending, setIsPending] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  const loginMutation = useLogin({
-    mutation: {
-      onSuccess: (data) => {
-        login(data.user, data.token);
-        const space = (data.user as any).space as string | null;
-        if (data.user.role === "counsellor") setLocation("/counsellor");
-        else if (space === "self") setLocation("/self-dashboard");
-        else setLocation("/dashboard");
-      },
-      onError: () =>
-        toast({
-          title: "Login failed",
-          description: "Please check your credentials and selected role.",
-          variant: "destructive",
-        }),
-    },
-  });
   function onSubmit(v: LoginFormValues) {
-    loginMutation.mutate({
-      data: { ...v, role: tab === "counsellor" ? "counsellor" : "student" },
+    const email = v.email.toLowerCase().trim();
+    const demo = DEMO_ACCOUNTS[email];
+
+    if (demo && v.password === DEMO_PASSWORD) {
+      setIsPending(true);
+      setTimeout(() => {
+        const fakeUser = {
+          id: email,
+          email: demo.email,
+          name: demo.name,
+          role: demo.role,
+          space: demo.space,
+          avatarUrl: null,
+        } as any;
+        const fakeToken = btoa(`${email}:demo:heartspace`);
+        login(fakeUser, fakeToken);
+        setIsPending(false);
+        setLocation(demo.redirect);
+      }, 600);
+      return;
+    }
+
+    toast({
+      title: "Login failed",
+      description:
+        "Invalid credentials. Use the demo accounts shown below the tabs.",
+      variant: "destructive",
     });
   }
 
@@ -94,7 +149,7 @@ export default function Login() {
         />
       </div>
 
-      <div className="w-full max-w-[420px] z-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+      <div className="w-full max-w-[420px] z-10">
         {/* Brand */}
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-3 mb-2">
@@ -107,33 +162,9 @@ export default function Login() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              <line
-                x1="8"
-                y1="7"
-                x2="6"
-                y2="4"
-                stroke={GOLD}
-                strokeWidth="1"
-                strokeLinecap="round"
-              />
-              <line
-                x1="11"
-                y1="5.5"
-                x2="11"
-                y2="2"
-                stroke={GOLD}
-                strokeWidth="1"
-                strokeLinecap="round"
-              />
-              <line
-                x1="14"
-                y1="7"
-                x2="16"
-                y2="4"
-                stroke={GOLD}
-                strokeWidth="1"
-                strokeLinecap="round"
-              />
+              <line x1="8"  y1="7"   x2="6"  y2="4" stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+              <line x1="11" y1="5.5" x2="11" y2="2" stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+              <line x1="14" y1="7"   x2="16" y2="4" stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
             </svg>
             <h1
               className="text-5xl font-serif font-bold tracking-tight"
@@ -170,6 +201,7 @@ export default function Login() {
             {TAB_CONFIG.map(({ id, label, sub }) => (
               <button
                 key={id}
+                type="button"
                 onClick={() => setTab(id)}
                 className="flex flex-col items-center py-2.5 px-1 rounded-xl transition-all duration-200 text-center"
                 style={
@@ -191,16 +223,15 @@ export default function Login() {
           </div>
 
           {/* Demo hint */}
-          <p
-            className="text-[11px] mb-5 px-3 py-2 rounded-lg"
-            style={{ background: `${GOLD}15`, color: SIDEBAR }}
+          <div
+            className="mb-5 px-3 py-2.5 rounded-xl text-[11px] leading-relaxed"
+            style={{ background: `${GOLD}18`, border: `1px solid ${GOLD}30`, color: SIDEBAR }}
           >
-            {tab === "prep"
-              ? "Try: student1@heartspace.com / password123"
-              : tab === "self"
-                ? "Try: student3@heartspace.com / password123"
-                : "Try: vaishnavi@heartspace.com / password123"}
-          </p>
+            <span className="font-semibold">Demo:</span>{" "}
+            {DEMO_HINTS[tab]}
+            <br />
+            <span style={{ color: MUTED }}>Password: heartspace123</span>
+          </div>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
@@ -240,6 +271,7 @@ export default function Login() {
 
               <Button
                 type="submit"
+                disabled={isPending}
                 className="w-full h-12 rounded-xl font-semibold text-base mt-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
@@ -248,7 +280,7 @@ export default function Login() {
                   boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
                 }}
               >
-                {loginMutation.isPending ? "Entering..." : "Enter HeartSpace"}
+                {isPending ? "Entering..." : "Enter HeartSpace"}
               </Button>
             </form>
           </Form>
