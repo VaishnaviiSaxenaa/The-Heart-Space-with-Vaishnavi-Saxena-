@@ -10,13 +10,13 @@ import {
 } from "lucide-react";
 
 const CREAM         = "#FAF7F2";
-const CHARCOAL      = "#3D3530";
-const GOLD          = "#E6A756";
-const CARD          = "#F3EDE6";
+const CHARCOAL      = "#2C1810";
+const GOLD          = "#C9A96E";
+const CARD          = "#FFFFFF";
 const SIDEBAR       = "#EBE3D9";
-const SIDEBAR_HEADER = "#5C3D2E";
+const SIDEBAR_HEADER = "#3D2314";
 const MUTED         = "#8C7B70";
-const BORDER        = "#D8CFC4";
+const BORDER        = "#E8DDD0";
 const RISK_RED      = "#C0392B";
 
 interface NavItem {

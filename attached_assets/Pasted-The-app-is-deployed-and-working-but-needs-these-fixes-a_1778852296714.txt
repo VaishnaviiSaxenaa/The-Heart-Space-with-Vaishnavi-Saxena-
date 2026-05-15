@@ -1,0 +1,102 @@
+The app is deployed and working but needs 
+these fixes across ALL dashboards:
+
+1. COLORS - Make richer and warmer:
+- Navbar: #3D2314 dark brown
+- Background: #FAF7F2 warm cream  
+- Buttons: #C9A96E warm gold
+- Cards: white with warm shadow
+- Text: #2C1810 dark brown
+- Accents: #C9A96E gold
+- Remove all grey/dull colors
+
+2. DAILY TRACKER - Make fully working:
+- Sleep hours (number input)
+- Sleep quality (1-5 clickable circles)
+- Study hours (number input)
+- Physical activity (yes/no toggle)
+- Activity type (select if yes)
+- Me time in minutes (number input)
+- Stress level (1-5 clickable circles)
+- Mood (1-5 emoji buttons: 😞😕😐🙂😄)
+- Emotional state (clickable pill buttons:
+  Calm, Anxious, Motivated, Tired, 
+  Overwhelmed, Focused, Sad)
+- Daily note (textarea)
+- Save button → saves to localStorage
+- Show today's saved entry if already logged
+
+3. SYLLABUS TRACKER - Make fully working:
+- Show these subjects as expandable sections:
+  * Calculus
+  * Linear Algebra  
+  * Real Analysis
+  * Abstract Algebra
+  * Complex Analysis
+  * Differential Equations
+  * Probability & Statistics
+- Each subject expands to show topics
+- Each topic has a checkbox
+- Checking topic updates % complete
+- Progress bar per subject
+- Overall % at top
+- All saves to localStorage
+
+4. ASSIGNMENT TRACKER - Make fully working:
+- "+ Log Assignment" button opens a form:
+  * Subject (dropdown)
+  * Topic (text input)
+  * Date (auto today)
+  * Questions attempted (number)
+  * Correct answers (number)
+  * Auto-calculates accuracy %
+  * Approach: Confused/Partial/Clear/Strong
+    (clickable pills)
+  * Speed: Slow/Moderate/Fast/Exam Ready
+    (clickable pills)
+  * Notes (optional textarea)
+  * Save button
+- Show list of logged assignments
+- Show average accuracy at top
+- All saves to localStorage
+
+5. SESSIONS PAGE - Make fully working:
+- Show upcoming sessions list
+- "+ Book Session" button
+- Pre-session form popup with fields:
+  * What would you like to discuss?
+  * What problems did you face?
+  * What is bothering you most?
+  * Additional notes
+- Cannot close without filling all fields
+- Saves to localStorage
+
+6. CHARTS - Add real charts:
+- Mood trend (last 7 days line chart)
+- Study hours (last 7 days bar chart)
+- Syllabus completion (donut chart)
+- Assignment accuracy trend (line chart)
+- All pull from localStorage data
+
+7. COUNSELLOR DASHBOARD:
+- Clean student cards with:
+  * Name, plan type
+  * Last active
+  * Mood average
+  * Study hours average
+  * Risk indicator (green/yellow/red)
+- Click student → see their full data
+- Sessions management section
+- Clean warm brown and gold design
+
+Make ALL buttons clickable and working.
+Remove ALL demo/placeholder content.
+Make it feel like a real professional app.
+
+After all changes run:
+pnpm run build
+
+Then push:
+git add .
+git commit -m "Full features update"
+git push origin main --force

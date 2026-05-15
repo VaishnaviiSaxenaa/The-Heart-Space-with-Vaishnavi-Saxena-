@@ -1,25 +1,29 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "../lib/auth";
 import {
   useGetDashboardSummary, useListMoods, useCreateMood, useListSessions,
   getGetDashboardSummaryQueryKey, getListMoodsQueryKey,
 } from "../lib/api-client-react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
+import {
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 import { Loader2, Calendar, Clock, Zap, CheckCircle2, Droplets, BookOpen, Dumbbell, LeafyGreen, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 /* ─── Brand tokens ───────────────────────── */
 const CREAM    = "#FAF7F2";
-const CHARCOAL = "#3D3530";
-const GOLD     = "#E6A756";
-const CARD     = "#F3EDE6";
+const CHARCOAL = "#2C1810";
+const GOLD     = "#C9A96E";
+const CARD     = "#FFFFFF";
 const MUTED    = "#8C7B70";
-const BORDER   = "#D8CFC4";
+const BORDER   = "#E8DDD0";
 const SAGE     = "#A8BFA3";
 const OLIVE    = "#6E8B6B";
 const ROSE     = "#D4A5A5";
-const SIDEBAR  = "#5C3D2E";
+const SIDEBAR  = "#3D2314";
 
 /* Mood palette */
 const MOODS = [
@@ -49,17 +53,77 @@ const HABITS = [
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const DONE_DAYS = [true, true, true, true, false, false, false];
 
-const CHART_DATA = {
-  Academics:  [45, 52, 58, 63, 67, 70, 74, 72],
-  "PhD Journey": [30, 35, 40, 44, 48, 51, 55, 55],
-  Business:   [55, 60, 65, 70, 66, 74, 78, 80],
-  Health:     [40, 43, 50, 54, 58, 60, 63, 65],
-};
-const CHART_COLORS = [OLIVE, SAGE, GOLD, ROSE];
-
 /* Tiny inline "Brain" icon since lucide doesn't export as Brain_ */
 function Brain_({ className }: { className?: string }) {
   return <BookOpen className={className} />;
+}
+
+/* ─── Real analytics from localStorage ───── */
+function AnalyticsSection({ userId }: { userId: string }) {
+  const data = useMemo(() => {
+    try {
+      const raw = localStorage.getItem(`hs_daily_${userId}`);
+      const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+      return Array.from({ length: 7 }, (_, i) => {
+        const d   = subDays(new Date(), 6 - i);
+        const key = d.toISOString().split("T")[0];
+        const e   = all[key];
+        return {
+          day:   format(d, "EEE"),
+          mood:  e?.mood   ?? null,
+          study: e?.studyHours ?? null,
+        };
+      });
+    } catch { return []; }
+  }, [userId]);
+
+  const hasData = data.some((d) => d.mood !== null || d.study !== null);
+
+  if (!hasData) {
+    return (
+      <div className="text-center py-10 rounded-2xl"
+        style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+        <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No daily entries yet</p>
+        <p className="text-xs mt-1" style={{ color: MUTED }}>
+          Start logging in <strong>Daily Tracker</strong> to see your mood and study trends here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: MUTED }}>Mood Trend — last 7 days</p>
+        <ResponsiveContainer width="100%" height={150}>
+          <LineChart data={data} margin={{ top: 5, right: 8, left: -24, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
+            <XAxis dataKey="day" tick={{ fontSize: 10, fill: MUTED }} />
+            <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 10, fill: MUTED }} />
+            <Tooltip
+              formatter={(val: any) => [val !== null ? `${val}/5` : "–", "Mood"]}
+              contentStyle={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 11 }} />
+            <Line type="monotone" dataKey="mood" stroke={GOLD} strokeWidth={2.5}
+              dot={{ fill: GOLD, r: 4 }} connectNulls={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: MUTED }}>Study Hours — last 7 days</p>
+        <ResponsiveContainer width="100%" height={150}>
+          <BarChart data={data} margin={{ top: 5, right: 8, left: -24, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
+            <XAxis dataKey="day" tick={{ fontSize: 10, fill: MUTED }} />
+            <YAxis tick={{ fontSize: 10, fill: MUTED }} />
+            <Tooltip
+              formatter={(val: any) => [val !== null ? `${val}h` : "–", "Study"]}
+              contentStyle={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 11 }} />
+            <Bar dataKey="study" fill={OLIVE} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
 /* ─── Sub-components ─────────────────────── */
@@ -91,59 +155,6 @@ function CircularProgress({ pct, size = 120 }: { pct: number; size?: number }) {
       <text x="55" y="52" textAnchor="middle" style={{ fontSize: "18px", fontFamily: "'Playfair Display',serif", fill: CHARCOAL, fontWeight: 700 }}>{pct}%</text>
       <text x="55" y="67" textAnchor="middle" style={{ fontSize: "9px", fill: MUTED }}>overall</text>
     </svg>
-  );
-}
-
-/* Simple SVG line chart */
-function GrowthChart() {
-  const W = 560; const H = 160; const PAD = { t: 12, r: 20, b: 30, l: 36 };
-  const IW = W - PAD.l - PAD.r; const IH = H - PAD.t - PAD.b;
-  const weeks = 8;
-  const xStep = IW / (weeks - 1);
-
-  const toPath = (vals: number[]) =>
-    vals.map((v, i) => `${i === 0 ? "M" : "L"} ${PAD.l + i * xStep} ${PAD.t + IH - (v / 100) * IH}`).join(" ");
-
-  const colors = Object.values(CHART_COLORS);
-  const entries = Object.entries(CHART_DATA);
-
-  return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 200 }}>
-        {/* Grid lines */}
-        {[0, 25, 50, 75, 100].map((v) => {
-          const y = PAD.t + IH - (v / 100) * IH;
-          return (
-            <g key={v}>
-              <line x1={PAD.l} y1={y} x2={W - PAD.r} y2={y} stroke="#E8DDD0" strokeWidth="1" />
-              <text x={PAD.l - 6} y={y + 4} textAnchor="end" style={{ fontSize: "9px", fill: MUTED }}>{v}</text>
-            </g>
-          );
-        })}
-        {/* X labels */}
-        {Array.from({ length: weeks }, (_, i) => (
-          <text key={i} x={PAD.l + i * xStep} y={H - 4} textAnchor="middle" style={{ fontSize: "9px", fill: MUTED }}>W{i + 1}</text>
-        ))}
-        {/* Lines */}
-        {entries.map(([key, vals], idx) => (
-          <g key={key}>
-            <path d={toPath(vals)} fill="none" stroke={colors[idx]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            {vals.map((v, i) => (
-              <circle key={i} cx={PAD.l + i * xStep} cy={PAD.t + IH - (v / 100) * IH} r="3" fill={colors[idx]} />
-            ))}
-          </g>
-        ))}
-      </svg>
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4 mt-3">
-        {entries.map(([key], idx) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <div className="w-3 h-1.5 rounded-full" style={{ background: colors[idx] }} />
-            <span className="text-xs" style={{ color: MUTED }}>{key}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -677,10 +688,10 @@ export default function StudentDashboard() {
         </Card>
       </div>
 
-      {/* ── Growth Insights ── */}
+      {/* ── Analytics ── */}
       <Card className="p-6">
-        <SectionTitle>Growth Insights</SectionTitle>
-        <GrowthChart />
+        <SectionTitle>Your Analytics</SectionTitle>
+        <AnalyticsSection userId={String(user?.id ?? "guest")} />
       </Card>
 
       {/* ── Quote card ── */}

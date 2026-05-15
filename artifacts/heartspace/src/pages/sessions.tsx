@@ -1,302 +1,330 @@
 import { useState } from "react";
 import { useAuth } from "../lib/auth";
-import {
-  useListSessions, useListUsers, useCreateSession, useUpdateSession,
-  getListSessionsQueryKey, UpdateSessionBodyStatus,
-} from "../lib/api-client-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
-import { Loader2, Plus, Clock, CheckCircle, XCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Clock, X, Calendar, CheckCircle, AlertCircle } from "lucide-react";
+import { format, addDays } from "date-fns";
 
 const CREAM    = "#FAF7F2";
-const CHARCOAL = "#3D3530";
-const GOLD     = "#E6A756";
-const CARD     = "#F3EDE6";
+const CHARCOAL = "#2C1810";
+const GOLD     = "#C9A96E";
+const DARK     = "#3D2314";
+const CARD     = "#FFFFFF";
 const MUTED    = "#8C7B70";
-const BORDER   = "#D8CFC4";
-const SAGE     = "#A8BFA3";
+const BORDER   = "#E8DDD0";
 const OLIVE    = "#6E8B6B";
-const SIDEBAR  = "#5C3D2E";
+
+export interface SessionRecord {
+  id: string;
+  createdAt: string;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  discuss: string;
+  problems: string;
+  bothering: string;
+  additionalNotes: string;
+  scheduledDate?: string;
+}
+
+function lsKey(userId: string) { return `hs_sessions_${userId}`; }
+
+function loadSessions(userId: string): SessionRecord[] {
+  try { const r = localStorage.getItem(lsKey(userId)); return r ? JSON.parse(r) : []; }
+  catch { return []; }
+}
+
+function saveSessions(userId: string, list: SessionRecord[]) {
+  localStorage.setItem(lsKey(userId), JSON.stringify(list));
+}
 
 const STATUS_CFG = {
-  scheduled: { label: "Scheduled", bg: `${GOLD}22`,  text: "#8A5A10",  border: `${GOLD}55` },
-  completed:  { label: "Completed", bg: "#DFF0DA",    text: "#2A5020",  border: `${OLIVE}55` },
-  cancelled:  { label: "Cancelled", bg: "#EDE4D8",    text: "#7A5A40",  border: "#C8B8A8" },
+  pending:   { label: "Requested",  bg: `${GOLD}22`,  text: "#8A5A10" },
+  confirmed: { label: "Confirmed",  bg: "#E8F0E6",    text: "#2D5A29" },
+  completed: { label: "Completed",  bg: "#DFF0DA",    text: "#2D5A29" },
+  cancelled: { label: "Cancelled",  bg: "#EDE4D8",    text: "#7A5A40" },
+} as const;
+
+const blankForm = {
+  discuss: "",
+  problems: "",
+  bothering: "",
+  additionalNotes: "",
 };
 
-const schema = z.object({
-  studentId: z.string().min(1, "Student is required"),
-  scheduledAtDate: z.string().min(1, "Date is required"),
-  scheduledAtTime: z.string().min(1, "Time is required"),
-  durationMinutes: z.string().min(1, "Duration is required"),
-  topic: z.string().optional(),
-});
-type FormValues = z.infer<typeof schema>;
+function BookingModal({ onClose, onSave }: { onClose: () => void; onSave: (form: typeof blankForm) => void }) {
+  const [form, setForm] = useState(blankForm);
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof blankForm, string>>>({});
 
-function SCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const set = (k: keyof typeof blankForm) => (v: string) => {
+    setForm((p) => ({ ...p, [k]: v }));
+    setErrors((e) => ({ ...e, [k]: "" }));
+  };
+
+  function submit() {
+    const errs: typeof errors = {};
+    if (!form.discuss.trim())          errs.discuss = "Required";
+    if (!form.problems.trim())         errs.problems = "Required";
+    if (!form.bothering.trim())        errs.bothering = "Required";
+    if (!form.additionalNotes.trim())  errs.additionalNotes = "Required";
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    onSave(form);
+  }
+
+  const fields: { key: keyof typeof blankForm; label: string; placeholder: string }[] = [
+    {
+      key: "discuss",
+      label: "What would you like to discuss in this session?",
+      placeholder: "Topics, goals, or situations you want help with…",
+    },
+    {
+      key: "problems",
+      label: "What problems did you face recently?",
+      placeholder: "Challenges in academics, life, or wellbeing…",
+    },
+    {
+      key: "bothering",
+      label: "What is bothering you the most right now?",
+      placeholder: "Your biggest concern or worry…",
+    },
+    {
+      key: "additionalNotes",
+      label: "Additional notes for your counsellor",
+      placeholder: "Anything else you'd like them to know…",
+    },
+  ];
+
   return (
-    <div className={`rounded-2xl overflow-hidden ${className}`}
-      style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 8px rgba(61,53,48,.06)" }}>
-      {children}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(44,24,16,.45)" }}>
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden"
+        style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 20px 60px rgba(44,24,16,.25)" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5"
+          style={{ background: DARK }}>
+          <div>
+            <h2 className="font-serif text-lg font-bold" style={{ color: CREAM }}>Book a Session</h2>
+            <p className="text-xs mt-0.5" style={{ color: "rgba(250,247,242,.6)" }}>
+              Please fill in all fields — your counsellor will review these before your session
+            </p>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {fields.map(({ key, label, placeholder }) => (
+            <div key={key}>
+              <label className="text-xs font-semibold mb-1.5 block" style={{ color: CHARCOAL }}>
+                {label} <span style={{ color: "#C0392B" }}>*</span>
+              </label>
+              <textarea rows={2}
+                value={form[key]}
+                onChange={(e) => set(key)(e.target.value)}
+                placeholder={placeholder}
+                className="w-full px-3 py-2.5 rounded-xl text-sm border-2 outline-none resize-none leading-relaxed"
+                style={{
+                  background: CREAM,
+                  borderColor: errors[key] ? "#C0392B" : BORDER,
+                  color: CHARCOAL,
+                }} />
+              {errors[key] && (
+                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#C0392B" }}>
+                  <AlertCircle className="w-3 h-3" /> {errors[key]}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 flex gap-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+          <button onClick={submit}
+            className="flex-1 h-11 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
+            style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
+            Submit Request
+          </button>
+          <button onClick={onClose}
+            className="px-5 h-11 rounded-xl text-sm font-medium"
+            style={{ background: BORDER, color: MUTED }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SessionCard({ session, onCancel }: { session: SessionRecord; onCancel: (id: string) => void }) {
+  const cfg = STATUS_CFG[session.status];
+  const date = new Date(session.createdAt);
+
+  return (
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 8px rgba(44,24,16,.06)" }}>
+      <div className="flex flex-col md:flex-row">
+        {/* Date panel */}
+        <div className="p-5 md:w-36 flex flex-col items-center justify-center text-center flex-shrink-0"
+          style={{
+            background: session.status === "pending" || session.status === "confirmed"
+              ? `linear-gradient(160deg, ${DARK} 0%, #6B3A28 100%)`
+              : "#F3EDE6",
+            borderRight: `1px solid ${BORDER}`,
+          }}>
+          <div className="text-[10px] font-semibold uppercase tracking-widest mb-0.5"
+            style={{ color: session.status === "completed" || session.status === "cancelled" ? MUTED : "rgba(250,247,242,.55)" }}>
+            {format(date, "EEEE")}
+          </div>
+          <div className="text-4xl font-serif font-bold"
+            style={{ color: session.status === "completed" || session.status === "cancelled" ? MUTED : GOLD }}>
+            {format(date, "d")}
+          </div>
+          <div className="text-xs"
+            style={{ color: session.status === "completed" || session.status === "cancelled" ? MUTED : "rgba(250,247,242,.7)" }}>
+            {format(date, "MMM yyyy")}
+          </div>
+          <div className="flex items-center gap-1 text-[10px] mt-1.5"
+            style={{ color: session.status === "completed" || session.status === "cancelled" ? MUTED : "rgba(250,247,242,.45)" }}>
+            <Clock className="w-3 h-3" />{format(date, "h:mm a")}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 flex-1">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <h3 className="font-serif text-base font-semibold" style={{ color: CHARCOAL }}>
+              Counselling Session Request
+            </h3>
+            <span className="flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-full"
+              style={{ background: cfg.bg, color: cfg.text }}>
+              {cfg.label}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {[
+              { label: "Discuss", value: session.discuss },
+              { label: "Problems", value: session.problems },
+              { label: "Bothering me", value: session.bothering },
+            ].filter((f) => f.value).map(({ label, value }) => (
+              <div key={label}>
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: MUTED }}>{label}: </span>
+                <span className="text-xs" style={{ color: CHARCOAL }}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {session.status === "pending" && (
+            <div className="mt-4 pt-4 flex items-center gap-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+              <button onClick={() => onCancel(session.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                style={{ background: "#EDE4D8", color: "#7A5A40" }}>
+                <X className="w-3.5 h-3.5" /> Cancel Request
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function Sessions() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const userId = String(user?.id ?? "guest");
 
-  const { data: sessions, isLoading } = useListSessions(
-    user?.role === "student" ? { studentId: user.id } : undefined,
-    { query: { enabled: !!user?.id } }
-  );
-  const { data: students } = useListUsers(
-    { role: "student" }, { query: { enabled: user?.role === "counsellor" } }
-  );
+  const [sessions, setSessions] = useState<SessionRecord[]>(() => loadSessions(userId));
+  const [showModal, setShowModal] = useState(false);
 
-  const createMutation = useCreateSession({
-    mutation: {
-      onSuccess: () => { toast({ title: "Session scheduled ✓" }); setOpen(false); qc.invalidateQueries({ queryKey: getListSessionsQueryKey() }); },
-      onError: () => toast({ title: "Failed to schedule", variant: "destructive" }),
-    },
-  });
-  const updateMutation = useUpdateSession({
-    mutation: { onSuccess: () => { toast({ title: "Updated" }); qc.invalidateQueries({ queryKey: getListSessionsQueryKey() }); } },
-  });
+  function persist(next: SessionRecord[]) { setSessions(next); saveSessions(userId, next); }
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { studentId: "", scheduledAtDate: "", scheduledAtTime: "", durationMinutes: "60", topic: "" },
-  });
+  function handleBook(form: typeof blankForm) {
+    const record: SessionRecord = {
+      id: `${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      status: "pending",
+      ...form,
+    };
+    persist([record, ...sessions]);
+    setShowModal(false);
+  }
 
-  const onSubmit = (v: FormValues) => {
-    if (!user) return;
-    createMutation.mutate({
-      data: {
-        studentId: parseInt(v.studentId), counsellorId: user.id,
-        scheduledAt: new Date(`${v.scheduledAtDate}T${v.scheduledAtTime}`).toISOString(),
-        durationMinutes: parseInt(v.durationMinutes), topic: v.topic,
-      },
-    });
-  };
+  function cancel(id: string) {
+    persist(sessions.map((s) => s.id === id ? { ...s, status: "cancelled" as const } : s));
+  }
 
-  if (isLoading) return (
-    <div className="flex justify-center items-center h-64">
-      <Loader2 className="w-7 h-7 animate-spin" style={{ color: GOLD }} />
-    </div>
-  );
-
-  const upcoming = sessions?.filter((s) => s.status === "scheduled") ?? [];
-  const past     = sessions?.filter((s) => s.status !== "scheduled") ?? [];
+  const upcoming = sessions.filter((s) => s.status === "pending" || s.status === "confirmed");
+  const past     = sessions.filter((s) => s.status === "completed" || s.status === "cancelled");
 
   return (
     <div className="space-y-7 animate-in fade-in duration-500">
+      {showModal && (
+        <BookingModal onClose={() => setShowModal(false)} onSave={handleBook} />
+      )}
 
       {/* Header */}
       <div className="flex items-start gap-4 justify-between flex-wrap">
         <div>
           <h1 className="text-3xl md:text-4xl font-serif font-bold" style={{ color: CHARCOAL }}>Sessions</h1>
-          <p className="mt-1.5 text-sm" style={{ color: MUTED }}>Your counselling schedule and history.</p>
+          <p className="mt-1.5 text-sm" style={{ color: MUTED }}>
+            {user?.role === "student"
+              ? "Request sessions and track your counselling journey."
+              : "Manage your student counselling sessions."}
+          </p>
         </div>
-
-        {user?.role === "counsellor" && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02] shadow-md"
-                style={{ background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`, color: CREAM }}>
-                <Plus className="w-4 h-4" />Schedule
-              </button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md rounded-2xl" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
-              <DialogHeader>
-                <DialogTitle className="font-serif text-xl" style={{ color: CHARCOAL }}>Schedule New Session</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-2">
-                  <FormField control={form.control} name="studentId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel style={{ color: SIDEBAR }}>Student</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger style={{ background: CREAM, borderColor: BORDER }}>
-                            <SelectValue placeholder="Select a student" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {students?.map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <div className="grid grid-cols-2 gap-3">
-                    {(["scheduledAtDate", "scheduledAtTime"] as const).map((name) => (
-                      <FormField key={name} control={form.control} name={name} render={({ field }) => (
-                        <FormItem>
-                          <FormLabel style={{ color: SIDEBAR }}>{name === "scheduledAtDate" ? "Date" : "Time"}</FormLabel>
-                          <FormControl>
-                            <Input type={name === "scheduledAtDate" ? "date" : "time"} {...field}
-                              style={{ background: CREAM, borderColor: BORDER }} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    ))}
-                  </div>
-                  <FormField control={form.control} name="durationMinutes" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel style={{ color: SIDEBAR }}>Duration (minutes)</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} style={{ background: CREAM, borderColor: BORDER }} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="topic" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel style={{ color: SIDEBAR }}>Topic (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Initial Consultation" {...field} style={{ background: CREAM, borderColor: BORDER }} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <DialogFooter className="pt-2">
-                    <button type="submit" disabled={createMutation.isPending}
-                      className="w-full h-11 rounded-xl font-semibold text-sm disabled:opacity-50"
-                      style={{ background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`, color: CREAM }}>
-                      {createMutation.isPending ? "Scheduling…" : "Schedule Session"}
-                    </button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+        {user?.role === "student" && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02]"
+            style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff", boxShadow: "0 4px 14px rgba(201,169,110,.30)" }}>
+            <Plus className="w-4 h-4" /> Book Session
+          </button>
         )}
       </div>
 
-      {/* Sessions list */}
+      {/* Info banner for students */}
+      {user?.role === "student" && sessions.length === 0 && (
+        <div className="rounded-2xl p-6"
+          style={{ background: `${GOLD}12`, border: `1px solid ${GOLD}44` }}>
+          <div className="flex items-start gap-3">
+            <Calendar className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: GOLD }} />
+            <div>
+              <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>Ready to book your first session?</p>
+              <p className="text-xs mt-0.5" style={{ color: MUTED }}>
+                Click "Book Session" to submit a request. Your counsellor will confirm a time that works for both of you.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming */}
       {upcoming.length > 0 && (
         <section>
-          <h2 className="font-serif text-lg font-semibold mb-4" style={{ color: CHARCOAL }}>Upcoming</h2>
+          <h2 className="font-serif text-lg font-semibold mb-4" style={{ color: CHARCOAL }}>
+            Upcoming & Pending
+          </h2>
           <div className="space-y-3">
-            {upcoming.map((s) => <SessionCard key={s.id} session={s} user={user}
-              onStatus={(id, st) => updateMutation.mutate({ id, data: { status: st } })}
-              isPending={updateMutation.isPending} />)}
+            {upcoming.map((s) => (
+              <SessionCard key={s.id} session={s} onCancel={cancel} />
+            ))}
           </div>
         </section>
       )}
 
+      {/* Past */}
       {past.length > 0 && (
         <section>
-          <h2 className="font-serif text-lg font-semibold mb-4" style={{ color: CHARCOAL }}>Past</h2>
+          <h2 className="font-serif text-lg font-semibold mb-4" style={{ color: CHARCOAL }}>History</h2>
           <div className="space-y-3">
-            {past.map((s) => <SessionCard key={s.id} session={s} user={user}
-              onStatus={(id, st) => updateMutation.mutate({ id, data: { status: st } })}
-              isPending={updateMutation.isPending} />)}
+            {past.map((s) => <SessionCard key={s.id} session={s} onCancel={cancel} />)}
           </div>
         </section>
       )}
 
-      {sessions?.length === 0 && (
+      {sessions.length === 0 && (
         <div className="text-center py-20 rounded-2xl"
-          style={{ background: CREAM, border: `1.5px dashed ${BORDER}`, color: MUTED }}>
-          No sessions found.
+          style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+          <Calendar className="w-10 h-10 mx-auto mb-3 opacity-30" style={{ color: GOLD }} />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No sessions yet</p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>Book your first session to get started</p>
         </div>
       )}
-    </div>
-  );
-}
-
-function SessionCard({ session, user, onStatus, isPending }: {
-  session: any; user: any;
-  onStatus: (id: number, s: UpdateSessionBodyStatus) => void;
-  isPending: boolean;
-}) {
-  const cfg = STATUS_CFG[session.status as keyof typeof STATUS_CFG] ?? STATUS_CFG.scheduled;
-  const isUpcoming = session.status === "scheduled";
-
-  return (
-    <div className="rounded-2xl overflow-hidden flex flex-col md:flex-row"
-      style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 8px rgba(61,53,48,.06)" }}>
-      {/* Date panel */}
-      <div
-        className="p-5 md:w-40 flex flex-col items-center justify-center text-center flex-shrink-0"
-        style={{
-          background: isUpcoming ? `linear-gradient(160deg, ${SIDEBAR} 0%, #3A2518 100%)` : "#EDE4D8",
-          borderRight: `1px solid ${BORDER}`,
-        }}
-      >
-        <div className="text-[10px] font-semibold uppercase tracking-widest"
-          style={{ color: isUpcoming ? "rgba(250,247,242,.55)" : MUTED }}>
-          {format(new Date(session.scheduledAt), "EEEE")}
-        </div>
-        <div className="text-4xl font-serif font-bold my-0.5"
-          style={{ color: isUpcoming ? GOLD : "#8C7B70" }}>
-          {format(new Date(session.scheduledAt), "d")}
-        </div>
-        <div className="text-xs" style={{ color: isUpcoming ? "rgba(250,247,242,.7)" : MUTED }}>
-          {format(new Date(session.scheduledAt), "MMM yyyy")}
-        </div>
-        <div className="flex items-center gap-1 text-[11px] mt-1.5"
-          style={{ color: isUpcoming ? "rgba(250,247,242,.45)" : MUTED }}>
-          <Clock className="w-3 h-3" />{format(new Date(session.scheduledAt), "h:mm a")}
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="p-5 flex-1 flex flex-col justify-between">
-        <div>
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>
-              {session.topic || "Counselling Session"}
-            </h3>
-            <span className="flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-full"
-              style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
-              {cfg.label}
-            </span>
-          </div>
-          <p className="text-sm" style={{ color: MUTED }}>
-            {user?.role === "counsellor"
-              ? <>Student: <span style={{ color: CHARCOAL, fontWeight: 600 }}>{session.student?.name}</span></>
-              : <>Counsellor: <span style={{ color: CHARCOAL, fontWeight: 600 }}>{session.counsellor?.name}</span></>}
-            <span className="mx-2">·</span>
-            <span>{session.durationMinutes} min</span>
-          </p>
-          {session.notes && (
-            <div className="mt-3 p-3 rounded-xl text-sm italic"
-              style={{ background: `${GOLD}12`, color: "#7A5520", borderLeft: `3px solid ${GOLD}66` }}>
-              {session.notes}
-            </div>
-          )}
-        </div>
-
-        {user?.role === "counsellor" && session.status === "scheduled" && (
-          <div className="flex gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
-            <button onClick={() => onStatus(session.id, "completed")} disabled={isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-50 transition-all hover:scale-[1.02]"
-              style={{ background: "#DFF0DA", color: "#2A5020", border: `1px solid ${OLIVE}55` }}>
-              <CheckCircle className="w-3.5 h-3.5" />Mark Completed
-            </button>
-            <button onClick={() => onStatus(session.id, "cancelled")} disabled={isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-50 transition-all hover:scale-[1.02]"
-              style={{ background: "#EDE4D8", color: "#7A5A40", border: `1px solid #C8B8A8` }}>
-              <XCircle className="w-3.5 h-3.5" />Cancel
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
