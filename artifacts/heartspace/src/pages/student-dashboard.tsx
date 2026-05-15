@@ -471,7 +471,8 @@ export default function StudentDashboard() {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
-  const upcomingSessions = (sessions ?? []).filter((s) => s.status === "scheduled").slice(0, 5);
+  const sessionList      = Array.isArray(sessions) ? sessions : [];
+  const upcomingSessions = sessionList.filter((s) => s.status === "scheduled").slice(0, 5);
   const overallPct = Math.round(PROGRESS_ITEMS.reduce((a, p) => a + p.pct, 0) / PROGRESS_ITEMS.length);
 
   return (
@@ -586,7 +587,7 @@ export default function StudentDashboard() {
           </button>
 
           {/* Recent mood history */}
-          {moods && moods.length > 0 && (
+          {Array.isArray(moods) && moods.length > 0 && (
             <div className="mt-5 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Recent</p>
               {moods.slice(0, 3).map((m) => {

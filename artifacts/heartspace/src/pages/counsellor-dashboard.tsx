@@ -328,8 +328,9 @@ export default function CounsellorDashboard() {
 
   const students: StudentCardData[] = (() => {
     try {
-      if (isError || (!isLoading && !overviews?.length)) return DEMO_STUDENTS;
-      return (overviews ?? []).map((o) => ({
+      const list = Array.isArray(overviews) ? overviews : [];
+      if (isError || (!isLoading && !list.length)) return DEMO_STUDENTS;
+      return list.map((o) => ({
         id:             o.student.id,
         name:           o.student.name ?? "Student",
         space:          (o.student as any).space ?? null,
