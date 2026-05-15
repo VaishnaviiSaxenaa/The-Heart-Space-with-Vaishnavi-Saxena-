@@ -8,12 +8,7 @@ import { supabase, ROLE_MAP, type SupabaseRole } from "../lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,8 +17,7 @@ const CHARCOAL = "#3D3530";
 const GOLD     = "#E6A756";
 const SIDEBAR  = "#3D2314";
 const MUTED    = "#8C7B70";
-
-type Tab = "prep" | "self" | "counsellor";
+const BORDER   = "#E8DDD0";
 
 const loginSchema = z.object({
   email:    z.string().email("Please enter a valid email"),
@@ -31,52 +25,23 @@ const loginSchema = z.object({
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const TAB_CONFIG: { id: Tab; label: string; sub: string }[] = [
-  { id: "prep",       label: "Prep Space",  sub: "Exam prep tracking"  },
-  { id: "self",       label: "Self Space",  sub: "Wellness journey"    },
-  { id: "counsellor", label: "Counsellor",  sub: "Student oversight"   },
-];
-
-const DEMO_HINTS: Record<Tab, string> = {
-  prep:       "prep@heartspace.com · academy@heartspace.com",
-  self:       "counseling@heartspace.com",
-  counsellor: "vaishnavi@heartspace.com",
-};
-
+/* ── Demo accounts (fallback) ── */
 interface DemoAccount {
-  email:    string;
-  name:     string;
-  role:     "student" | "counsellor";
-  space:    "prep" | "self" | null;
-  redirect: string;
+  email: string; name: string;
+  role: "student" | "counsellor"; space: "prep" | "self" | null; redirect: string;
 }
-
 const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
-  "vaishnavi@heartspace.com": {
-    email: "vaishnavi@heartspace.com", name: "Vaishnavi Saxena",
-    role: "counsellor", space: null, redirect: "/counsellor",
-  },
-  "prep@heartspace.com": {
-    email: "prep@heartspace.com", name: "Prep Space Student",
-    role: "student", space: "prep", redirect: "/dashboard",
-  },
-  "counseling@heartspace.com": {
-    email: "counseling@heartspace.com", name: "Counseling Client",
-    role: "student", space: "self", redirect: "/self-dashboard",
-  },
-  "academy@heartspace.com": {
-    email: "academy@heartspace.com", name: "Academy Student",
-    role: "student", space: "prep", redirect: "/dashboard",
-  },
+  "vaishnavi@heartspace.com": { email: "vaishnavi@heartspace.com", name: "Vaishnavi Saxena",   role: "counsellor", space: null,   redirect: "/counsellor"     },
+  "prep@heartspace.com":      { email: "prep@heartspace.com",      name: "Prep Space Student", role: "student",    space: "prep", redirect: "/dashboard"      },
+  "counseling@heartspace.com":{ email: "counseling@heartspace.com",name: "Counseling Client",  role: "student",    space: "self", redirect: "/self-dashboard" },
+  "academy@heartspace.com":   { email: "academy@heartspace.com",   name: "Academy Student",    role: "student",    space: "prep", redirect: "/dashboard"      },
 };
-
 const DEMO_PASSWORD = "heartspace123";
 
 export default function Login() {
-  const [, setLocation]   = useLocation();
-  const { login }         = useAuth();
-  const { toast }         = useToast();
-  const [tab, setTab]     = useState<Tab>("prep");
+  const [, setLocation]  = useLocation();
+  const { login }        = useAuth();
+  const { toast }        = useToast();
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -88,15 +53,14 @@ export default function Login() {
     setIsPending(true);
     const email = v.email.toLowerCase().trim();
 
-    /* ── 1. Demo accounts (instant) ── */
+    /* ── 1. Demo accounts (instant, no network) ── */
     const demo = DEMO_ACCOUNTS[email];
     if (demo && v.password === DEMO_PASSWORD) {
       setTimeout(() => {
-        const fakeUser = {
-          id: email, email: demo.email, name: demo.name,
+        login({
+          id: email as any, email: demo.email, name: demo.name,
           role: demo.role, space: demo.space, avatarUrl: null,
-        } as any;
-        login(fakeUser, btoa(`${email}:demo:heartspace`));
+        } as any, btoa(`${email}:demo:heartspace`));
         setIsPending(false);
         setLocation(demo.redirect);
       }, 400);
@@ -106,43 +70,32 @@ export default function Login() {
     /* ── 2. Real Supabase auth ── */
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: v.email.trim(),
-        password: v.password,
+        email: v.email.trim(), password: v.password,
       });
-
       if (error || !data.session) throw error ?? new Error("No session");
 
-      /* Fetch profile for role-based redirect */
       const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, role, avatar_url")
-        .eq("id", data.user.id)
-        .single();
+        .from("profiles").select("full_name, role, avatar_url")
+        .eq("id", data.user.id).single();
 
-      const role     = (profile?.role as SupabaseRole) ?? "prep_student";
-      const mapped   = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
+      const role   = (profile?.role as SupabaseRole) ?? "prep_student";
+      const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
 
-      const heartUser = {
-        id:        data.user.id as any,
-        email:     data.user.email ?? "",
-        name:      profile?.full_name ?? data.user.email ?? "User",
-        role:      mapped.role,
-        space:     mapped.space,
-        avatarUrl: profile?.avatar_url ?? null,
-      } as any;
+      login({
+        id: data.user.id as any, email: data.user.email ?? "",
+        name: profile?.full_name ?? data.user.email ?? "User",
+        role: mapped.role, space: mapped.space, avatarUrl: profile?.avatar_url ?? null,
+      } as any, data.session.access_token);
 
-      login(heartUser, data.session.access_token);
       setIsPending(false);
       setLocation(mapped.redirect);
       return;
-    } catch {
-      /* fall through to error */
-    }
+    } catch { /* fall through */ }
 
     setIsPending(false);
     toast({
       title: "Login failed",
-      description: "Invalid email or password. Try the demo accounts below the tabs.",
+      description: "Invalid email or password. Try the demo accounts shown below.",
       variant: "destructive",
     });
   }
@@ -186,33 +139,8 @@ export default function Login() {
             boxShadow: "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
           }}
         >
-          {/* 3-way tab */}
-          <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl mb-7" style={{ background: "rgba(61,53,48,.07)" }}>
-            {TAB_CONFIG.map(({ id, label, sub }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setTab(id)}
-                className="flex flex-col items-center py-2.5 px-1 rounded-xl transition-all duration-200 text-center"
-                style={tab === id
-                  ? { background: SIDEBAR, color: CREAM, boxShadow: "0 2px 8px rgba(92,61,46,.30)" }
-                  : { background: "transparent", color: MUTED }}
-              >
-                <span className="text-xs font-bold leading-tight">{label}</span>
-                <span className="text-[10px] leading-tight mt-0.5 opacity-75">{sub}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Demo hint */}
-          <div
-            className="mb-5 px-3 py-2.5 rounded-xl text-[11px] leading-relaxed"
-            style={{ background: `${GOLD}18`, border: `1px solid ${GOLD}30`, color: SIDEBAR }}
-          >
-            <span className="font-semibold">Demo:</span> {DEMO_HINTS[tab]}
-            <br />
-            <span style={{ color: MUTED }}>Password: heartspace123</span>
-          </div>
+          <h2 className="font-serif text-xl font-bold mb-1" style={{ color: SIDEBAR }}>Welcome back</h2>
+          <p className="text-sm mb-6" style={{ color: MUTED }}>Sign in to your account</p>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
@@ -230,7 +158,7 @@ export default function Login() {
                           placeholder={name === "email" ? "hello@example.com" : "••••••••"}
                           {...field}
                           className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
-                          style={{ background: CREAM, borderColor: "#D8CFC4", color: CHARCOAL }}
+                          style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -245,12 +173,11 @@ export default function Login() {
                 className="w-full h-12 rounded-xl font-semibold text-base mt-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
-                  color: CREAM,
-                  border: "none",
+                  color: CREAM, border: "none",
                   boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
                 }}
               >
-                {isPending ? "Entering…" : "Enter HeartSpace"}
+                {isPending ? "Signing in…" : "Enter HeartSpace"}
               </Button>
             </form>
           </Form>
@@ -263,7 +190,19 @@ export default function Login() {
           </p>
         </div>
 
-        <p className="text-center text-xs mt-5" style={{ color: MUTED }}>A safe space for student wellbeing</p>
+        {/* Compact demo hint */}
+        <div className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
+          style={{ background: "rgba(230,167,86,.12)", border: `1px solid rgba(230,167,86,.25)`, color: SIDEBAR }}>
+          <p className="font-semibold mb-1" style={{ color: SIDEBAR }}>Demo accounts (password: heartspace123)</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5" style={{ color: MUTED }}>
+            <span>vaishnavi@heartspace.com → Counsellor</span>
+            <span>prep@heartspace.com → Prep student</span>
+            <span>counseling@heartspace.com → Self space</span>
+            <span>academy@heartspace.com → Academy</span>
+          </div>
+        </div>
+
+        <p className="text-center text-xs mt-4" style={{ color: MUTED }}>A safe space for student wellbeing</p>
       </div>
     </div>
   );

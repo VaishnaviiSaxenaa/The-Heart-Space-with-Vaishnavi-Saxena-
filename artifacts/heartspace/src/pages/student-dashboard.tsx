@@ -439,12 +439,6 @@ export default function StudentDashboard() {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
-  if (loadS || loadM) return (
-    <div className="flex justify-center items-center h-64">
-      <Loader2 className="w-7 h-7 animate-spin" style={{ color: GOLD }} />
-    </div>
-  );
-
   const upcomingSessions = (sessions ?? []).filter((s) => s.status === "scheduled").slice(0, 5);
   const overallPct = Math.round(PROGRESS_ITEMS.reduce((a, p) => a + p.pct, 0) / PROGRESS_ITEMS.length);
 

@@ -2,6 +2,7 @@ import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { Layout } from "./components/layout";
@@ -15,7 +16,27 @@ import Assignments from "./pages/assignments";
 import DailyTracker from "./pages/daily-tracker";
 import StudentDetail from "./pages/student-detail";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+});
+
+const GOLD  = "#C9A96E";
+const CREAM = "#FAF7F2";
+const MUTED = "#8C7B70";
+
+function FullScreenLoader() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: CREAM }}>
+      <div className="relative w-14 h-14">
+        <div className="absolute inset-0 rounded-full opacity-20 animate-pulse" style={{ background: GOLD }} />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: GOLD }} />
+        </div>
+      </div>
+      <p className="text-sm font-medium" style={{ color: MUTED }}>Loading HeartSpace…</p>
+    </div>
+  );
+}
 
 function ProtectedRoute({
   component: Component,
@@ -27,7 +48,7 @@ function ProtectedRoute({
   const { isAuthenticated, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (isLoading) return null;
+  if (isLoading) return <FullScreenLoader />;
 
   if (!isAuthenticated) {
     setLocation("/");
@@ -46,41 +67,33 @@ function ProtectedRoute({
 }
 
 function Router() {
+  const { isLoading } = useAuth();
+  if (isLoading) return <FullScreenLoader />;
+
   return (
     <Layout>
       <Switch>
         <Route path="/"       component={Login}  />
         <Route path="/signup" component={Signup} />
 
-        {/* Prep Space student dashboard */}
         <Route path="/dashboard">
           <ProtectedRoute component={StudentDashboard} allowedRole="student" />
         </Route>
-
-        {/* Self Space student dashboard */}
         <Route path="/self-dashboard">
           <ProtectedRoute component={StudentDashboard} allowedRole="student" />
         </Route>
-
-        {/* Counsellor */}
         <Route path="/counsellor">
           <ProtectedRoute component={CounsellorDashboard} allowedRole="counsellor" />
         </Route>
-
-        {/* Student detail (counsellor only) */}
         <Route path="/student/:id">
           <ProtectedRoute component={StudentDetail} allowedRole="counsellor" />
         </Route>
-
-        {/* Shared */}
         <Route path="/sessions">
           <ProtectedRoute component={Sessions} />
         </Route>
         <Route path="/daily-tracker">
           <ProtectedRoute component={DailyTracker} />
         </Route>
-
-        {/* Prep Space only */}
         <Route path="/syllabus">
           <ProtectedRoute component={Syllabus} allowedRole="student" />
         </Route>
