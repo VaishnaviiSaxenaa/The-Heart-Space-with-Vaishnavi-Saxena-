@@ -5,7 +5,7 @@ import {
   getGetDashboardSummaryQueryKey, getListMoodsQueryKey,
 } from "../lib/api-client-react";
 import { format } from "date-fns";
-import { Loader2, Calendar, Clock, Zap, CheckCircle2, Droplets, BookOpen, Dumbbell, LeafyGreen, Coffee, TrendingUp } from "lucide-react";
+import { Loader2, Calendar, Clock, Zap, CheckCircle2, Droplets, BookOpen, Dumbbell, LeafyGreen, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -147,6 +147,250 @@ function GrowthChart() {
   );
 }
 
+/* ─── Today's Plan ───────────────────────── */
+type PlanCategory = "Study" | "Revision" | "Practice" | "Physical" | "Personal";
+
+interface PlanTask {
+  id: string;
+  name: string;
+  category: PlanCategory;
+  done: boolean;
+}
+
+const CATEGORIES: PlanCategory[] = ["Study", "Revision", "Practice", "Physical", "Personal"];
+
+const CAT_COLORS: Record<PlanCategory, { bg: string; text: string; active: string }> = {
+  Study:    { bg: `${OLIVE}22`,      text: OLIVE,    active: OLIVE    },
+  Revision: { bg: `${GOLD}22`,       text: "#9A6010", active: "#9A6010" },
+  Practice: { bg: `${ROSE}22`,       text: "#A05050", active: "#A05050" },
+  Physical: { bg: `${SAGE}22`,       text: "#3A6A38", active: "#3A6A38" },
+  Personal: { bg: "rgba(61,53,48,.08)", text: MUTED,  active: MUTED   },
+};
+
+const PLAN_KEY = "heartspace_today_plan";
+
+function todayDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function loadPlanTasks(): PlanTask[] {
+  try {
+    const raw = localStorage.getItem(PLAN_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (parsed.date !== todayDate()) return [];
+    return parsed.tasks ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function savePlanTasks(tasks: PlanTask[]) {
+  localStorage.setItem(PLAN_KEY, JSON.stringify({ date: todayDate(), tasks }));
+}
+
+function TodaysPlan() {
+  const [tasks, setTasks] = useState<PlanTask[]>(() => loadPlanTasks());
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCat, setNewCat] = useState<PlanCategory>("Study");
+
+  const persist = (next: PlanTask[]) => { setTasks(next); savePlanTasks(next); };
+
+  const addTask = () => {
+    const name = newName.trim();
+    if (!name) return;
+    persist([...tasks, { id: `${Date.now()}`, name, category: newCat, done: false }]);
+    setNewName("");
+    setNewCat("Study");
+    setAdding(false);
+  };
+
+  const toggleDone = (id: string) =>
+    persist(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+
+  const deleteTask = (id: string) =>
+    persist(tasks.filter((t) => t.id !== id));
+
+  const doneCount = tasks.filter((t) => t.done).length;
+
+  return (
+    <Card className="lg:col-span-2 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>
+          Today's Plan
+          {tasks.length > 0 && (
+            <span className="ml-2 text-sm font-sans font-normal" style={{ color: MUTED }}>
+              {doneCount}/{tasks.length} done
+            </span>
+          )}
+        </h2>
+        {tasks.length > 0 && (
+          <button
+            onClick={() => { setAdding(true); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.03] active:scale-[0.98]"
+            style={{
+              background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+              color: CREAM,
+              boxShadow: "0 3px 10px rgba(230,167,86,.30)",
+            }}
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Task
+          </button>
+        )}
+      </div>
+
+      {/* Add-task form */}
+      {adding && (
+        <div
+          className="mb-4 p-4 rounded-2xl space-y-3"
+          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+        >
+          <input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addTask();
+              if (e.key === "Escape") { setAdding(false); setNewName(""); }
+            }}
+            placeholder="What do you want to get done today?"
+            className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-sm"
+            style={{ color: CHARCOAL }}
+          />
+          {/* Category pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setNewCat(cat)}
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all duration-150"
+                style={
+                  newCat === cat
+                    ? { background: SIDEBAR, color: CREAM }
+                    : { background: CAT_COLORS[cat].bg, color: CAT_COLORS[cat].text }
+                }
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-0.5">
+            <button
+              onClick={addTask}
+              className="px-4 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
+              style={{ background: `${GOLD}28`, color: "#9A6010" }}
+            >
+              Add
+            </button>
+            <button
+              onClick={() => { setAdding(false); setNewName(""); }}
+              className="px-4 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
+              style={{ background: `${BORDER}88`, color: MUTED }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {tasks.length === 0 && !adding && (
+        <div className="flex flex-col items-center justify-center py-14 text-center">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: `${GOLD}15`, border: `1.5px dashed ${GOLD}55` }}
+          >
+            <Plus className="w-7 h-7" style={{ color: GOLD }} />
+          </div>
+          <p className="text-sm font-semibold mb-1" style={{ color: CHARCOAL }}>No tasks yet</p>
+          <p className="text-xs mb-6" style={{ color: MUTED }}>Add your first task for today!</p>
+          <button
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{
+              background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+              color: CREAM,
+              boxShadow: "0 4px 14px rgba(230,167,86,.35)",
+            }}
+          >
+            <Plus className="w-4 h-4" /> Add Task
+          </button>
+        </div>
+      )}
+
+      {/* Task list */}
+      {tasks.length > 0 && (
+        <div className="space-y-2">
+          {tasks.map((task) => {
+            const cc = CAT_COLORS[task.category];
+            return (
+              <div
+                key={task.id}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200"
+                style={{
+                  background: task.done ? `${OLIVE}0C` : CREAM,
+                  border: `1px solid ${task.done ? OLIVE + "35" : BORDER}`,
+                }}
+              >
+                {/* Animated checkbox */}
+                <button
+                  onClick={() => toggleDone(task.id)}
+                  className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200"
+                  style={{
+                    borderColor: task.done ? OLIVE : "#C5B8AC",
+                    background: task.done ? OLIVE : "transparent",
+                    transform: task.done ? "scale(1.08)" : "scale(1)",
+                    boxShadow: task.done ? `0 0 0 3px ${OLIVE}22` : "none",
+                  }}
+                >
+                  {task.done && (
+                    <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                      <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* Task name */}
+                <span
+                  className="flex-1 text-sm font-medium transition-all duration-200"
+                  style={{
+                    color: task.done ? MUTED : CHARCOAL,
+                    textDecoration: task.done ? "line-through" : "none",
+                    textDecorationColor: MUTED,
+                  }}
+                >
+                  {task.name}
+                </span>
+
+                {/* Category badge */}
+                <span
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background: cc.bg, color: cc.text }}
+                >
+                  {task.category}
+                </span>
+
+                {/* Delete (visible on hover) */}
+                <button
+                  onClick={() => deleteTask(task.id)}
+                  className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-lg"
+                  style={{ color: "#B03030" }}
+                  title="Delete task"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /* ─── Main dashboard ─────────────────────── */
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -237,81 +481,8 @@ export default function StudentDashboard() {
 
       {/* ── Today's Plan + Progress ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Plan */}
-        <Card className="lg:col-span-2 p-6">
-          <SectionTitle>Today's Plan</SectionTitle>
-          {upcomingSessions.length > 0 ? (
-            <div className="space-y-0">
-              {upcomingSessions.map((s, idx) => {
-                const tags = ["Academics", "Wellness", "Personal", "Business"];
-                const tagColors = [OLIVE, SAGE, GOLD, ROSE];
-                const tag = tags[idx % tags.length];
-                const tc = tagColors[idx % tagColors.length];
-                return (
-                  <div key={s.id} className={`flex gap-4 py-4 ${idx < upcomingSessions.length - 1 ? "border-b" : ""}`}
-                    style={{ borderColor: BORDER }}>
-                    {/* Time */}
-                    <div className="w-14 flex-shrink-0 pt-0.5">
-                      <span className="text-xs font-medium" style={{ color: MUTED }}>
-                        {format(new Date(s.scheduledAt), "h:mm")}
-                        <span className="block text-[10px]">{format(new Date(s.scheduledAt), "a")}</span>
-                      </span>
-                    </div>
-                    {/* Dot + line */}
-                    <div className="flex flex-col items-center">
-                      <div className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: tc }} />
-                      {idx < upcomingSessions.length - 1 && (
-                        <div className="flex-1 w-px my-1" style={{ background: BORDER }} />
-                      )}
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-sm" style={{ color: CHARCOAL }}>{s.topic || "Counselling Session"}</p>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          style={{ background: `${tc}22`, color: tc }}>{tag}</span>
-                      </div>
-                      <p className="text-xs mt-0.5" style={{ color: MUTED }}>
-                        with {s.counsellor?.name} · {s.durationMinutes} min
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            /* Static demo plan if no sessions */
-            <div className="space-y-0">
-              {[
-                { time: "9:00 AM",  label: "Deep Work Session",    tag: "Academics", icon: BookOpen },
-                { time: "11:30 AM", label: "Content Creation",      tag: "Business",  icon: TrendingUp },
-                { time: "1:00 PM",  label: "Movement Break",        tag: "Wellness",  icon: Dumbbell },
-                { time: "3:00 PM",  label: "PhD Proposal Work",     tag: "PhD",       icon: BookOpen },
-                { time: "6:00 PM",  label: "Sunday Reset",          tag: "Personal",  icon: Coffee },
-              ].map(({ time, label, tag, icon: Icon }, idx, arr) => {
-                const tc = [OLIVE, GOLD, SAGE, ROSE, MUTED][idx];
-                return (
-                  <div key={time} className={`flex gap-4 py-4 ${idx < arr.length - 1 ? "border-b" : ""}`} style={{ borderColor: BORDER }}>
-                    <div className="w-14 flex-shrink-0 pt-0.5">
-                      <span className="text-xs font-medium leading-tight" style={{ color: MUTED }}>{time}</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <div className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: tc }} />
-                      {idx < arr.length - 1 && <div className="flex-1 w-px my-1" style={{ background: BORDER }} />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm" style={{ color: CHARCOAL }}>{label}</p>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          style={{ background: `${tc}22`, color: tc }}>{tag}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+        {/* Today's Plan — editable, saved in localStorage */}
+        <TodaysPlan />
 
         {/* Progress Overview */}
         <Card className="p-6 flex flex-col">
