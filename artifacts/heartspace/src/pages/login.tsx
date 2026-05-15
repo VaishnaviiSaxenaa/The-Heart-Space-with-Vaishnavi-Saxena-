@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-const CREAM    = "#FAF7F2";
-const CHARCOAL = "#3D3530";
-const GOLD     = "#E6A756";
-const SIDEBAR  = "#3D2314";
-const MUTED    = "#8C7B70";
-const BORDER   = "#E8DDD0";
+const CREAM   = "#FAF7F2";
+const CHARCOAL= "#3D3530";
+const GOLD    = "#E6A756";
+const SIDEBAR = "#3D2314";
+const MUTED   = "#8C7B70";
+const BORDER  = "#E8DDD0";
 
 const loginSchema = z.object({
   email:    z.string().email("Please enter a valid email"),
@@ -25,18 +25,22 @@ const loginSchema = z.object({
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-/* ── Demo accounts (fallback) ── */
 interface DemoAccount {
   email: string; name: string;
   role: "student" | "counsellor"; space: "prep" | "self" | null; redirect: string;
 }
 const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
-  "vaishnavi@heartspace.com": { email: "vaishnavi@heartspace.com", name: "Vaishnavi Saxena",   role: "counsellor", space: null,   redirect: "/counsellor"     },
-  "prep@heartspace.com":      { email: "prep@heartspace.com",      name: "Prep Space Student", role: "student",    space: "prep", redirect: "/dashboard"      },
-  "counseling@heartspace.com":{ email: "counseling@heartspace.com",name: "Counseling Client",  role: "student",    space: "self", redirect: "/self-dashboard" },
-  "academy@heartspace.com":   { email: "academy@heartspace.com",   name: "Academy Student",    role: "student",    space: "prep", redirect: "/dashboard"      },
+  "vaishnavi@heartspace.com":  { email: "vaishnavi@heartspace.com",  name: "Vaishnavi Saxena",   role: "counsellor", space: null,   redirect: "/counsellor"     },
+  "prep@heartspace.com":       { email: "prep@heartspace.com",       name: "Prep Space Student", role: "student",    space: "prep", redirect: "/dashboard"      },
+  "counseling@heartspace.com": { email: "counseling@heartspace.com", name: "Counseling Client",  role: "student",    space: "self", redirect: "/self-dashboard" },
+  "academy@heartspace.com":    { email: "academy@heartspace.com",    name: "Academy Student",    role: "student",    space: "prep", redirect: "/dashboard"      },
 };
 const DEMO_PASSWORD = "heartspace123";
+
+/* Race Supabase calls against a timeout */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]);
+}
 
 export default function Login() {
   const [, setLocation]  = useLocation();
@@ -53,33 +57,41 @@ export default function Login() {
     setIsPending(true);
     const email = v.email.toLowerCase().trim();
 
-    /* ── 1. Demo accounts (instant, no network) ── */
+    /* ── 1. Demo accounts — INSTANT, no network ── */
     const demo = DEMO_ACCOUNTS[email];
     if (demo && v.password === DEMO_PASSWORD) {
-      setTimeout(() => {
-        login({
-          id: email as any, email: demo.email, name: demo.name,
-          role: demo.role, space: demo.space, avatarUrl: null,
-        } as any, btoa(`${email}:demo:heartspace`));
-        setIsPending(false);
-        setLocation(demo.redirect);
-      }, 400);
+      login({
+        id: email as any, email: demo.email, name: demo.name,
+        role: demo.role, space: demo.space, avatarUrl: null,
+      } as any, btoa(`${email}:demo:heartspace`));
+      setIsPending(false);
+      setLocation(demo.redirect);
       return;
     }
 
-    /* ── 2. Real Supabase auth ── */
+    /* ── 2. Real Supabase auth — 5-second timeout ── */
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: v.email.trim(), password: v.password,
-      });
-      if (error || !data.session) throw error ?? new Error("No session");
+      const authResult = await withTimeout(
+        supabase.auth.signInWithPassword({ email: v.email.trim(), password: v.password }),
+        5000,
+      );
 
-      const { data: profile } = await supabase
-        .from("profiles").select("full_name, role, avatar_url")
-        .eq("id", data.user.id).single();
+      if (!authResult) {
+        throw new Error("Connection timed out. Please check your network.");
+      }
 
-      const role   = (profile?.role as SupabaseRole) ?? "prep_student";
-      const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
+      const { data, error } = authResult;
+      if (error || !data.session) throw error ?? new Error("Sign-in failed");
+
+      /* Fetch profile with a 3-second timeout */
+      const profileResult = await withTimeout(
+        supabase.from("profiles").select("full_name, role, avatar_url").eq("id", data.user.id).single(),
+        3000,
+      );
+
+      const profile = profileResult?.data ?? null;
+      const role    = (profile?.role as SupabaseRole) ?? "prep_student";
+      const mapped  = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
 
       login({
         id: data.user.id as any, email: data.user.email ?? "",
@@ -90,14 +102,14 @@ export default function Login() {
       setIsPending(false);
       setLocation(mapped.redirect);
       return;
-    } catch { /* fall through */ }
-
-    setIsPending(false);
-    toast({
-      title: "Login failed",
-      description: "Invalid email or password. Try the demo accounts shown below.",
-      variant: "destructive",
-    });
+    } catch (err: any) {
+      setIsPending(false);
+      toast({
+        title: "Login failed",
+        description: err?.message ?? "Invalid email or password. Use the demo accounts below.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
@@ -105,7 +117,6 @@ export default function Login() {
       className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
       style={{ background: `linear-gradient(155deg, ${CREAM} 0%, #EDE4D8 55%, #E8DDD0 100%)` }}
     >
-      {/* Background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl" style={{ background: GOLD }} />
         <div className="absolute bottom-10 -left-20 w-72 h-72 rounded-full opacity-15 blur-3xl" style={{ background: "#D4A5A5" }} />
@@ -145,10 +156,7 @@ export default function Login() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               {(["email", "password"] as const).map((name) => (
-                <FormField
-                  key={name}
-                  control={form.control}
-                  name={name}
+                <FormField key={name} control={form.control} name={name}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-semibold capitalize" style={{ color: SIDEBAR }}>{name}</FormLabel>
@@ -168,8 +176,7 @@ export default function Login() {
               ))}
 
               <Button
-                type="submit"
-                disabled={isPending}
+                type="submit" disabled={isPending}
                 className="w-full h-12 rounded-xl font-semibold text-base mt-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
@@ -190,7 +197,7 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Compact demo hint */}
+        {/* Demo hint */}
         <div className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
           style={{ background: "rgba(230,167,86,.12)", border: `1px solid rgba(230,167,86,.25)`, color: SIDEBAR }}>
           <p className="font-semibold mb-1" style={{ color: SIDEBAR }}>Demo accounts (password: heartspace123)</p>
