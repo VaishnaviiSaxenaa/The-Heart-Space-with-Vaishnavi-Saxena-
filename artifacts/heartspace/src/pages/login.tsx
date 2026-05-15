@@ -4,6 +4,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../lib/auth";
+import { supabase, ROLE_MAP, type SupabaseRole } from "../lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,78 +17,66 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-const CREAM = "#FAF7F2";
+const CREAM    = "#FAF7F2";
 const CHARCOAL = "#3D3530";
-const GOLD = "#E6A756";
-const SIDEBAR = "#5C3D2E";
-const MUTED = "#8C7B70";
+const GOLD     = "#E6A756";
+const SIDEBAR  = "#3D2314";
+const MUTED    = "#8C7B70";
 
 type Tab = "prep" | "self" | "counsellor";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
+  email:    z.string().email("Please enter a valid email"),
   password: z.string().min(1, "Password is required"),
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const TAB_CONFIG: { id: Tab; label: string; sub: string }[] = [
-  { id: "prep", label: "Prep Space", sub: "Exam prep tracking" },
-  { id: "self", label: "Self Space", sub: "Wellness journey" },
-  { id: "counsellor", label: "Counsellor", sub: "Student oversight" },
+  { id: "prep",       label: "Prep Space",  sub: "Exam prep tracking"  },
+  { id: "self",       label: "Self Space",  sub: "Wellness journey"    },
+  { id: "counsellor", label: "Counsellor",  sub: "Student oversight"   },
 ];
 
 const DEMO_HINTS: Record<Tab, string> = {
-  prep: "prep@heartspace.com · academy@heartspace.com",
-  self: "counseling@heartspace.com",
+  prep:       "prep@heartspace.com · academy@heartspace.com",
+  self:       "counseling@heartspace.com",
   counsellor: "vaishnavi@heartspace.com",
 };
 
 interface DemoAccount {
-  email: string;
-  name: string;
-  role: "student" | "counsellor";
-  space: "prep" | "self" | null;
+  email:    string;
+  name:     string;
+  role:     "student" | "counsellor";
+  space:    "prep" | "self" | null;
   redirect: string;
 }
 
 const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
   "vaishnavi@heartspace.com": {
-    email: "vaishnavi@heartspace.com",
-    name: "Vaishnavi Saxena",
-    role: "counsellor",
-    space: null,
-    redirect: "/counsellor",
+    email: "vaishnavi@heartspace.com", name: "Vaishnavi Saxena",
+    role: "counsellor", space: null, redirect: "/counsellor",
   },
   "prep@heartspace.com": {
-    email: "prep@heartspace.com",
-    name: "Prep Space Student",
-    role: "student",
-    space: "prep",
-    redirect: "/dashboard",
+    email: "prep@heartspace.com", name: "Prep Space Student",
+    role: "student", space: "prep", redirect: "/dashboard",
   },
   "counseling@heartspace.com": {
-    email: "counseling@heartspace.com",
-    name: "Counseling Client",
-    role: "student",
-    space: "self",
-    redirect: "/self-dashboard",
+    email: "counseling@heartspace.com", name: "Counseling Client",
+    role: "student", space: "self", redirect: "/self-dashboard",
   },
   "academy@heartspace.com": {
-    email: "academy@heartspace.com",
-    name: "Academy Student",
-    role: "student",
-    space: "prep",
-    redirect: "/dashboard",
+    email: "academy@heartspace.com", name: "Academy Student",
+    role: "student", space: "prep", redirect: "/dashboard",
   },
 };
 
 const DEMO_PASSWORD = "heartspace123";
 
 export default function Login() {
-  const [, setLocation] = useLocation();
-  const { login } = useAuth();
-  const { toast } = useToast();
-  const [tab, setTab] = useState<Tab>("prep");
+  const [, setLocation]   = useLocation();
+  const { login }         = useAuth();
+  const { toast }         = useToast();
+  const [tab, setTab]     = useState<Tab>("prep");
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -95,33 +84,65 @@ export default function Login() {
     defaultValues: { email: "", password: "" },
   });
 
-  function onSubmit(v: LoginFormValues) {
+  async function onSubmit(v: LoginFormValues) {
+    setIsPending(true);
     const email = v.email.toLowerCase().trim();
-    const demo = DEMO_ACCOUNTS[email];
 
+    /* ── 1. Demo accounts (instant) ── */
+    const demo = DEMO_ACCOUNTS[email];
     if (demo && v.password === DEMO_PASSWORD) {
-      setIsPending(true);
       setTimeout(() => {
         const fakeUser = {
-          id: email,
-          email: demo.email,
-          name: demo.name,
-          role: demo.role,
-          space: demo.space,
-          avatarUrl: null,
+          id: email, email: demo.email, name: demo.name,
+          role: demo.role, space: demo.space, avatarUrl: null,
         } as any;
-        const fakeToken = btoa(`${email}:demo:heartspace`);
-        login(fakeUser, fakeToken);
+        login(fakeUser, btoa(`${email}:demo:heartspace`));
         setIsPending(false);
         setLocation(demo.redirect);
-      }, 600);
+      }, 400);
       return;
     }
 
+    /* ── 2. Real Supabase auth ── */
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: v.email.trim(),
+        password: v.password,
+      });
+
+      if (error || !data.session) throw error ?? new Error("No session");
+
+      /* Fetch profile for role-based redirect */
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, role, avatar_url")
+        .eq("id", data.user.id)
+        .single();
+
+      const role     = (profile?.role as SupabaseRole) ?? "prep_student";
+      const mapped   = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
+
+      const heartUser = {
+        id:        data.user.id as any,
+        email:     data.user.email ?? "",
+        name:      profile?.full_name ?? data.user.email ?? "User",
+        role:      mapped.role,
+        space:     mapped.space,
+        avatarUrl: profile?.avatar_url ?? null,
+      } as any;
+
+      login(heartUser, data.session.access_token);
+      setIsPending(false);
+      setLocation(mapped.redirect);
+      return;
+    } catch {
+      /* fall through to error */
+    }
+
+    setIsPending(false);
     toast({
       title: "Login failed",
-      description:
-        "Invalid credentials. Use the demo accounts shown below the tabs.",
+      description: "Invalid email or password. Try the demo accounts below the tabs.",
       variant: "destructive",
     });
   }
@@ -129,24 +150,13 @@ export default function Login() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
-      style={{
-        background: `linear-gradient(155deg, ${CREAM} 0%, #EDE4D8 55%, #E8DDD0 100%)`,
-      }}
+      style={{ background: `linear-gradient(155deg, ${CREAM} 0%, #EDE4D8 55%, #E8DDD0 100%)` }}
     >
       {/* Background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl"
-          style={{ background: GOLD }}
-        />
-        <div
-          className="absolute bottom-10 -left-20 w-72 h-72 rounded-full opacity-15 blur-3xl"
-          style={{ background: "#D4A5A5" }}
-        />
-        <div
-          className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full opacity-10 blur-2xl"
-          style={{ background: "#A8BFA3" }}
-        />
+        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl" style={{ background: GOLD }} />
+        <div className="absolute bottom-10 -left-20 w-72 h-72 rounded-full opacity-15 blur-3xl" style={{ background: "#D4A5A5" }} />
+        <div className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full opacity-10 blur-2xl" style={{ background: "#A8BFA3" }} />
       </div>
 
       <div className="w-full max-w-[420px] z-10">
@@ -154,32 +164,16 @@ export default function Login() {
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-3 mb-2">
             <svg width="28" height="26" viewBox="0 0 22 20" fill="none">
-              <path
-                d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
-                stroke={GOLD}
-                strokeWidth="1.5"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <line x1="8"  y1="7"   x2="6"  y2="4" stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-              <line x1="11" y1="5.5" x2="11" y2="2" stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-              <line x1="14" y1="7"   x2="16" y2="4" stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+              <path d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
+                stroke={GOLD} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <line x1="8"  y1="7"   x2="6"  y2="4"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+              <line x1="11" y1="5.5" x2="11" y2="2"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+              <line x1="14" y1="7"   x2="16" y2="4"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
             </svg>
-            <h1
-              className="text-5xl font-serif font-bold tracking-tight"
-              style={{ color: SIDEBAR }}
-            >
-              HeartSpace
-            </h1>
+            <h1 className="text-5xl font-serif font-bold tracking-tight" style={{ color: SIDEBAR }}>HeartSpace</h1>
           </div>
-          <p className="font-serif italic" style={{ color: GOLD }}>
-            with Vaishnavi Saxena
-          </p>
-          <div
-            className="mt-3 mx-auto w-12 h-px rounded-full"
-            style={{ background: GOLD }}
-          />
+          <p className="font-serif italic" style={{ color: GOLD }}>with Vaishnavi Saxena</p>
+          <div className="mt-3 mx-auto w-12 h-px rounded-full" style={{ background: GOLD }} />
         </div>
 
         {/* Card */}
@@ -189,35 +183,23 @@ export default function Login() {
             background: "rgba(243,237,230,0.96)",
             backdropFilter: "blur(20px)",
             border: "1px solid rgba(216,207,196,0.7)",
-            boxShadow:
-              "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
+            boxShadow: "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
           }}
         >
           {/* 3-way tab */}
-          <div
-            className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl mb-7"
-            style={{ background: "rgba(61,53,48,.07)" }}
-          >
+          <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl mb-7" style={{ background: "rgba(61,53,48,.07)" }}>
             {TAB_CONFIG.map(({ id, label, sub }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
                 className="flex flex-col items-center py-2.5 px-1 rounded-xl transition-all duration-200 text-center"
-                style={
-                  tab === id
-                    ? {
-                        background: SIDEBAR,
-                        color: CREAM,
-                        boxShadow: "0 2px 8px rgba(92,61,46,.30)",
-                      }
-                    : { background: "transparent", color: MUTED }
-                }
+                style={tab === id
+                  ? { background: SIDEBAR, color: CREAM, boxShadow: "0 2px 8px rgba(92,61,46,.30)" }
+                  : { background: "transparent", color: MUTED }}
               >
                 <span className="text-xs font-bold leading-tight">{label}</span>
-                <span className="text-[10px] leading-tight mt-0.5 opacity-75">
-                  {sub}
-                </span>
+                <span className="text-[10px] leading-tight mt-0.5 opacity-75">{sub}</span>
               </button>
             ))}
           </div>
@@ -227,8 +209,7 @@ export default function Login() {
             className="mb-5 px-3 py-2.5 rounded-xl text-[11px] leading-relaxed"
             style={{ background: `${GOLD}18`, border: `1px solid ${GOLD}30`, color: SIDEBAR }}
           >
-            <span className="font-semibold">Demo:</span>{" "}
-            {DEMO_HINTS[tab]}
+            <span className="font-semibold">Demo:</span> {DEMO_HINTS[tab]}
             <br />
             <span style={{ color: MUTED }}>Password: heartspace123</span>
           </div>
@@ -242,25 +223,14 @@ export default function Login() {
                   name={name}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel
-                        className="text-sm font-semibold capitalize"
-                        style={{ color: SIDEBAR }}
-                      >
-                        {name}
-                      </FormLabel>
+                      <FormLabel className="text-sm font-semibold capitalize" style={{ color: SIDEBAR }}>{name}</FormLabel>
                       <FormControl>
                         <Input
                           type={name === "password" ? "password" : "email"}
-                          placeholder={
-                            name === "email" ? "hello@example.com" : "••••••••"
-                          }
+                          placeholder={name === "email" ? "hello@example.com" : "••••••••"}
                           {...field}
                           className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
-                          style={{
-                            background: CREAM,
-                            borderColor: "#D8CFC4",
-                            color: CHARCOAL,
-                          }}
+                          style={{ background: CREAM, borderColor: "#D8CFC4", color: CHARCOAL }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -280,15 +250,20 @@ export default function Login() {
                   boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
                 }}
               >
-                {isPending ? "Entering..." : "Enter HeartSpace"}
+                {isPending ? "Entering…" : "Enter HeartSpace"}
               </Button>
             </form>
           </Form>
+
+          <p className="text-center text-sm mt-5" style={{ color: MUTED }}>
+            New here?{" "}
+            <a href="/signup" className="font-semibold underline underline-offset-2" style={{ color: GOLD }}>
+              Create an account
+            </a>
+          </p>
         </div>
 
-        <p className="text-center text-xs mt-5" style={{ color: MUTED }}>
-          A safe space for student wellbeing
-        </p>
+        <p className="text-center text-xs mt-5" style={{ color: MUTED }}>A safe space for student wellbeing</p>
       </div>
     </div>
   );

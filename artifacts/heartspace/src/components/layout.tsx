@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
-import { useLogout } from "../lib/api-client-react";
 import { ReactNode } from "react";
 import {
   LayoutDashboard, Calendar, BookOpen, FlaskConical, Heart, Zap,
@@ -76,7 +75,6 @@ const quote = QUOTES[new Date().getDay() % QUOTES.length];
 function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  const logoutMutation = useLogout({ mutation: { onSuccess: () => { logout(); setLocation("/"); } } });
 
   const space = (user as any)?.space as string | null ?? null;
   const navItems = getNavItems(user?.role ?? "student", space);
@@ -168,7 +166,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                 {user?.role === "counsellor" ? "Counsellor" : space === "prep" ? "Prep Space" : "Self Space"}
               </p>
             </div>
-            <button onClick={() => logoutMutation.mutate()} title="Sign out"
+            <button onClick={() => logout().then(() => setLocation("/"))} title="Sign out"
               className="p-1.5 rounded-lg transition-opacity hover:opacity-70" style={{ color: MUTED }}>
               <LogOut className="w-3.5 h-3.5" />
             </button>

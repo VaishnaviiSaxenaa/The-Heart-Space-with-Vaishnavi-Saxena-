@@ -1,0 +1,59 @@
+Connect this app to Supabase.
+
+SUPABASE_URL: https://nrpheeyumpldxpikfrup.supabase.co
+SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ycGhlZXl1bXBsZHhwaWtmcnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDkwOTEsImV4cCI6MjA5NDMyNTA5MX0.di-M1sKzoQjGIcBsq1EtDP6gca0C_9j5qDX04B6VdfQ
+
+Do ALL of this:
+
+1. Install @supabase/supabase-js
+
+2. Create src/lib/supabase.ts:
+import { createClient } from '@supabase/supabase-js'
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+
+3. Create .env file in artifacts/heartspace/:
+VITE_SUPABASE_URL=https://nrpheeyumpldxpikfrup.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ycGhlZXl1bXBsZHhwaWtmcnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDkwOTEsImV4cCI6MjA5NDMyNTA5MX0.di-M1sKzoQjGIcBsq1EtDP6gca0C_9j5qDX04B6VdfQ
+
+4. Replace hardcoded login with 
+   real Supabase auth:
+   - Login: supabase.auth.signInWithPassword()
+   - Signup: supabase.auth.signUp()
+   - Logout: supabase.auth.signOut()
+   - Get session: supabase.auth.getSession()
+
+5. After login fetch user role from 
+   profiles table:
+   - role = 'admin' → counsellor dashboard
+   - role = 'prep_student' → prep dashboard
+   - role = 'counseling_client' → counseling dashboard
+   - role = 'academy_student' → academy dashboard
+
+6. Add a signup page with:
+   - Full name input
+   - Email input
+   - Password input
+   - "Create Account" gold button
+   - Role automatically set to prep_student
+   - Link back to login
+
+7. Keep demo accounts as fallback:
+   - vaishnavi@heartspace.com / heartspace123 → admin
+   - prep@heartspace.com / heartspace123 → prep_student
+   - counseling@heartspace.com / heartspace123 → counseling_client
+   - academy@heartspace.com / heartspace123 → academy_student
+
+8. Add Supabase keys to Vercel:
+   Go to Vercel → Settings → 
+   Environment Variables and add:
+   VITE_SUPABASE_URL
+   VITE_SUPABASE_ANON_KEY
+
+9. After all changes build and push:
+pnpm run build
+git add .
+git commit -m "Connect Supabase real auth"
+git push origin main --force

@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { Layout } from "./components/layout";
 import Login from "./pages/login";
+import Signup from "./pages/signup";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import Sessions from "./pages/sessions";
@@ -23,8 +24,10 @@ function ProtectedRoute({
   component: React.ComponentType;
   allowedRole?: "student" | "counsellor";
 }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+
+  if (isLoading) return null;
 
   if (!isAuthenticated) {
     setLocation("/");
@@ -46,24 +49,22 @@ function Router() {
   return (
     <Layout>
       <Switch>
-        <Route path="/" component={Login} />
+        <Route path="/"       component={Login}  />
+        <Route path="/signup" component={Signup} />
 
         {/* Prep Space student dashboard */}
         <Route path="/dashboard">
           <ProtectedRoute component={StudentDashboard} allowedRole="student" />
         </Route>
 
-        {/* Self Space student dashboard (reuses same component, adapts via user.space) */}
+        {/* Self Space student dashboard */}
         <Route path="/self-dashboard">
           <ProtectedRoute component={StudentDashboard} allowedRole="student" />
         </Route>
 
         {/* Counsellor */}
         <Route path="/counsellor">
-          <ProtectedRoute
-            component={CounsellorDashboard}
-            allowedRole="counsellor"
-          />
+          <ProtectedRoute component={CounsellorDashboard} allowedRole="counsellor" />
         </Route>
 
         {/* Student detail (counsellor only) */}
