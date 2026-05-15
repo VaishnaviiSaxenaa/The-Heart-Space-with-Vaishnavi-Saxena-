@@ -1,0 +1,96 @@
+Fix all of these issues in one go:
+
+1. ROLES NOT SAVING TO SUPABASE
+After new user signs up their role 
+is not being saved to profiles table.
+Fix the handle_new_user trigger to 
+make sure role = 'prep_student' is 
+saved correctly.
+
+Also after signup immediately insert 
+profile manually as backup:
+await supabase.from('profiles').insert({
+  id: user.id,
+  email: user.email,
+  full_name: name,
+  role: 'prep_student'
+})
+
+2. REMOVE ALL DEMO/FAKE DATA
+Real users should see empty states 
+not fake demo data.
+
+Remove ALL hardcoded fake data from:
+- counsellor dashboard (fake students, 
+  fake sessions, fake stats)
+- student dashboard (fake progress, 
+  fake sessions)
+- All other pages
+
+Replace with clean empty states:
+- "No students yet" 
+- "No sessions booked yet"
+- "Start logging to see your progress"
+- Empty charts with helpful message
+
+3. FIX EXISTING USERS LOGIN
+Some users signed up but cannot login
+because profile was not created.
+
+When login succeeds with Supabase
+but no profile exists:
+→ Automatically create profile with
+  prep_student role
+→ Then login successfully
+→ Never show invalid credentials
+  if Supabase auth succeeds
+
+4. ROLE MANAGEMENT IN COUNSELLOR DASHBOARD
+Show all students from Supabase 
+profiles table.
+
+For each student show:
+- Name
+- Email  
+- Current role/plan
+- Join date
+- Edit role button
+
+Edit role dropdown options:
+- Prep Student (Plan 1)
+- Counseling Client (Plan 2)
+- Academy Student (Plan 3)
+- Admin
+
+When role changed → update Supabase
+profiles table immediately.
+
+Show real data only.
+Empty state if no students yet:
+"No students registered yet"
+
+5. FORGOT PASSWORD
+Add "Forgot password?" link below 
+the login form.
+
+Clicking it shows:
+- Email input
+- "Send Reset Link" gold button
+- Uses supabase.auth.resetPasswordForEmail(
+    email,
+    { redirectTo: 'https://the-heart-space-with-vaishnavi-saxe.vercel.app' }
+  )
+- Success message: 
+  "Check your email for reset link"
+- Back to login link
+
+6. REMOVE ALL FAKE DATA FROM ALL DASHBOARDS
+Every dashboard shows clean empty states
+for new users with no data.
+Never show hardcoded fake numbers or content.
+
+After ALL fixes run:
+pnpm run build
+git add .
+git commit -m "Fix roles, login, forgot password, remove demo data"
+git push origin main --force

@@ -9,7 +9,7 @@ import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Loader2, Calendar, Clock, Zap, CheckCircle2, Droplets, BookOpen, Dumbbell, LeafyGreen, Plus, Trash2 } from "lucide-react";
+import { Loader2, Calendar, Clock, Zap, BookOpen, Dumbbell, LeafyGreen, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -34,24 +34,6 @@ const MOODS = [
   { label: "Great",      color: OLIVE,     bg: "#DFF0DA", text: "#2A5020" },
 ];
 
-/* Static demo data */
-const PROGRESS_ITEMS = [
-  { label: "Academics",      pct: 72, color: OLIVE },
-  { label: "PhD Journey",    pct: 55, color: SAGE  },
-  { label: "Business",       pct: 80, color: GOLD  },
-  { label: "Health & Wellness", pct: 65, color: ROSE },
-];
-
-const HABITS = [
-  { icon: Brain_,   label: "Meditation",   streak: 7  },
-  { icon: BookOpen, label: "Reading",      streak: 5  },
-  { icon: Dumbbell, label: "Workout",      streak: 3  },
-  { icon: Droplets, label: "Water Intake", streak: 12 },
-  { icon: LeafyGreen, label: "No Sugar",   streak: 2  },
-];
-
-const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
-const DONE_DAYS = [true, true, true, true, false, false, false];
 
 /* Safe date formatter — never throws */
 function safeFormat(input: string | null | undefined, fmt: string, fallback = "—"): string {
@@ -83,11 +65,6 @@ class SectionBoundary extends Component<{ label: string; children: ReactNode }, 
     }
     return this.props.children;
   }
-}
-
-/* Tiny inline "Brain" icon since lucide doesn't export as Brain_ */
-function Brain_({ className }: { className?: string }) {
-  return <BookOpen className={className} />;
 }
 
 /* ─── Real analytics from localStorage ───── */
@@ -174,21 +151,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="font-serif text-lg font-semibold mb-4" style={{ color: CHARCOAL }}>{children}</h2>;
 }
 
-/* Circular progress SVG */
-function CircularProgress({ pct, size = 120 }: { pct: number; size?: number }) {
-  const r = 45; const c = 2 * Math.PI * r;
-  const offset = c * (1 - pct / 100);
-  return (
-    <svg width={size} height={size} viewBox="0 0 110 110">
-      <circle cx="55" cy="55" r={r} fill="none" stroke="#E8DDD0" strokeWidth="9" />
-      <circle cx="55" cy="55" r={r} fill="none" stroke={GOLD} strokeWidth="9"
-        strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
-        transform="rotate(-90 55 55)" style={{ transition: "stroke-dashoffset .6s ease" }} />
-      <text x="55" y="52" textAnchor="middle" style={{ fontSize: "18px", fontFamily: "'Playfair Display',serif", fill: CHARCOAL, fontWeight: 700 }}>{pct}%</text>
-      <text x="55" y="67" textAnchor="middle" style={{ fontSize: "9px", fill: MUTED }}>overall</text>
-    </svg>
-  );
-}
 
 /* ─── Today's Plan ───────────────────────── */
 type PlanCategory = "Study" | "Revision" | "Practice" | "Physical" | "Personal";
@@ -473,7 +435,6 @@ export default function StudentDashboard() {
 
   const sessionList      = Array.isArray(sessions) ? sessions : [];
   const upcomingSessions = sessionList.filter((s) => s.status === "scheduled").slice(0, 5);
-  const overallPct = Math.round(PROGRESS_ITEMS.reduce((a, p) => a + p.pct, 0) / PROGRESS_ITEMS.length);
 
   return (
     <div className="space-y-7 animate-in fade-in duration-500">
@@ -501,13 +462,12 @@ export default function StudentDashboard() {
       </div>
 
       {/* ── Stats row ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Sessions",   value: summary?.totalSessions ?? 0,  sub: "all time",   color: SIDEBAR },
-          { label: "Upcoming",          value: summary?.upcomingSessions ?? 0, sub: "scheduled", color: GOLD },
-          { label: "Completed",         value: summary?.completedSessions ?? 0, sub: "sessions", color: OLIVE },
-          { label: "Avg Mood",          value: summary?.averageMood ? `${summary.averageMood.toFixed(1)}/5` : "—", sub: "this month", color: ROSE },
-          { label: "Daily Progress",    value: "68%",  sub: "today",         color: SAGE },
+          { label: "Total Sessions",  value: summary?.totalSessions ?? 0,   sub: "all time",   color: SIDEBAR },
+          { label: "Upcoming",         value: summary?.upcomingSessions ?? 0, sub: "scheduled", color: GOLD },
+          { label: "Completed",        value: summary?.completedSessions ?? 0, sub: "sessions", color: OLIVE },
+          { label: "Avg Mood",         value: summary?.averageMood ? `${summary.averageMood.toFixed(1)}/5` : "—", sub: "this month", color: ROSE },
         ].map(({ label, value, sub, color }) => (
           <Card key={label} className="p-5">
             <div className="text-2xl md:text-3xl font-serif font-bold mb-1" style={{ color }}>{value}</div>
@@ -517,33 +477,35 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      {/* ── Today's Plan + Progress ── */}
+      {/* ── Today's Plan ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Plan — editable, saved in localStorage */}
         <TodaysPlan />
 
-        {/* Progress Overview */}
+        {/* Next session + quick links */}
         <Card className="p-6 flex flex-col">
-          <SectionTitle>Progress Overview</SectionTitle>
-          <div className="space-y-4 mb-6">
-            {PROGRESS_ITEMS.map(({ label, pct, color }) => (
-              <div key={label}>
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-xs font-medium" style={{ color: CHARCOAL }}>{label}</span>
-                  <span className="text-xs font-semibold" style={{ color }}>{pct}%</span>
-                </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#E8DDD0" }}>
-                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
-                </div>
+          <SectionTitle>Next Session</SectionTitle>
+          {upcomingSessions[0] ? (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4" style={{ background: CREAM }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${GOLD}22` }}>
+                <Calendar className="w-4 h-4" style={{ color: GOLD }} />
               </div>
-            ))}
-          </div>
-          <div className="flex justify-center mt-auto pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
-            <div className="text-center">
-              <CircularProgress pct={overallPct} />
-              <p className="text-xs font-medium mt-2" style={{ color: MUTED }}>Overall Progress</p>
+              <div>
+                <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
+                  {upcomingSessions[0].topic || "Counselling Session"}
+                </p>
+                <p className="text-xs" style={{ color: MUTED }}>
+                  {safeFormat(upcomingSessions[0].scheduledAt, "MMM d, h:mm a")}
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-8 rounded-2xl"
+              style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+              <Calendar className="w-8 h-8 mb-3 opacity-30" style={{ color: GOLD }} />
+              <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No upcoming sessions</p>
+              <p className="text-xs mt-1" style={{ color: MUTED }}>Book a session to get started</p>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -635,83 +597,45 @@ export default function StudentDashboard() {
         </Card>
       </div>
 
-      {/* ── Habits + Weekly Rhythm ── */}
+      {/* ── Wellbeing prompts ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Habits */}
         <Card className="p-6">
-          <SectionTitle>Habit Streaks</SectionTitle>
-          <div className="space-y-3">
-            {HABITS.map(({ icon: Icon, label, streak }) => (
-              <div key={label} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: CREAM }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${GOLD}22` }}>
-                  <Icon className="w-4 h-4" style={{ color: GOLD }} />
-                </div>
-                <span className="flex-1 text-sm font-medium" style={{ color: CHARCOAL }}>{label}</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-lg font-bold font-serif" style={{ color: streak >= 7 ? OLIVE : streak >= 5 ? GOLD : CHARCOAL }}>
-                    {streak}
-                  </span>
-                  <span className="text-xs" style={{ color: MUTED }}>day{streak !== 1 ? "s" : ""}</span>
-                  {streak >= 7 && <span className="text-sm">🔥</span>}
-                </div>
-              </div>
-            ))}
+          <SectionTitle>Habit Tracking</SectionTitle>
+          <div className="flex flex-col items-center justify-center py-8 text-center rounded-2xl"
+            style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+            <LeafyGreen className="w-8 h-8 mb-3 opacity-30" style={{ color: OLIVE }} />
+            <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No habits tracked yet</p>
+            <p className="text-xs mt-1" style={{ color: MUTED }}>
+              Log daily entries in the <strong>Daily Tracker</strong> to build streaks here.
+            </p>
           </div>
         </Card>
 
-        {/* Weekly Rhythm */}
         <Card className="p-6">
           <SectionTitle>Weekly Rhythm</SectionTitle>
-          <div className="flex gap-2">
-            {DAYS.map((day, idx) => {
-              const isToday = idx === new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-              const isSunday = idx === 6;
-              const done = DONE_DAYS[idx];
+          <div className="flex gap-2 mb-4">
+            {["M","T","W","T","F","S","S"].map((day, idx) => {
+              const todayIdx = (new Date().getDay() + 6) % 7;
+              const isToday  = idx === todayIdx;
               return (
                 <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-[11px] font-semibold" style={{ color: MUTED }}>{day}</span>
-                  <div
-                    className="w-full aspect-square rounded-xl flex items-center justify-center text-xs font-medium"
+                  <span className="text-[11px] font-semibold" style={{ color: isToday ? GOLD : MUTED }}>{day}</span>
+                  <div className="w-full aspect-square rounded-xl flex items-center justify-center"
                     style={{
-                      background: isSunday ? `${SAGE}33` : done ? `${OLIVE}22` : CREAM,
-                      border: `1.5px solid ${isSunday ? SAGE : done ? OLIVE : BORDER}`,
-                    }}
-                  >
-                    {isSunday ? (
-                      <span className="text-[9px]" style={{ color: OLIVE }}>Free</span>
-                    ) : done ? (
-                      <CheckCircle2 className="w-4 h-4" style={{ color: OLIVE }} />
-                    ) : (
-                      <span className="text-[11px]" style={{ color: BORDER }}>—</span>
-                    )}
+                      background: isToday ? `${GOLD}22` : CREAM,
+                      border: `1.5px solid ${isToday ? GOLD : BORDER}`,
+                    }}>
+                    <span className="text-[10px]" style={{ color: isToday ? GOLD : BORDER }}>
+                      {isToday ? "today" : "—"}
+                    </span>
                   </div>
                 </div>
               );
             })}
           </div>
-
-          {/* Mini session summary */}
-          <div className="mt-6 pt-5" style={{ borderTop: `1px solid ${BORDER}` }}>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: MUTED }}>Next Session</p>
-            {upcomingSessions[0] ? (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: CREAM }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${GOLD}22` }}>
-                  <Calendar className="w-4 h-4" style={{ color: GOLD }} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-                    {upcomingSessions[0].topic || "Counselling Session"}
-                  </p>
-                  <p className="text-xs" style={{ color: MUTED }}>
-                    {safeFormat(upcomingSessions[0].scheduledAt, "MMM d, h:mm a")}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm" style={{ color: MUTED }}>No upcoming sessions.</p>
-            )}
-          </div>
+          <p className="text-xs text-center" style={{ color: MUTED }}>
+            Daily Tracker entries will appear here week by week.
+          </p>
         </Card>
       </div>
 

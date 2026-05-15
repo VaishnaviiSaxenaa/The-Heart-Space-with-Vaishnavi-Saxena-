@@ -63,25 +63,6 @@ class SectionBoundary extends Component<{ label: string; children: ReactNode }, 
   }
 }
 
-/* Demo student data (shown when API is unavailable) */
-const DEMO_STUDENTS = [
-  {
-    id: "prep@heartspace.com", name: "Prep Space Student", space: "prep",
-    moodAvg: 3.8, sleepAvg: 7.2, riskFlag: false, totalSessions: 4,
-    latestMood: 4, lastSession: new Date(Date.now() - 5 * 86400000).toISOString(), upcomingSession: null, avatarUrl: null,
-  },
-  {
-    id: "counseling@heartspace.com", name: "Counseling Client", space: "self",
-    moodAvg: 2.1, sleepAvg: 5.8, riskFlag: true, totalSessions: 7,
-    latestMood: 2, lastSession: new Date(Date.now() - 2 * 86400000).toISOString(),
-    upcomingSession: { scheduledAt: new Date(Date.now() + 2 * 86400000).toISOString() }, avatarUrl: null,
-  },
-  {
-    id: "academy@heartspace.com", name: "Academy Student", space: "prep",
-    moodAvg: 4.2, sleepAvg: 7.8, riskFlag: false, totalSessions: 2,
-    latestMood: 5, lastSession: new Date(Date.now() - 10 * 86400000).toISOString(), upcomingSession: null, avatarUrl: null,
-  },
-];
 
 function MoodBar({ avg }: { avg: number | null | undefined }) {
   if (avg == null) return <span style={{ color: MUTED }}>No data</span>;
@@ -329,7 +310,7 @@ export default function CounsellorDashboard() {
   const students: StudentCardData[] = (() => {
     try {
       const list = Array.isArray(overviews) ? overviews : [];
-      if (isError || (!isLoading && !list.length)) return DEMO_STUDENTS;
+      if (isError || !list.length) return [];
       return list.map((o) => ({
         id:             o.student.id,
         name:           o.student.name ?? "Student",

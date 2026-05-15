@@ -70,7 +70,16 @@ export default function Signup() {
         return;
       }
 
-      /* ── Step 3: Resolve profile (may not exist yet on first sign-up) ── */
+      /* ── Step 3: Ensure profile exists, then fetch it ── */
+      /* Upsert covers the case where the DB trigger didn't fire */
+      try {
+        await supabase.from("profiles").upsert({
+          id:        signInData.user.id,
+          full_name: v.fullName,
+          role:      "prep_student",
+        }, { onConflict: "id", ignoreDuplicates: true });
+      } catch { /* ignore — profile may already exist with a different role */ }
+
       let profile: { full_name?: string | null; role?: string | null; avatar_url?: string | null } | null = null;
       try {
         const { data } = await supabase

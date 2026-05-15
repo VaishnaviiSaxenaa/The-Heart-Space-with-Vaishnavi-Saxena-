@@ -19,6 +19,8 @@ const SIDEBAR  = "#3D2314";
 const MUTED    = "#8C7B70";
 const BORDER   = "#E8DDD0";
 
+const RESET_REDIRECT = "https://the-heart-space-with-vaishnavi-saxe.vercel.app";
+
 const loginSchema = z.object({
   email:    z.string().email("Please enter a valid email"),
   password: z.string().min(1, "Password is required"),
@@ -31,13 +33,11 @@ interface DemoAccount {
   role: "student" | "counsellor"; space: "prep" | "self" | null; redirect: string;
 }
 const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
-  /* Original replit.md demo accounts */
   "vaishnavi@heartspace.com":   { email: "vaishnavi@heartspace.com",   name: "Vaishnavi Saxena",   role: "counsellor", space: null,   redirect: "/counsellor"     },
   "counsellor@heartspace.com":  { email: "counsellor@heartspace.com",  name: "Dr. Priya Sharma",   role: "counsellor", space: null,   redirect: "/counsellor"     },
   "student1@heartspace.com":    { email: "student1@heartspace.com",    name: "Arjun Mehta",        role: "student",    space: "prep", redirect: "/dashboard"      },
   "student2@heartspace.com":    { email: "student2@heartspace.com",    name: "Sneha Kapoor",       role: "student",    space: "prep", redirect: "/dashboard"      },
   "student3@heartspace.com":    { email: "student3@heartspace.com",    name: "Rohan Verma",        role: "student",    space: "self", redirect: "/self-dashboard" },
-  /* New demo accounts */
   "prep@heartspace.com":        { email: "prep@heartspace.com",        name: "Prep Space Student", role: "student",    space: "prep", redirect: "/dashboard"      },
   "counseling@heartspace.com":  { email: "counseling@heartspace.com",  name: "Counseling Client",  role: "student",    space: "self", redirect: "/self-dashboard" },
   "academy@heartspace.com":     { email: "academy@heartspace.com",     name: "Academy Student",    role: "student",    space: "prep", redirect: "/dashboard"      },
@@ -45,14 +45,11 @@ const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
 const DEMO_PASSWORDS = ["heartspace123", "password123"];
 
 function isDemoMatch(email: string, password: string): DemoAccount | null {
-  const e = email.toLowerCase().trim();
-  const p = password.trim();
-  const account = DEMO_ACCOUNTS[e];
-  if (account && DEMO_PASSWORDS.includes(p)) return account;
+  const account = DEMO_ACCOUNTS[email.toLowerCase().trim()];
+  if (account && DEMO_PASSWORDS.includes(password.trim())) return account;
   return null;
 }
 
-/* Race a promise against a timeout */
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([
     promise.catch(() => null),
@@ -60,11 +57,138 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   ]);
 }
 
+/* ── Logo ─────────────────────────────────────────────────── */
+function HeartLogo() {
+  return (
+    <svg width="28" height="26" viewBox="0 0 22 20" fill="none">
+      <path d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
+        stroke={GOLD} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="8"  y1="7"   x2="6"  y2="4"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+      <line x1="11" y1="5.5" x2="11" y2="2"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+      <line x1="14" y1="7"   x2="16" y2="4"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BrandHeader() {
+  return (
+    <div className="text-center mb-10">
+      <div className="flex items-center justify-center gap-3 mb-2">
+        <HeartLogo />
+        <h1 className="text-5xl font-serif font-bold tracking-tight" style={{ color: SIDEBAR }}>HeartSpace</h1>
+      </div>
+      <p className="font-serif italic" style={{ color: GOLD }}>with Vaishnavi Saxena</p>
+      <div className="mt-3 mx-auto w-12 h-px rounded-full" style={{ background: GOLD }} />
+    </div>
+  );
+}
+
+/* ── Forgot password view ─────────────────────────────────── */
+function ForgotPasswordView({ onBack }: { onBack: () => void }) {
+  const { toast } = useToast();
+  const [email,   setEmail]   = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent,    setSent]    = useState(false);
+
+  async function handleSend() {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes("@")) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    setSending(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: RESET_REDIRECT,
+      });
+      if (error) throw error;
+      setSent(true);
+    } catch (err: any) {
+      toast({ title: "Failed to send", description: err?.message ?? "Please try again.", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-8"
+      style={{
+        background:     "rgba(243,237,230,0.96)",
+        backdropFilter: "blur(20px)",
+        border:         `1px solid ${BORDER}`,
+        boxShadow:      "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
+      }}
+    >
+      {sent ? (
+        <div className="text-center py-4">
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: `${GOLD}22` }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M20 6L9 17L4 12" stroke={GOLD} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h2 className="font-serif text-xl font-bold mb-2" style={{ color: SIDEBAR }}>Check your email</h2>
+          <p className="text-sm mb-6" style={{ color: MUTED }}>
+            We've sent a password reset link to <strong>{email}</strong>. Check your inbox and follow the link to reset your password.
+          </p>
+          <button onClick={onBack}
+            className="text-sm font-semibold underline underline-offset-2"
+            style={{ color: GOLD }}>
+            Back to login
+          </button>
+        </div>
+      ) : (
+        <>
+          <h2 className="font-serif text-xl font-bold mb-1" style={{ color: SIDEBAR }}>Reset password</h2>
+          <p className="text-sm mb-6" style={{ color: MUTED }}>Enter your email and we'll send you a reset link.</p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-semibold block mb-1.5" style={{ color: SIDEBAR }}>Email</label>
+              <Input
+                type="email"
+                placeholder="hello@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
+                className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
+                style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }}
+              />
+            </div>
+
+            <Button
+              onClick={handleSend}
+              disabled={sending}
+              className="w-full h-12 rounded-xl font-semibold text-base transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+                color: CREAM, border: "none",
+                boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
+              }}
+            >
+              {sending ? "Sending…" : "Send Reset Link"}
+            </Button>
+
+            <p className="text-center text-sm" style={{ color: MUTED }}>
+              <button onClick={onBack} className="font-semibold underline underline-offset-2" style={{ color: GOLD }}>
+                Back to login
+              </button>
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── Main login view ──────────────────────────────────────── */
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login }       = useAuth();
   const { toast }       = useToast();
   const [isPending, setIsPending] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -86,14 +210,36 @@ export default function Login() {
       if (authResult?.data?.session) {
         const { data } = authResult;
 
-        /* Fetch profile with 3s timeout; fall back gracefully */
-        const profileResult = await withTimeout(
-          supabase.from("profiles").select("full_name, role, avatar_url").eq("id", data.user.id).single(),
-          3000,
-        );
-        const profile = profileResult?.data ?? null;
-        const role    = (profile?.role as SupabaseRole) ?? "prep_student";
-        const mapped  = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
+        /* Fetch profile */
+        let profile: { full_name?: string | null; role?: string | null; avatar_url?: string | null } | null = null;
+        try {
+          const { data: p } = await supabase
+            .from("profiles")
+            .select("full_name, role, avatar_url")
+            .eq("id", data.user.id)
+            .single();
+          profile = p ?? null;
+        } catch { /* profile not found */ }
+
+        /* Auto-create profile if missing (existing user who signed up before trigger was set) */
+        if (!profile) {
+          try {
+            await supabase.from("profiles").upsert({
+              id:        data.user.id,
+              full_name: data.user.email?.split("@")[0] ?? "User",
+              role:      "prep_student",
+            }, { onConflict: "id" });
+            const { data: fresh } = await supabase
+              .from("profiles")
+              .select("full_name, role, avatar_url")
+              .eq("id", data.user.id)
+              .single();
+            profile = fresh ?? null;
+          } catch { /* use defaults */ }
+        }
+
+        const role   = (profile?.role as SupabaseRole) ?? "prep_student";
+        const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
 
         login({
           id:        data.user.id as any,
@@ -108,9 +254,7 @@ export default function Login() {
         setLocation(mapped.redirect);
         return;
       }
-    } catch {
-      /* Supabase unavailable or wrong credentials — fall through to demo */
-    }
+    } catch { /* fall through to demo */ }
 
     /* ── Step 2: Demo account fallback ─────────────────────── */
     const demo = isDemoMatch(email, password);
@@ -128,16 +272,24 @@ export default function Login() {
     setIsPending(false);
     toast({
       title:       "Login failed",
-      description: "Invalid email or password. Check the demo credentials below.",
+      description: "Invalid email or password.",
       variant:     "destructive",
     });
   }
 
+  const bgStyle = {
+    background: `linear-gradient(155deg, ${CREAM} 0%, #EDE4D8 55%, #E8DDD0 100%)`,
+  };
+
+  const cardStyle = {
+    background:     "rgba(243,237,230,0.96)",
+    backdropFilter: "blur(20px)",
+    border:         `1px solid ${BORDER}`,
+    boxShadow:      "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
+  };
+
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: `linear-gradient(155deg, ${CREAM} 0%, #EDE4D8 55%, #E8DDD0 100%)` }}
-    >
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden" style={bgStyle}>
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl" style={{ background: GOLD }} />
         <div className="absolute bottom-10 -left-20 w-72 h-72 rounded-full opacity-15 blur-3xl" style={{ background: "#D4A5A5" }} />
@@ -145,91 +297,82 @@ export default function Login() {
       </div>
 
       <div className="w-full max-w-[420px] z-10">
-        {/* Brand */}
-        <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <svg width="28" height="26" viewBox="0 0 22 20" fill="none">
-              <path d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
-                stroke={GOLD} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              <line x1="8"  y1="7"   x2="6"  y2="4"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-              <line x1="11" y1="5.5" x2="11" y2="2"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-              <line x1="14" y1="7"   x2="16" y2="4"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-            </svg>
-            <h1 className="text-5xl font-serif font-bold tracking-tight" style={{ color: SIDEBAR }}>HeartSpace</h1>
-          </div>
-          <p className="font-serif italic" style={{ color: GOLD }}>with Vaishnavi Saxena</p>
-          <div className="mt-3 mx-auto w-12 h-px rounded-full" style={{ background: GOLD }} />
-        </div>
+        <BrandHeader />
 
-        {/* Card */}
-        <div
-          className="rounded-2xl p-8"
-          style={{
-            background:     "rgba(243,237,230,0.96)",
-            backdropFilter: "blur(20px)",
-            border:         "1px solid rgba(216,207,196,0.7)",
-            boxShadow:      "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
-          }}
-        >
-          <h2 className="font-serif text-xl font-bold mb-1" style={{ color: SIDEBAR }}>Welcome back</h2>
-          <p className="text-sm mb-6" style={{ color: MUTED }}>Sign in to your account</p>
+        {showForgot ? (
+          <ForgotPasswordView onBack={() => setShowForgot(false)} />
+        ) : (
+          <>
+            <div className="rounded-2xl p-8" style={cardStyle}>
+              <h2 className="font-serif text-xl font-bold mb-1" style={{ color: SIDEBAR }}>Welcome back</h2>
+              <p className="text-sm mb-6" style={{ color: MUTED }}>Sign in to your account</p>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              {(["email", "password"] as const).map((name) => (
-                <FormField key={name} control={form.control} name={name}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold capitalize" style={{ color: SIDEBAR }}>{name}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type={name === "password" ? "password" : "email"}
-                          placeholder={name === "email" ? "hello@example.com" : "••••••••"}
-                          {...field}
-                          className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
-                          style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                  {(["email", "password"] as const).map((name) => (
+                    <FormField key={name} control={form.control} name={name}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-semibold capitalize" style={{ color: SIDEBAR }}>{name}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type={name === "password" ? "password" : "email"}
+                              placeholder={name === "email" ? "hello@example.com" : "••••••••"}
+                              {...field}
+                              className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
+                              style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
 
-              <Button
-                type="submit" disabled={isPending}
-                className="w-full h-12 rounded-xl font-semibold text-base mt-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
-                  color: CREAM, border: "none",
-                  boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
-                }}
-              >
-                {isPending ? "Signing in…" : "Enter HeartSpace"}
-              </Button>
-            </form>
-          </Form>
+                  <div className="text-right -mt-2">
+                    <button type="button" onClick={() => setShowForgot(true)}
+                      className="text-xs font-medium underline underline-offset-2"
+                      style={{ color: MUTED }}>
+                      Forgot password?
+                    </button>
+                  </div>
 
-          <p className="text-center text-sm mt-5" style={{ color: MUTED }}>
-            New here?{" "}
-            <a href="/signup" className="font-semibold underline underline-offset-2" style={{ color: GOLD }}>
-              Create an account
-            </a>
-          </p>
-        </div>
+                  <Button
+                    type="submit" disabled={isPending}
+                    className="w-full h-12 rounded-xl font-semibold text-base transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                    style={{
+                      background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+                      color: CREAM, border: "none",
+                      boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
+                    }}
+                  >
+                    {isPending ? "Signing in…" : "Enter HeartSpace"}
+                  </Button>
+                </form>
+              </Form>
 
-        {/* Demo hint */}
-        <div className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
-          style={{ background: "rgba(230,167,86,.12)", border: "1px solid rgba(230,167,86,.25)", color: SIDEBAR }}>
-          <p className="font-semibold mb-1.5">Demo accounts — password: <code className="font-mono">password123</code> or <code className="font-mono">heartspace123</code></p>
-          <div className="grid grid-cols-1 gap-0.5" style={{ color: MUTED }}>
-            <span>vaishnavi@heartspace.com → Counsellor</span>
-            <span>counsellor@heartspace.com → Counsellor</span>
-            <span>student1@heartspace.com → Prep student</span>
-            <span>student2@heartspace.com → Prep student</span>
-            <span>student3@heartspace.com → Self space</span>
-          </div>
-        </div>
+              <p className="text-center text-sm mt-5" style={{ color: MUTED }}>
+                New here?{" "}
+                <a href="/signup" className="font-semibold underline underline-offset-2" style={{ color: GOLD }}>
+                  Create an account
+                </a>
+              </p>
+            </div>
+
+            {/* Demo hint */}
+            <div className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
+              style={{ background: "rgba(230,167,86,.12)", border: "1px solid rgba(230,167,86,.25)", color: SIDEBAR }}>
+              <p className="font-semibold mb-1.5">Demo accounts — password: <code className="font-mono">password123</code> or <code className="font-mono">heartspace123</code></p>
+              <div className="grid grid-cols-1 gap-0.5" style={{ color: MUTED }}>
+                <span>vaishnavi@heartspace.com → Counsellor</span>
+                <span>counsellor@heartspace.com → Counsellor</span>
+                <span>student1@heartspace.com → Prep student</span>
+                <span>student2@heartspace.com → Prep student</span>
+                <span>student3@heartspace.com → Self space</span>
+              </div>
+            </div>
+          </>
+        )}
 
         <p className="text-center text-xs mt-4" style={{ color: MUTED }}>A safe space for student wellbeing</p>
       </div>
