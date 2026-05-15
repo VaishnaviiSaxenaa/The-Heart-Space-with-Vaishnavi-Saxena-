@@ -71,16 +71,20 @@ export default function Signup() {
       }
 
       /* ── Step 3: Resolve profile (may not exist yet on first sign-up) ── */
-      const profileResult = await supabase
-        .from("profiles")
-        .select("full_name, role, avatar_url")
-        .eq("id", signInData.user.id)
-        .single()
-        .catch(() => ({ data: null }));
+      let profile: { full_name?: string | null; role?: string | null; avatar_url?: string | null } | null = null;
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("full_name, role, avatar_url")
+          .eq("id", signInData.user.id)
+          .single();
+        profile = data ?? null;
+      } catch {
+        /* profile row not ready yet — use safe defaults */
+      }
 
-      const profile = (profileResult as any).data ?? null;
-      const role    = (profile?.role as SupabaseRole) ?? "prep_student";
-      const mapped  = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
+      const role   = (profile?.role as SupabaseRole) ?? "prep_student";
+      const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
 
       login({
         id:        signInData.user.id as any,
