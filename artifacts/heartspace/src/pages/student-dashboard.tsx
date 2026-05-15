@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, Component, ReactNode } from "react";
 import { useAuth } from "../lib/auth";
 import {
   useGetDashboardSummary, useListMoods, useCreateMood, useListSessions,
@@ -52,6 +52,38 @@ const HABITS = [
 
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const DONE_DAYS = [true, true, true, true, false, false, false];
+
+/* Safe date formatter — never throws */
+function safeFormat(input: string | null | undefined, fmt: string, fallback = "—"): string {
+  try {
+    if (!input) return fallback;
+    const d = new Date(input);
+    if (isNaN(d.getTime())) return fallback;
+    return format(d, fmt);
+  } catch {
+    return fallback;
+  }
+}
+
+/* Section-level error boundary — shows empty state instead of crashing the whole page */
+class SectionBoundary extends Component<{ label: string; children: ReactNode }, { crashed: boolean }> {
+  constructor(props: { label: string; children: ReactNode }) {
+    super(props);
+    this.state = { crashed: false };
+  }
+  static getDerivedStateFromError() { return { crashed: true }; }
+  componentDidCatch(err: unknown) { console.error(`[${this.props.label}] crashed:`, err); }
+  render() {
+    if (this.state.crashed) {
+      return (
+        <div className="rounded-2xl p-6 text-center" style={{ background: "#FAF7F2", border: "1.5px dashed #E8DDD0" }}>
+          <p className="text-sm" style={{ color: "#8C7B70" }}>{this.props.label} is temporarily unavailable.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /* Tiny inline "Brain" icon since lucide doesn't export as Brain_ */
 function Brain_({ className }: { className?: string }) {
@@ -562,7 +594,7 @@ export default function StudentDashboard() {
                 return (
                   <div key={m.id} className="flex items-center justify-between px-3 py-2 rounded-xl"
                     style={{ background: mood?.bg ?? CARD }}>
-                    <span className="text-xs" style={{ color: MUTED }}>{format(new Date(m.createdAt), "MMM d")}</span>
+                    <span className="text-xs" style={{ color: MUTED }}>{safeFormat(m.createdAt, "MMM d")}</span>
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
                       style={{ background: mood?.color ?? GOLD, color: "white" }}>
                       {mood?.label ?? m.mood}
@@ -671,7 +703,7 @@ export default function StudentDashboard() {
                     {upcomingSessions[0].topic || "Counselling Session"}
                   </p>
                   <p className="text-xs" style={{ color: MUTED }}>
-                    {format(new Date(upcomingSessions[0].scheduledAt), "MMM d, h:mm a")}
+                    {safeFormat(upcomingSessions[0].scheduledAt, "MMM d, h:mm a")}
                   </p>
                 </div>
               </div>

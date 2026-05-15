@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component, ReactNode } from "react";
 import { useGetStudentsOverview, useGetDashboardSummary } from "../lib/api-client-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Calendar, AlertTriangle, TrendingUp, Users, ChevronDown, Check, X } from "lucide-react";
@@ -30,6 +30,38 @@ const ROLE_LABELS: Record<string, string> = {
   academy_student:   "Academy Student",
 };
 const ALL_ROLES: SupabaseRole[] = ["admin", "prep_student", "counseling_client", "academy_student"];
+
+/* Safe date formatter — never throws */
+function safeFormat(input: string | null | undefined, fmt: string, fallback = "—"): string {
+  try {
+    if (!input) return fallback;
+    const d = new Date(input);
+    if (isNaN(d.getTime())) return fallback;
+    return format(d, fmt);
+  } catch {
+    return fallback;
+  }
+}
+
+/* Section-level error boundary — shows empty state instead of crashing the whole page */
+class SectionBoundary extends Component<{ label: string; children: ReactNode }, { crashed: boolean }> {
+  constructor(props: { label: string; children: ReactNode }) {
+    super(props);
+    this.state = { crashed: false };
+  }
+  static getDerivedStateFromError() { return { crashed: true }; }
+  componentDidCatch(err: unknown) { console.error(`[${this.props.label}] crashed:`, err); }
+  render() {
+    if (this.state.crashed) {
+      return (
+        <div className="rounded-2xl p-6 text-center" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+          <p className="text-sm" style={{ color: MUTED }}>{this.props.label} is temporarily unavailable.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /* Demo student data (shown when API is unavailable) */
 const DEMO_STUDENTS = [
@@ -88,7 +120,7 @@ function StudentCard({ s }: { s: StudentCardData }) {
             <Avatar className="h-12 w-12">
               <AvatarImage src={s.avatarUrl || undefined} />
               <AvatarFallback className="font-bold text-sm" style={{ background: `${DARK}18`, color: DARK }}>
-                {s.name.substring(0, 2).toUpperCase()}
+                {(s.name ?? "??").substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             {s.riskFlag && (
@@ -115,8 +147,8 @@ function StudentCard({ s }: { s: StudentCardData }) {
               </div>
               {mood !== null && (
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
-                  style={{ background: MOOD_BG[mood], color: MOOD_COLORS[mood] }}>
-                  {MOOD_LABELS[mood]}
+                  style={{ background: MOOD_BG[mood] ?? CREAM, color: MOOD_COLORS[mood] ?? MUTED }}>
+                  {MOOD_LABELS[mood] ?? mood}
                 </span>
               )}
             </div>
@@ -134,8 +166,10 @@ function StudentCard({ s }: { s: StudentCardData }) {
               </div>
             </div>
             <div className="mt-2.5 text-xs" style={{ color: MUTED }}>
-              <span>{s.totalSessions} session{s.totalSessions !== 1 ? "s" : ""}</span>
-              {s.lastSession && <span className="ml-2">· Last: {format(new Date(s.lastSession), "MMM d")}</span>}
+              <span>{s.totalSessions ?? 0} session{s.totalSessions !== 1 ? "s" : ""}</span>
+              {s.lastSession && (
+                <span className="ml-2">· Last: {safeFormat(s.lastSession, "MMM d")}</span>
+              )}
             </div>
           </div>
         </div>
@@ -143,7 +177,7 @@ function StudentCard({ s }: { s: StudentCardData }) {
           <div className="mt-4 pt-3 flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-xl"
             style={{ borderTop: `1px solid ${BORDER}`, background: `${GOLD}14`, color: "#7A5510" }}>
             <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-            Next: {format(new Date(s.upcomingSession.scheduledAt), "MMM d, h:mm a")}
+            Next: {safeFormat(s.upcomingSession.scheduledAt, "MMM d, h:mm a")}
           </div>
         )}
       </div>
@@ -157,11 +191,10 @@ interface Profile {
   full_name: string | null;
   role: string;
   avatar_url: string | null;
-  email?: string;
 }
 
 function StudentProfilesManager() {
-  const { toast } = useToast();
+  const { toast }         = useToast();
   const [profiles, setProfiles]   = useState<Profile[]>([]);
   const [loading, setLoading]     = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -176,17 +209,22 @@ function StudentProfilesManager() {
       .then(({ data, error }) => {
         if (!error && data) setProfiles(data as Profile[]);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   async function handleSaveRole(id: string) {
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ role: editRole }).eq("id", id);
-    if (error) {
-      toast({ title: "Failed to update role", description: error.message, variant: "destructive" });
-    } else {
-      setProfiles((p) => p.map((pr) => pr.id === id ? { ...pr, role: editRole } : pr));
-      toast({ title: "Role updated", description: `Profile updated to "${ROLE_LABELS[editRole] ?? editRole}"` });
+    try {
+      const { error } = await supabase.from("profiles").update({ role: editRole }).eq("id", id);
+      if (error) {
+        toast({ title: "Failed to update role", description: error.message, variant: "destructive" });
+      } else {
+        setProfiles((p) => p.map((pr) => pr.id === id ? { ...pr, role: editRole } : pr));
+        toast({ title: "Role updated", description: `Updated to "${ROLE_LABELS[editRole] ?? editRole}"` });
+      }
+    } catch (err: any) {
+      toast({ title: "Failed to update role", description: err?.message ?? "Unknown error", variant: "destructive" });
     }
     setSaving(false);
     setEditingId(null);
@@ -194,7 +232,6 @@ function StudentProfilesManager() {
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 10px rgba(44,24,16,.07)" }}>
-      {/* Header */}
       <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: `1px solid ${BORDER}`, background: CREAM }}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${GOLD}22` }}>
@@ -210,7 +247,6 @@ function StudentProfilesManager() {
         </span>
       </div>
 
-      {/* Body */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: GOLD }} />
@@ -227,31 +263,20 @@ function StudentProfilesManager() {
             const initials  = (p.full_name ?? "??").substring(0, 2).toUpperCase();
             return (
               <div key={p.id} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-[#FAF7F2]">
-                {/* Avatar */}
                 <Avatar className="h-9 w-9 flex-shrink-0">
                   <AvatarImage src={p.avatar_url || undefined} />
                   <AvatarFallback className="text-xs font-bold" style={{ background: `${DARK}14`, color: DARK }}>{initials}</AvatarFallback>
                 </Avatar>
-
-                {/* Name */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: CHARCOAL }}>{p.full_name ?? "Unknown"}</p>
-                  <p className="text-xs truncate" style={{ color: MUTED }}>{p.id.length < 30 ? p.id : ""}</p>
                 </div>
-
-                {/* Role — view or edit */}
                 {isEditing ? (
                   <div className="flex items-center gap-2">
                     <div className="relative">
-                      <select
-                        value={editRole}
-                        onChange={(e) => setEditRole(e.target.value as SupabaseRole)}
+                      <select value={editRole} onChange={(e) => setEditRole(e.target.value as SupabaseRole)}
                         className="appearance-none pl-3 pr-8 py-1.5 rounded-xl text-xs font-semibold cursor-pointer outline-none"
-                        style={{ background: `${GOLD}18`, border: `1.5px solid ${GOLD}55`, color: CHARCOAL }}
-                      >
-                        {ALL_ROLES.map((r) => (
-                          <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                        ))}
+                        style={{ background: `${GOLD}18`, border: `1.5px solid ${GOLD}55`, color: CHARCOAL }}>
+                        {ALL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
                       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" style={{ color: MUTED }} />
                     </div>
@@ -271,12 +296,11 @@ function StudentProfilesManager() {
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
                       style={{
                         background: p.role === "admin" ? `${DARK}14` : p.role === "prep_student" ? `${GOLD}22` : p.role === "counseling_client" ? `${SAGE}33` : `${OLIVE}22`,
-                        color: p.role === "admin" ? DARK : p.role === "prep_student" ? "#7A5510" : p.role === "counseling_client" ? OLIVE : OLIVE,
+                        color: p.role === "admin" ? DARK : p.role === "prep_student" ? "#7A5510" : OLIVE,
                       }}>
                       {ROLE_LABELS[p.role] ?? p.role}
                     </span>
-                    <button
-                      onClick={() => { setEditingId(p.id); setEditRole((p.role as SupabaseRole) ?? "prep_student"); }}
+                    <button onClick={() => { setEditingId(p.id); setEditRole((p.role as SupabaseRole) ?? "prep_student"); }}
                       className="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-70"
                       style={{ background: `${GOLD}18`, color: "#7A5510" }}>
                       Edit
@@ -302,24 +326,30 @@ export default function CounsellorDashboard() {
   const greetWord = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = user?.name?.split(" ")[0] ?? "";
 
-  const students: StudentCardData[] = isError || (!isLoading && !overviews?.length)
-    ? DEMO_STUDENTS
-    : (overviews ?? []).map((o) => ({
-        id: o.student.id, name: o.student.name,
-        space: (o.student as any).space ?? null,
-        moodAvg: (o as any).moodAvg ?? null,
-        sleepAvg: (o as any).sleepAvg ?? null,
-        riskFlag: (o as any).riskFlag ?? false,
-        totalSessions: o.totalSessions,
-        latestMood: o.latestMood ?? null,
-        lastSession: o.lastSession ?? null,
+  const students: StudentCardData[] = (() => {
+    try {
+      if (isError || (!isLoading && !overviews?.length)) return DEMO_STUDENTS;
+      return (overviews ?? []).map((o) => ({
+        id:             o.student.id,
+        name:           o.student.name ?? "Student",
+        space:          (o.student as any).space ?? null,
+        moodAvg:        (o as any).moodAvg ?? null,
+        sleepAvg:       (o as any).sleepAvg ?? null,
+        riskFlag:       (o as any).riskFlag ?? false,
+        totalSessions:  o.totalSessions ?? 0,
+        latestMood:     o.latestMood ?? null,
+        lastSession:    o.lastSession ?? null,
         upcomingSession: o.upcomingSession ?? null,
-        avatarUrl: o.student.avatarUrl ?? null,
+        avatarUrl:      o.student.avatarUrl ?? null,
       }));
+    } catch {
+      return DEMO_STUDENTS;
+    }
+  })();
 
   const riskCount     = students.filter((s) => s.riskFlag).length;
   const upcomingCount = students.filter((s) => s.upcomingSession).length;
-  const totalSessions = globalSummary?.totalSessions ?? students.reduce((a, s) => a + s.totalSessions, 0);
+  const totalSessions = globalSummary?.totalSessions ?? students.reduce((a, s) => a + (s.totalSessions ?? 0), 0);
 
   return (
     <div className="space-y-7 animate-in fade-in duration-500">
@@ -342,73 +372,81 @@ export default function CounsellorDashboard() {
 
       {/* Risk banner */}
       {riskCount > 0 && (
-        <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: "#FCE4E4", border: `1.5px solid ${RISK_RED}44` }}>
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: RISK_RED }} />
-          <div>
-            <p className="font-semibold text-sm" style={{ color: RISK_RED }}>
-              {riskCount} student{riskCount > 1 ? "s" : ""} flagged for immediate attention
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: "#8B2020" }}>
-              Mood score ≤ 2 logged for 3+ consecutive days. Click the student card to review their data.
-            </p>
+        <SectionBoundary label="Risk Banner">
+          <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: "#FCE4E4", border: `1.5px solid ${RISK_RED}44` }}>
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: RISK_RED }} />
+            <div>
+              <p className="font-semibold text-sm" style={{ color: RISK_RED }}>
+                {riskCount} student{riskCount > 1 ? "s" : ""} flagged for immediate attention
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "#8B2020" }}>
+                Mood score ≤ 2 logged for 3+ consecutive days. Click the student card to review their data.
+              </p>
+            </div>
           </div>
-        </div>
+        </SectionBoundary>
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total Students",    value: students.length, sub: "enrolled",  color: DARK,     icon: "👤" },
-          { label: "Sessions Upcoming", value: upcomingCount,   sub: "scheduled", color: "#8A5A10", icon: "📅" },
-          { label: "Total Sessions",    value: isLoading ? "…" : totalSessions, sub: "all time", color: OLIVE, icon: "📊" },
-          { label: "Needs Attention",   value: riskCount,       sub: "risk flag", color: riskCount ? RISK_RED : MUTED, icon: "⚠️" },
-        ].map(({ label, value, sub, color, icon }) => (
-          <div key={label} className="rounded-2xl p-5"
-            style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 10px rgba(44,24,16,.07)" }}>
-            <div className="text-2xl mb-1">{icon}</div>
-            <div className="text-3xl font-serif font-bold mb-1" style={{ color }}>{value}</div>
-            <div className="text-xs font-semibold" style={{ color: CHARCOAL }}>{label}</div>
-            <div className="text-xs" style={{ color: MUTED }}>{sub}</div>
-          </div>
-        ))}
-      </div>
+      <SectionBoundary label="Stats">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "Total Students",    value: students.length, sub: "enrolled",  color: DARK,     icon: "👤" },
+            { label: "Sessions Upcoming", value: upcomingCount,   sub: "scheduled", color: "#8A5A10", icon: "📅" },
+            { label: "Total Sessions",    value: isLoading ? "…" : totalSessions,  sub: "all time",  color: OLIVE, icon: "📊" },
+            { label: "Needs Attention",   value: riskCount,       sub: "risk flag", color: riskCount ? RISK_RED : MUTED, icon: "⚠️" },
+          ].map(({ label, value, sub, color, icon }) => (
+            <div key={label} className="rounded-2xl p-5"
+              style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 10px rgba(44,24,16,.07)" }}>
+              <div className="text-2xl mb-1">{icon}</div>
+              <div className="text-3xl font-serif font-bold mb-1" style={{ color }}>{value}</div>
+              <div className="text-xs font-semibold" style={{ color: CHARCOAL }}>{label}</div>
+              <div className="text-xs" style={{ color: MUTED }}>{sub}</div>
+            </div>
+          ))}
+        </div>
+      </SectionBoundary>
 
       {/* Students grid */}
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="font-serif text-xl font-semibold" style={{ color: CHARCOAL }}>Your Students</h2>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full" style={{ background: RISK_RED }} />
-            <span className="text-xs" style={{ color: MUTED }}>Needs attention</span>
-            <div className="w-2 h-2 rounded-full ml-2" style={{ background: OLIVE }} />
-            <span className="text-xs" style={{ color: MUTED }}>On track</span>
+      <SectionBoundary label="Student Cards">
+        <div>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-serif text-xl font-semibold" style={{ color: CHARCOAL }}>Your Students</h2>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full" style={{ background: RISK_RED }} />
+              <span className="text-xs" style={{ color: MUTED }}>Needs attention</span>
+              <div className="w-2 h-2 rounded-full ml-2" style={{ background: OLIVE }} />
+              <span className="text-xs" style={{ color: MUTED }}>On track</span>
+            </div>
           </div>
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-2xl p-5 animate-pulse" style={{ background: CARD, border: `1px solid ${BORDER}`, height: 160 }} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {students.map((s) => <StudentCard key={String(s.id)} s={s} />)}
+              {students.length === 0 && (
+                <div className="col-span-2 text-center py-16 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+                  <TrendingUp className="w-8 h-8 mx-auto mb-3 opacity-30" style={{ color: GOLD }} />
+                  <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No students assigned yet</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+      </SectionBoundary>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl p-5 animate-pulse" style={{ background: CARD, border: `1px solid ${BORDER}`, height: 160 }} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {students.map((s) => <StudentCard key={String(s.id)} s={s} />)}
-            {students.length === 0 && (
-              <div className="col-span-2 text-center py-16 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
-                <TrendingUp className="w-8 h-8 mx-auto mb-3 opacity-30" style={{ color: GOLD }} />
-                <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No students assigned yet</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Supabase student profiles management ── */}
-      <div>
-        <h2 className="font-serif text-xl font-semibold mb-5" style={{ color: CHARCOAL }}>Registered User Profiles</h2>
-        <StudentProfilesManager />
-      </div>
+      {/* Supabase student profiles management */}
+      <SectionBoundary label="Profile Manager">
+        <div>
+          <h2 className="font-serif text-xl font-semibold mb-5" style={{ color: CHARCOAL }}>Registered User Profiles</h2>
+          <StudentProfilesManager />
+        </div>
+      </SectionBoundary>
     </div>
   );
 }
