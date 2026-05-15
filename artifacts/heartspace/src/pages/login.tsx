@@ -1,15 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLogin } from "@workspace/api-client-react";
+import { useLogin } from "../lib/api-client-react";
 import { useAuth } from "../lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,27 +65,10 @@ export default function Login() {
         }),
     },
   });
-  async function onSubmit(v: LoginFormValues) {
-    console.log("Form submitted", v);
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: v.email,
-      password: v.password,
+  function onSubmit(v: LoginFormValues) {
+    loginMutation.mutate({
+      data: { ...v, role: tab === "counsellor" ? "counsellor" : "student" },
     });
-
-    if (error) {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Login successful 💖",
-        description: "Welcome to HeartSpace",
-      });
-      console.log(data);
-    }
   }
 
   return (

@@ -3,7 +3,7 @@ import { useAuth } from "../lib/auth";
 import {
   useListSessions, useListUsers, useCreateSession, useUpdateSession,
   getListSessionsQueryKey, UpdateSessionBodyStatus,
-} from "@workspace/api-client-react";
+} from "../lib/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";

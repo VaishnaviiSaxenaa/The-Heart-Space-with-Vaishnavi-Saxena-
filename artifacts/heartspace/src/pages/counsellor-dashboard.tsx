@@ -1,4 +1,4 @@
-import { useGetStudentsOverview, useGetDashboardSummary } from "@workspace/api-client-react";
+import { useGetStudentsOverview, useGetDashboardSummary } from "../lib/api-client-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Calendar, AlertTriangle, Moon, Heart, TrendingUp } from "lucide-react";
 import { format } from "date-fns";

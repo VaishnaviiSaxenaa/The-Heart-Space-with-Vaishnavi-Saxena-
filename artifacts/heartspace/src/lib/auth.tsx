@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User } from "@workspace/api-client-react";
+import { createContext, useContext, useState, ReactNode } from "react";
+import { User } from "./api-client-react";
+import { setAuthTokenGetter } from "./api-client-react";
 
 interface AuthContextType {
   user: User | null;
@@ -11,12 +12,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+setAuthTokenGetter(() => localStorage.getItem("heartspace_token"));
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem("heartspace_user");
     return saved ? JSON.parse(saved) : null;
   });
-  
+
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem("heartspace_token");
   });

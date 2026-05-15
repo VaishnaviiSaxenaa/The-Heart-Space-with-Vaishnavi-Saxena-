@@ -3,7 +3,7 @@ import { useAuth } from "../lib/auth";
 import {
   useGetDashboardSummary, useListMoods, useCreateMood, useListSessions,
   getGetDashboardSummaryQueryKey, getListMoodsQueryKey,
-} from "@workspace/api-client-react";
+} from "../lib/api-client-react";
 import { format } from "date-fns";
 import { Loader2, Calendar, Clock, Zap, CheckCircle2, Droplets, BookOpen, Dumbbell, LeafyGreen, Coffee, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
-import { useLogout } from "@workspace/api-client-react";
+import { useLogout } from "../lib/api-client-react";
 import { ReactNode } from "react";
 import {
   LayoutDashboard, Calendar, BookOpen, FlaskConical, Heart, Zap,
