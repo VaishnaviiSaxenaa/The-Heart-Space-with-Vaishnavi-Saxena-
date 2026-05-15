@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import {
+  createContext, useContext, useState, useEffect, useCallback, ReactNode,
+} from "react";
 import { User } from "./api-client-react";
 import { setAuthTokenGetter } from "./api-client-react";
 import { supabase, ROLE_MAP, type SupabaseRole } from "./supabase";
@@ -16,10 +18,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 setAuthTokenGetter(() => localStorage.getItem("heartspace_token"));
 
-/* Race a promise against a timeout — returns null if it times out */
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([
-    promise,
+    promise.catch(() => null),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
   ]);
 }
@@ -33,7 +34,7 @@ async function resolveSupabaseUser(
       supabase.from("profiles").select("full_name, role, avatar_url").eq("id", supabaseUser.id).single(),
       3000,
     );
-    if (!result) return null; // timed out
+    if (!result) return null;
 
     const { data: profile } = result;
     const role   = (profile?.role as SupabaseRole) ?? "prep_student";
@@ -54,66 +55,65 @@ async function resolveSupabaseUser(
   }
 }
 
-/* Read cached user from localStorage (sync, instant) */
 function readCachedUser(): User | null {
   try {
     const saved = localStorage.getItem("heartspace_user");
     return saved ? JSON.parse(saved) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,  setUser]  = useState<User | null>(readCachedUser);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("heartspace_token"));
+  const [token, setToken] = useState<string | null>(() => {
+    try { return localStorage.getItem("heartspace_token"); } catch { return null; }
+  });
 
-  /* If we already have a cached user, don't block the UI at all.
-     Only show the loading spinner for truly fresh sessions. */
+  /* Don't block the UI if we already have a cached user */
   const [isLoading, setIsLoading] = useState(() => !readCachedUser());
 
   const persistUser = useCallback((u: User | null, t: string | null) => {
     setUser(u);
     setToken(t);
-    if (u && t) {
-      localStorage.setItem("heartspace_user", JSON.stringify(u));
-      localStorage.setItem("heartspace_token", t);
-    } else {
-      localStorage.removeItem("heartspace_user");
-      localStorage.removeItem("heartspace_token");
-    }
+    try {
+      if (u && t) {
+        localStorage.setItem("heartspace_user", JSON.stringify(u));
+        localStorage.setItem("heartspace_token", t);
+      } else {
+        localStorage.removeItem("heartspace_user");
+        localStorage.removeItem("heartspace_token");
+      }
+    } catch { /* storage unavailable */ }
   }, []);
 
   useEffect(() => {
-    /* Hard cap: never show loading screen for more than 3 seconds */
+    /* Absolute hard cap — app is ALWAYS shown within 3 seconds */
     const hardCap = setTimeout(() => setIsLoading(false), 3000);
 
-    const sessionPromise = withTimeout(supabase.auth.getSession(), 3000);
-
-    sessionPromise.then(async (result) => {
-      clearTimeout(hardCap);
-      if (result) {
-        const { data: { session } } = result;
-        if (session) {
-          const resolved = await withTimeout(
-            resolveSupabaseUser(session.user, session.access_token).then(r => r),
-            3000,
-          );
+    (async () => {
+      try {
+        const result = await withTimeout(supabase.auth.getSession(), 3000);
+        if (result?.data?.session) {
+          const session  = result.data.session;
+          const resolved = await resolveSupabaseUser(session.user, session.access_token);
           if (resolved) persistUser(resolved.user, resolved.token);
         }
-      }
-      setIsLoading(false);
-    }).catch(() => {
+      } catch { /* supabase unreachable — stay with cached user */ }
       clearTimeout(hardCap);
       setIsLoading(false);
-    });
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        const resolved = await resolveSupabaseUser(session.user, session.access_token);
-        if (resolved) persistUser(resolved.user, resolved.token);
-      } else {
-        const isDemoUser = !!localStorage.getItem("heartspace_token")?.includes("demo");
-        if (!isDemoUser) persistUser(null, null);
-      }
+      try {
+        if (session) {
+          const resolved = await resolveSupabaseUser(session.user, session.access_token);
+          if (resolved) persistUser(resolved.user, resolved.token);
+        } else {
+          const isDemoUser = !!localStorage.getItem("heartspace_token")?.includes("demo");
+          if (!isDemoUser) persistUser(null, null);
+        }
+      } catch { /* ignore */ }
     });
 
     return () => {
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [persistUser]);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut().catch(() => {});
+    try { await supabase.auth.signOut(); } catch { /* ignore */ }
     persistUser(null, null);
   }, [persistUser]);
 
