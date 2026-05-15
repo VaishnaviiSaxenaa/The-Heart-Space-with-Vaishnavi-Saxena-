@@ -27,9 +27,9 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function Signup() {
-  const [, setLocation]   = useLocation();
-  const { login }         = useAuth();
-  const { toast }         = useToast();
+  const [, setLocation]         = useLocation();
+  const { login }               = useAuth();
+  const { toast }               = useToast();
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<SignupFormValues>({
@@ -40,40 +40,45 @@ export default function Signup() {
   async function onSubmit(v: SignupFormValues) {
     setIsPending(true);
     try {
-      /* ── Step 1: Create account ── */
+      /* ── Step 1: Create account (no email confirmation) ── */
       const { error: signUpError } = await supabase.auth.signUp({
-        email:    v.email,
+        email:    v.email.trim(),
         password: v.password,
-        options:  { data: { full_name: v.fullName } },
+        options: {
+          data: { full_name: v.fullName },
+          emailRedirectTo: undefined,  /* skip email confirmation flow */
+        },
       });
 
-      if (signUpError) throw signUpError;
+      /* Ignore "User already registered" — just try signing in */
+      const isAlreadyRegistered = signUpError?.message?.toLowerCase().includes("already");
+      if (signUpError && !isAlreadyRegistered) throw signUpError;
 
-      /* ── Step 2: Sign in immediately — no email confirmation needed ── */
+      /* ── Step 2: Sign in immediately regardless ── */
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email:    v.email,
+        email:    v.email.trim(),
         password: v.password,
       });
 
       if (signInError || !signInData?.session) {
-        /* Account created but sign-in failed — send to login with a hint */
+        /* Account created but email confirmation may be blocking sign-in */
         toast({
           title:       "Account created!",
-          description: "Please sign in with your new credentials.",
+          description: "Please check your email to confirm your account, then sign in.",
         });
         setLocation("/");
         return;
       }
 
-      /* ── Step 3: Resolve profile (may not exist yet — use fallback) ── */
+      /* ── Step 3: Resolve profile (may not exist yet on first sign-up) ── */
       const profileResult = await supabase
         .from("profiles")
         .select("full_name, role, avatar_url")
         .eq("id", signInData.user.id)
         .single()
-        .catch(() => ({ data: null, error: null }));
+        .catch(() => ({ data: null }));
 
-      const profile = profileResult.data ?? null;
+      const profile = (profileResult as any).data ?? null;
       const role    = (profile?.role as SupabaseRole) ?? "prep_student";
       const mapped  = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
 
@@ -87,10 +92,9 @@ export default function Signup() {
       } as any, signInData.session.access_token);
 
       toast({
-        title:       "Welcome to HeartSpace! 🎉",
+        title:       `Welcome to HeartSpace! 🎉`,
         description: `Hi ${v.fullName.split(" ")[0]}, your account is ready.`,
       });
-
       setLocation(mapped.redirect);
     } catch (err: any) {
       toast({
@@ -133,14 +137,14 @@ export default function Signup() {
         <div
           className="rounded-2xl p-8"
           style={{
-            background:    "rgba(243,237,230,0.96)",
+            background:     "rgba(243,237,230,0.96)",
             backdropFilter: "blur(20px)",
-            border:        `1px solid ${BORDER}`,
-            boxShadow:     "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
+            border:         `1px solid ${BORDER}`,
+            boxShadow:      "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
           }}
         >
           <h2 className="text-xl font-serif font-bold mb-1" style={{ color: SIDEBAR }}>Create your account</h2>
-          <p className="text-sm mb-6" style={{ color: MUTED }}>Join HeartSpace as a student — no confirmation email needed</p>
+          <p className="text-sm mb-6" style={{ color: MUTED }}>Join HeartSpace — you'll be inside immediately</p>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

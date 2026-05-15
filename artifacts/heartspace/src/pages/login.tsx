@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-const CREAM   = "#FAF7F2";
-const CHARCOAL= "#3D3530";
-const GOLD    = "#E6A756";
-const SIDEBAR = "#3D2314";
-const MUTED   = "#8C7B70";
-const BORDER  = "#E8DDD0";
+const CREAM    = "#FAF7F2";
+const CHARCOAL = "#3D3530";
+const GOLD     = "#E6A756";
+const SIDEBAR  = "#3D2314";
+const MUTED    = "#8C7B70";
+const BORDER   = "#E8DDD0";
 
 const loginSchema = z.object({
   email:    z.string().email("Please enter a valid email"),
@@ -25,27 +25,45 @@ const loginSchema = z.object({
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+/* ── Demo accounts ─────────────────────────────────────────── */
 interface DemoAccount {
   email: string; name: string;
   role: "student" | "counsellor"; space: "prep" | "self" | null; redirect: string;
 }
 const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
-  "vaishnavi@heartspace.com":  { email: "vaishnavi@heartspace.com",  name: "Vaishnavi Saxena",   role: "counsellor", space: null,   redirect: "/counsellor"     },
-  "prep@heartspace.com":       { email: "prep@heartspace.com",       name: "Prep Space Student", role: "student",    space: "prep", redirect: "/dashboard"      },
-  "counseling@heartspace.com": { email: "counseling@heartspace.com", name: "Counseling Client",  role: "student",    space: "self", redirect: "/self-dashboard" },
-  "academy@heartspace.com":    { email: "academy@heartspace.com",    name: "Academy Student",    role: "student",    space: "prep", redirect: "/dashboard"      },
+  /* Original replit.md demo accounts */
+  "vaishnavi@heartspace.com":   { email: "vaishnavi@heartspace.com",   name: "Vaishnavi Saxena",   role: "counsellor", space: null,   redirect: "/counsellor"     },
+  "counsellor@heartspace.com":  { email: "counsellor@heartspace.com",  name: "Dr. Priya Sharma",   role: "counsellor", space: null,   redirect: "/counsellor"     },
+  "student1@heartspace.com":    { email: "student1@heartspace.com",    name: "Arjun Mehta",        role: "student",    space: "prep", redirect: "/dashboard"      },
+  "student2@heartspace.com":    { email: "student2@heartspace.com",    name: "Sneha Kapoor",       role: "student",    space: "prep", redirect: "/dashboard"      },
+  "student3@heartspace.com":    { email: "student3@heartspace.com",    name: "Rohan Verma",        role: "student",    space: "self", redirect: "/self-dashboard" },
+  /* New demo accounts */
+  "prep@heartspace.com":        { email: "prep@heartspace.com",        name: "Prep Space Student", role: "student",    space: "prep", redirect: "/dashboard"      },
+  "counseling@heartspace.com":  { email: "counseling@heartspace.com",  name: "Counseling Client",  role: "student",    space: "self", redirect: "/self-dashboard" },
+  "academy@heartspace.com":     { email: "academy@heartspace.com",     name: "Academy Student",    role: "student",    space: "prep", redirect: "/dashboard"      },
 };
-const DEMO_PASSWORD = "heartspace123";
+const DEMO_PASSWORDS = ["heartspace123", "password123"];
 
-/* Race Supabase calls against a timeout */
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
-  return Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]);
+function isDemoMatch(email: string, password: string): DemoAccount | null {
+  const e = email.toLowerCase().trim();
+  const p = password.trim();
+  const account = DEMO_ACCOUNTS[e];
+  if (account && DEMO_PASSWORDS.includes(p)) return account;
+  return null;
+}
+
+/* Race a promise against a timeout */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise.catch(() => null),
+    new Promise<null>((r) => setTimeout(() => r(null), ms)),
+  ]);
 }
 
 export default function Login() {
-  const [, setLocation]  = useLocation();
-  const { login }        = useAuth();
-  const { toast }        = useToast();
+  const [, setLocation] = useLocation();
+  const { login }       = useAuth();
+  const { toast }       = useToast();
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -55,11 +73,48 @@ export default function Login() {
 
   async function onSubmit(v: LoginFormValues) {
     setIsPending(true);
-    const email = v.email.toLowerCase().trim();
+    const email    = v.email.toLowerCase().trim();
+    const password = v.password.trim();
 
-    /* ── 1. Demo accounts — INSTANT, no network ── */
-    const demo = DEMO_ACCOUNTS[email];
-    if (demo && v.password === DEMO_PASSWORD) {
+    /* ── Step 1: Try Supabase ───────────────────────────────── */
+    try {
+      const authResult = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        5000,
+      );
+
+      if (authResult?.data?.session) {
+        const { data } = authResult;
+
+        /* Fetch profile with 3s timeout; fall back gracefully */
+        const profileResult = await withTimeout(
+          supabase.from("profiles").select("full_name, role, avatar_url").eq("id", data.user.id).single(),
+          3000,
+        );
+        const profile = profileResult?.data ?? null;
+        const role    = (profile?.role as SupabaseRole) ?? "prep_student";
+        const mapped  = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
+
+        login({
+          id:        data.user.id as any,
+          email:     data.user.email ?? email,
+          name:      profile?.full_name ?? data.user.email ?? "User",
+          role:      mapped.role,
+          space:     mapped.space,
+          avatarUrl: profile?.avatar_url ?? null,
+        } as any, data.session.access_token);
+
+        setIsPending(false);
+        setLocation(mapped.redirect);
+        return;
+      }
+    } catch {
+      /* Supabase unavailable or wrong credentials — fall through to demo */
+    }
+
+    /* ── Step 2: Demo account fallback ─────────────────────── */
+    const demo = isDemoMatch(email, password);
+    if (demo) {
       login({
         id: email as any, email: demo.email, name: demo.name,
         role: demo.role, space: demo.space, avatarUrl: null,
@@ -69,47 +124,13 @@ export default function Login() {
       return;
     }
 
-    /* ── 2. Real Supabase auth — 5-second timeout ── */
-    try {
-      const authResult = await withTimeout(
-        supabase.auth.signInWithPassword({ email: v.email.trim(), password: v.password }),
-        5000,
-      );
-
-      if (!authResult) {
-        throw new Error("Connection timed out. Please check your network.");
-      }
-
-      const { data, error } = authResult;
-      if (error || !data.session) throw error ?? new Error("Sign-in failed");
-
-      /* Fetch profile with a 3-second timeout */
-      const profileResult = await withTimeout(
-        supabase.from("profiles").select("full_name, role, avatar_url").eq("id", data.user.id).single(),
-        3000,
-      );
-
-      const profile = profileResult?.data ?? null;
-      const role    = (profile?.role as SupabaseRole) ?? "prep_student";
-      const mapped  = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
-
-      login({
-        id: data.user.id as any, email: data.user.email ?? "",
-        name: profile?.full_name ?? data.user.email ?? "User",
-        role: mapped.role, space: mapped.space, avatarUrl: profile?.avatar_url ?? null,
-      } as any, data.session.access_token);
-
-      setIsPending(false);
-      setLocation(mapped.redirect);
-      return;
-    } catch (err: any) {
-      setIsPending(false);
-      toast({
-        title: "Login failed",
-        description: err?.message ?? "Invalid email or password. Use the demo accounts below.",
-        variant: "destructive",
-      });
-    }
+    /* ── Step 3: Nothing worked ─────────────────────────────── */
+    setIsPending(false);
+    toast({
+      title:       "Login failed",
+      description: "Invalid email or password. Check the demo credentials below.",
+      variant:     "destructive",
+    });
   }
 
   return (
@@ -144,10 +165,10 @@ export default function Login() {
         <div
           className="rounded-2xl p-8"
           style={{
-            background: "rgba(243,237,230,0.96)",
+            background:     "rgba(243,237,230,0.96)",
             backdropFilter: "blur(20px)",
-            border: "1px solid rgba(216,207,196,0.7)",
-            boxShadow: "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
+            border:         "1px solid rgba(216,207,196,0.7)",
+            boxShadow:      "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
           }}
         >
           <h2 className="font-serif text-xl font-bold mb-1" style={{ color: SIDEBAR }}>Welcome back</h2>
@@ -199,13 +220,14 @@ export default function Login() {
 
         {/* Demo hint */}
         <div className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
-          style={{ background: "rgba(230,167,86,.12)", border: `1px solid rgba(230,167,86,.25)`, color: SIDEBAR }}>
-          <p className="font-semibold mb-1" style={{ color: SIDEBAR }}>Demo accounts (password: heartspace123)</p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5" style={{ color: MUTED }}>
+          style={{ background: "rgba(230,167,86,.12)", border: "1px solid rgba(230,167,86,.25)", color: SIDEBAR }}>
+          <p className="font-semibold mb-1.5">Demo accounts — password: <code className="font-mono">password123</code> or <code className="font-mono">heartspace123</code></p>
+          <div className="grid grid-cols-1 gap-0.5" style={{ color: MUTED }}>
             <span>vaishnavi@heartspace.com → Counsellor</span>
-            <span>prep@heartspace.com → Prep student</span>
-            <span>counseling@heartspace.com → Self space</span>
-            <span>academy@heartspace.com → Academy</span>
+            <span>counsellor@heartspace.com → Counsellor</span>
+            <span>student1@heartspace.com → Prep student</span>
+            <span>student2@heartspace.com → Prep student</span>
+            <span>student3@heartspace.com → Self space</span>
           </div>
         </div>
 

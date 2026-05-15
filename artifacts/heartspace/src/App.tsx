@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { Layout } from "./components/layout";
@@ -48,20 +49,24 @@ function ProtectedRoute({
   const { isAuthenticated, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  /* NEVER call setLocation during render — use useEffect for navigation */
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      setLocation("/");
+      return;
+    }
+    if (allowedRole && user?.role !== allowedRole) {
+      const space = (user as any)?.space as string | null;
+      if (user?.role === "counsellor") setLocation("/counsellor");
+      else if (space === "self") setLocation("/self-dashboard");
+      else setLocation("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, user, allowedRole, setLocation]);
+
   if (isLoading) return <FullScreenLoader />;
-
-  if (!isAuthenticated) {
-    setLocation("/");
-    return null;
-  }
-
-  if (allowedRole && user?.role !== allowedRole) {
-    const space = (user as any)?.space as string | null;
-    if (user?.role === "counsellor") setLocation("/counsellor");
-    else if (space === "self") setLocation("/self-dashboard");
-    else setLocation("/dashboard");
-    return null;
-  }
+  if (!isAuthenticated) return null;
+  if (allowedRole && user?.role !== allowedRole) return null;
 
   return <Component />;
 }
