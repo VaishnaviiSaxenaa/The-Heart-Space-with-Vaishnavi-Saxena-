@@ -60,7 +60,7 @@ function ProtectedRoute({
     if (allowedRole && user?.role !== allowedRole) {
       const space = (user as any)?.space as string | null;
       if (user?.role === "counsellor") setLocation("/counsellor");
-      else if (space === "self") setLocation("/self-dashboard");
+      else if (space === "heartspace" || space === "self") setLocation("/self-dashboard");
       else setLocation("/dashboard");
     }
   }, [isLoading, isAuthenticated, user, allowedRole, setLocation]);

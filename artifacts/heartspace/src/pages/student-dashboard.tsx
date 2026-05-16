@@ -432,6 +432,15 @@ export default function StudentDashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = user?.name?.split(" ")[0] ?? "there";
+  const space = (user as any)?.space as string | null;
+
+  /* Service identity */
+  const SERVICE: Record<string, { name: string; emoji: string; color: string; sub: string }> = {
+    zenith:     { name: "Zenith",     emoji: "🏆", color: "#C9A96E", sub: "Full mentorship + counsellor support" },
+    apex:       { name: "Apex+",      emoji: "⚡", color: "#3D2314", sub: "Academic tracking + AI guidance"      },
+    heartspace: { name: "HeartSpace", emoji: "🌿", color: "#D4A5A5", sub: "Personal counselling + emotional support" },
+  };
+  const svc = space ? SERVICE[space] : null;
 
   const sessionList      = Array.isArray(sessions) ? sessions : [];
   const upcomingSessions = sessionList.filter((s) => s.status === "scheduled").slice(0, 5);
@@ -442,11 +451,20 @@ export default function StudentDashboard() {
       {/* ── Greeting ── */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
+          {svc && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-base">{svc.emoji}</span>
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
+                style={{ background: `${svc.color}20`, color: svc.color }}>
+                Welcome to {svc.name}
+              </span>
+            </div>
+          )}
           <h1 className="text-3xl md:text-4xl font-serif font-bold" style={{ color: CHARCOAL }}>
             {greeting}, {firstName} ✨
           </h1>
           <p className="mt-1.5 text-sm" style={{ color: MUTED }}>
-            You're building your dream life, one intentional day at a time.
+            {svc ? svc.sub : "You're building your dream life, one intentional day at a time."}
           </p>
         </div>
         <button

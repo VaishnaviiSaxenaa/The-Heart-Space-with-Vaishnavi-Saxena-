@@ -26,6 +26,13 @@ interface NavItem {
   soon?: boolean;
 }
 
+/* Service display config — mirrors supabase.ts SERVICE_INFO */
+const SERVICE_BADGE: Record<string, { name: string; emoji: string; color: string }> = {
+  zenith:     { name: "Zenith",      emoji: "🏆", color: "#C9A96E" },
+  apex:       { name: "Apex+",       emoji: "⚡", color: "#3D2314" },
+  heartspace: { name: "HeartSpace",  emoji: "🌿", color: "#D4A5A5" },
+};
+
 function getNavItems(role: string, space: string | null): NavItem[] {
   if (role === "counsellor") {
     return [
@@ -36,31 +43,32 @@ function getNavItems(role: string, space: string | null): NavItem[] {
       { icon: Library,         label: "Resources",       key: "resources",soon: true          },
     ];
   }
-  if (space === "prep") {
+  /* Zenith + Apex+ both get the prep nav (syllabus / assignments / daily tracker) */
+  if (space === "zenith" || space === "apex" || space === "prep") {
     return [
-      { icon: LayoutDashboard, label: "Dashboard",       key: "home",          href: "/dashboard"     },
-      { icon: GraduationCap,   label: "Syllabus Tracker",key: "syllabus",      href: "/syllabus"      },
-      { icon: FileText,        label: "Assignments",      key: "assignments",   href: "/assignments"   },
-      { icon: ClipboardList,   label: "Daily Tracker",   key: "daily",         href: "/daily-tracker" },
-      { icon: Calendar,        label: "Sessions",         key: "sessions",      href: "/sessions"      },
-      { icon: Heart,           label: "Health & Wellness",key: "health",        soon: true             },
-      { icon: Brain,           label: "Mood & Mind",      key: "mood",          soon: true             },
-      { icon: Zap,             label: "Habits",           key: "habits",        soon: true             },
-      { icon: BarChart2,       label: "Reports",          key: "reports2",      soon: true             },
-      { icon: Library,         label: "Resources",        key: "resources",     soon: true             },
+      { icon: LayoutDashboard, label: "Dashboard",        key: "home",       href: "/dashboard"     },
+      { icon: GraduationCap,   label: "Syllabus Tracker", key: "syllabus",   href: "/syllabus"      },
+      { icon: FileText,        label: "Assignments",       key: "assignments",href: "/assignments"   },
+      { icon: ClipboardList,   label: "Daily Tracker",    key: "daily",      href: "/daily-tracker" },
+      { icon: Calendar,        label: "Sessions",          key: "sessions",   href: "/sessions"      },
+      { icon: Heart,           label: "Health & Wellness", key: "health",     soon: true             },
+      { icon: Brain,           label: "Mood & Mind",       key: "mood",       soon: true             },
+      { icon: Zap,             label: "Habits",            key: "habits",     soon: true             },
+      { icon: BarChart2,       label: "Reports",           key: "reports2",   soon: true             },
+      { icon: Library,         label: "Resources",         key: "resources",  soon: true             },
     ];
   }
-  /* Self space */
+  /* HeartSpace (counseling_client / self) */
   return [
-    { icon: LayoutDashboard, label: "Dashboard",       key: "home",    href: "/self-dashboard" },
-    { icon: ClipboardList,   label: "Daily Tracker",   key: "daily",   href: "/daily-tracker"  },
-    { icon: Calendar,        label: "Sessions",         key: "sessions",href: "/sessions"       },
-    { icon: Heart,           label: "Health & Wellness",key: "health",  soon: true              },
-    { icon: Brain,           label: "Mood & Mind",      key: "mood",    soon: true              },
-    { icon: Zap,             label: "Habits",           key: "habits",  soon: true              },
-    { icon: BookOpen,        label: "Academics",        key: "academics",soon: true             },
-    { icon: Library,         label: "Resources",        key: "resources",soon: true             },
-    { icon: BarChart2,       label: "Reports",          key: "reports2", soon: true             },
+    { icon: LayoutDashboard, label: "Dashboard",        key: "home",     href: "/self-dashboard" },
+    { icon: ClipboardList,   label: "Daily Tracker",    key: "daily",    href: "/daily-tracker"  },
+    { icon: Calendar,        label: "Sessions",          key: "sessions", href: "/sessions"       },
+    { icon: Heart,           label: "Health & Wellness", key: "health",   soon: true              },
+    { icon: Brain,           label: "Mood & Mind",       key: "mood",     soon: true              },
+    { icon: Zap,             label: "Habits",            key: "habits",   soon: true              },
+    { icon: BookOpen,        label: "Academics",         key: "academics",soon: true              },
+    { icon: Library,         label: "Resources",         key: "resources",soon: true              },
+    { icon: BarChart2,       label: "Reports",           key: "reports2", soon: true              },
   ];
 }
 
@@ -104,12 +112,12 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           )}
         </div>
 
-        {/* Space badge */}
-        {user?.role === "student" && space && (
+        {/* Service badge */}
+        {user?.role === "student" && space && SERVICE_BADGE[space] && (
           <div className="mt-3 pl-7">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide"
-              style={{ background: `${GOLD}22`, color: SIDEBAR_HEADER }}>
-              {space === "prep" ? "📚 Prep Space" : "🌿 Self Space"}
+              style={{ background: `${SERVICE_BADGE[space].color}22`, color: SERVICE_BADGE[space].color }}>
+              {SERVICE_BADGE[space].emoji} {SERVICE_BADGE[space].name}
             </span>
           </div>
         )}
@@ -163,7 +171,11 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
             <div>
               <p className="text-sm font-semibold" style={{ color: CHARCOAL }}>{user?.name}</p>
               <p className="text-xs capitalize" style={{ color: GOLD }}>
-                {user?.role === "counsellor" ? "Counsellor" : space === "prep" ? "Prep Space" : "Self Space"}
+                {user?.role === "counsellor"
+                  ? "Counsellor"
+                  : space && SERVICE_BADGE[space]
+                    ? SERVICE_BADGE[space].name
+                    : "Student"}
               </p>
             </div>
             <button onClick={() => logout().then(() => setLocation("/"))} title="Sign out"

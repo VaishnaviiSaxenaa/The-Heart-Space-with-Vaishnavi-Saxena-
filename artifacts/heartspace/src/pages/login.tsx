@@ -185,10 +185,19 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
 /* ── Main login view ──────────────────────────────────────── */
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { login }       = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const { toast }       = useToast();
   const [isPending, setIsPending] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+
+  /* Already logged in → redirect to correct dashboard */
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    const space = (user as any)?.space as string | null;
+    if (user.role === "counsellor") setLocation("/counsellor");
+    else if (space === "heartspace" || space === "self") setLocation("/self-dashboard");
+    else setLocation("/dashboard");
+  }, [isAuthenticated, user, setLocation]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
