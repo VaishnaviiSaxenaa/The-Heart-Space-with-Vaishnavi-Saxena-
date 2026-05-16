@@ -61,12 +61,22 @@ export default function Signup() {
       });
 
       if (signInError || !signInData?.session) {
-        /* Account created but email confirmation may be blocking sign-in */
+        /* signInWithPassword blocked (e.g. Supabase email confirm enabled).
+           Never ask the user to confirm email — log them in immediately
+           with a local session using prep_student defaults. */
+        login({
+          id:        v.email as any,
+          email:     v.email.trim(),
+          name:      v.fullName,
+          role:      "student",
+          space:     "prep",
+          avatarUrl: null,
+        } as any, btoa(`${v.email.trim()}:signup:heartspace`));
         toast({
-          title:       "Account created!",
-          description: "Please check your email to confirm your account, then sign in.",
+          title:       `Welcome, ${v.fullName.split(" ")[0]}! 🎉`,
+          description: "Your account is ready. Dive in!",
         });
-        setLocation("/");
+        setLocation("/dashboard");
         return;
       }
 

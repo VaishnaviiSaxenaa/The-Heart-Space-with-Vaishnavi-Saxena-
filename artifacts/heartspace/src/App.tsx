@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { Layout } from "./components/layout";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
+import ResetPassword from "./pages/reset-password";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import Sessions from "./pages/sessions";
@@ -78,8 +79,9 @@ function Router() {
   return (
     <Layout>
       <Switch>
-        <Route path="/"       component={Login}  />
-        <Route path="/signup" component={Signup} />
+        <Route path="/"                component={Login}         />
+        <Route path="/signup"          component={Signup}        />
+        <Route path="/reset-password"  component={ResetPassword} />
 
         <Route path="/dashboard">
           <ProtectedRoute component={StudentDashboard} allowedRole="student" />
