@@ -220,46 +220,50 @@ export default function Login() {
         const { data } = authResult;
         console.log("[HeartSpace login] Auth success, user id:", data.user.id);
 
-        /* ── Fetch profile (select * to get all columns) ── */
-        const { data: profile, error: profileError } = await supabase
+        /* ── Fetch profile ── */
+        const { data: profile, error } = await supabase
           .from("profiles")
-          .select("*")
+          .select("id, email, full_name, role, avatar_url")
           .eq("id", data.user.id)
           .single();
 
-        console.log("[HeartSpace login] Profile fetched:", profile);
-        console.log("[HeartSpace login] Profile error:", profileError?.code, profileError?.message);
+        if (error) console.error("Profile fetch error:", error);
+        console.log("Profile:", profile);
 
-        /* Only auto-create a profile when the row genuinely doesn't exist.
-           PGRST116 = "no rows returned" — any other error (e.g. RLS) must NOT
-           trigger an upsert, because that would overwrite an existing role. */
+        /* Only auto-create when the row genuinely doesn't exist (PGRST116).
+           Any other error must NOT trigger an upsert — it would overwrite an existing role. */
         let resolvedProfile = profile;
-        if (!profile && profileError?.code === "PGRST116") {
-          console.log("[HeartSpace login] No profile row found — creating with prep_student default");
-          try {
-            await supabase.from("profiles").upsert({
-              id:        data.user.id,
-              full_name: data.user.email?.split("@")[0] ?? "User",
-              email:     data.user.email ?? null,
-              role:      "prep_student",
-            }, { onConflict: "id" });
-            const { data: fresh, error: freshErr } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", data.user.id)
-              .single();
-            console.log("[HeartSpace login] Fresh profile after create:", fresh, freshErr?.code);
-            resolvedProfile = fresh ?? null;
-          } catch (e) {
-            console.warn("[HeartSpace login] Profile create failed:", e);
-          }
-        } else if (profileError && profileError.code !== "PGRST116") {
-          console.warn("[HeartSpace login] Profile fetch blocked (RLS or network) — keeping raw auth data:", profileError.message);
+        if (!profile && error?.code === "PGRST116") {
+          console.log("[HeartSpace login] No profile row — creating with prep_student default");
+          await supabase.from("profiles").upsert({
+            id:        data.user.id,
+            full_name: data.user.email?.split("@")[0] ?? "User",
+            email:     data.user.email ?? null,
+            role:      "prep_student",
+          }, { onConflict: "id" });
+          const { data: fresh } = await supabase
+            .from("profiles")
+            .select("id, email, full_name, role, avatar_url")
+            .eq("id", data.user.id)
+            .single();
+          console.log("[HeartSpace login] Created profile:", fresh);
+          resolvedProfile = fresh ?? null;
         }
 
-        const role   = (resolvedProfile?.role as SupabaseRole) ?? "prep_student";
-        const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
-        console.log("[HeartSpace login] Resolved role:", role, "→ redirect:", mapped.redirect);
+        /* Map Supabase role → internal role + redirect */
+        const supaRole = (resolvedProfile?.role as SupabaseRole) ?? "prep_student";
+        const mapped   = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
+        console.log("[HeartSpace login] Role:", supaRole, "→", mapped.redirect);
+
+        if (supaRole === "admin") {
+          console.log("[HeartSpace login] Admin detected → counsellor dashboard");
+        } else if (supaRole === "academy_student") {
+          console.log("[HeartSpace login] Zenith student → dashboard");
+        } else if (supaRole === "prep_student") {
+          console.log("[HeartSpace login] Apex+ student → dashboard");
+        } else if (supaRole === "counseling_client") {
+          console.log("[HeartSpace login] HeartSpace client → self-dashboard");
+        }
 
         login({
           id:        data.user.id as any,
@@ -274,7 +278,9 @@ export default function Login() {
         setLocation(mapped.redirect);
         return;
       }
-    } catch { /* fall through to demo */ }
+    } catch (authErr) {
+      console.warn("[HeartSpace login] Supabase auth error, falling through to demo:", authErr);
+    }
 
     /* ── Step 2: Demo account fallback ─────────────────────── */
     const demo = isDemoMatch(email, password);

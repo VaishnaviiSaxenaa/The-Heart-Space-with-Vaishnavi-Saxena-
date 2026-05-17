@@ -191,7 +191,10 @@ function DetailsForm({
       const { error: signUpError } = await supabase.auth.signUp({
         email:    v.email.trim(),
         password: v.password,
-        options: { data: { full_name: v.fullName }, emailRedirectTo: undefined },
+        options: {
+          data: { full_name: v.fullName, role: selectedKey },
+          emailRedirectTo: undefined,
+        },
       });
       const isAlreadyRegistered = signUpError?.message?.toLowerCase().includes("already");
       if (signUpError && !isAlreadyRegistered) throw signUpError;
@@ -219,25 +222,24 @@ function DetailsForm({
       }
 
       /* ── Step 3: Upsert profile with correct role ── */
-      try {
-        await supabase.from("profiles").upsert({
-          id:        signInData.user.id,
-          full_name: v.fullName,
-          email:     v.email.trim(),
-          role:      selectedKey,           /* save the service role the user chose */
-        }, { onConflict: "id", ignoreDuplicates: true });
-      } catch { /* ignore */ }
+      /* NOTE: no ignoreDuplicates — we always want to write the chosen role */
+      const { error: upsertErr } = await supabase.from("profiles").upsert({
+        id:        signInData.user.id,
+        full_name: v.fullName,
+        email:     v.email.trim(),
+        role:      selectedKey,   /* academy_student | prep_student | counseling_client */
+      }, { onConflict: "id" });
+      if (upsertErr) console.error("Profile upsert error:", upsertErr);
+      console.log("Profile upserted with role:", selectedKey);
 
-      /* ── Step 4: Fetch profile (may already have a different role) ── */
-      let profile: { full_name?: string | null; role?: string | null; avatar_url?: string | null } | null = null;
-      try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("full_name, role, avatar_url")
-          .eq("id", signInData.user.id)
-          .single();
-        profile = data ?? null;
-      } catch { /* use defaults */ }
+      /* ── Step 4: Fetch profile to confirm saved role ── */
+      const { data: profile, error: fetchErr } = await supabase
+        .from("profiles")
+        .select("id, email, full_name, role, avatar_url")
+        .eq("id", signInData.user.id)
+        .single();
+      if (fetchErr) console.error("Profile fetch error:", fetchErr);
+      console.log("Profile after upsert:", profile);
 
       const role   = (profile?.role as SupabaseRole) ?? selectedKey;
       const mapped = ROLE_MAP[role] ?? ROLE_MAP[selectedKey];
