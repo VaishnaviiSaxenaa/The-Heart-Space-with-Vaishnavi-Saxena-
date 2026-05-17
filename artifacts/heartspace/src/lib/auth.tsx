@@ -31,14 +31,29 @@ async function resolveSupabaseUser(
 ): Promise<{ user: User; token: string } | null> {
   try {
     const result = await withTimeout(
-      supabase.from("profiles").select("full_name, role, avatar_url").eq("id", supabaseUser.id).single(),
+      supabase.from("profiles").select("*").eq("id", supabaseUser.id).single(),
       3000,
     );
-    if (!result) return null;
+    /* null = timed out */
+    if (!result) {
+      console.warn("[HeartSpace auth] Profile fetch timed out for", supabaseUser.id);
+      return null;
+    }
 
-    const { data: profile } = result;
+    const { data: profile, error: profileError } = result;
+    console.log("[HeartSpace auth] resolveSupabaseUser profile:", profile, "error:", profileError?.code);
+
+    /* If a non-"not found" error comes back (e.g. RLS policy blocks read),
+       return null so the caller keeps whatever user state it already has. */
+    if (profileError && profileError.code !== "PGRST116") {
+      console.warn("[HeartSpace auth] Profile blocked:", profileError.message,
+        "— add RLS policy: CREATE POLICY \"Users can read own profile\" ON public.profiles FOR SELECT USING (auth.uid() = id);");
+      return null;
+    }
+
     const role   = (profile?.role as SupabaseRole) ?? "prep_student";
     const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
+    console.log("[HeartSpace auth] role resolved:", role, "space:", mapped.space);
 
     const heartUser = {
       id:        supabaseUser.id as any,
@@ -50,7 +65,8 @@ async function resolveSupabaseUser(
     } as User;
 
     return { user: heartUser, token: accessToken };
-  } catch {
+  } catch (e) {
+    console.error("[HeartSpace auth] resolveSupabaseUser error:", e);
     return null;
   }
 }

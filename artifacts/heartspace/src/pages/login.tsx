@@ -218,45 +218,55 @@ export default function Login() {
 
       if (authResult?.data?.session) {
         const { data } = authResult;
+        console.log("[HeartSpace login] Auth success, user id:", data.user.id);
 
-        /* Fetch profile */
-        let profile: { full_name?: string | null; role?: string | null; avatar_url?: string | null } | null = null;
-        try {
-          const { data: p } = await supabase
-            .from("profiles")
-            .select("full_name, role, avatar_url")
-            .eq("id", data.user.id)
-            .single();
-          profile = p ?? null;
-        } catch { /* profile not found */ }
+        /* ── Fetch profile (select * to get all columns) ── */
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.user.id)
+          .single();
 
-        /* Auto-create profile if missing (existing user who signed up before trigger was set) */
-        if (!profile) {
+        console.log("[HeartSpace login] Profile fetched:", profile);
+        console.log("[HeartSpace login] Profile error:", profileError?.code, profileError?.message);
+
+        /* Only auto-create a profile when the row genuinely doesn't exist.
+           PGRST116 = "no rows returned" — any other error (e.g. RLS) must NOT
+           trigger an upsert, because that would overwrite an existing role. */
+        let resolvedProfile = profile;
+        if (!profile && profileError?.code === "PGRST116") {
+          console.log("[HeartSpace login] No profile row found — creating with prep_student default");
           try {
             await supabase.from("profiles").upsert({
               id:        data.user.id,
               full_name: data.user.email?.split("@")[0] ?? "User",
               role:      "prep_student",
             }, { onConflict: "id" });
-            const { data: fresh } = await supabase
+            const { data: fresh, error: freshErr } = await supabase
               .from("profiles")
-              .select("full_name, role, avatar_url")
+              .select("*")
               .eq("id", data.user.id)
               .single();
-            profile = fresh ?? null;
-          } catch { /* use defaults */ }
+            console.log("[HeartSpace login] Fresh profile after create:", fresh, freshErr?.code);
+            resolvedProfile = fresh ?? null;
+          } catch (e) {
+            console.warn("[HeartSpace login] Profile create failed:", e);
+          }
+        } else if (profileError && profileError.code !== "PGRST116") {
+          console.warn("[HeartSpace login] Profile fetch blocked (RLS or network) — keeping raw auth data:", profileError.message);
         }
 
-        const role   = (profile?.role as SupabaseRole) ?? "prep_student";
+        const role   = (resolvedProfile?.role as SupabaseRole) ?? "prep_student";
         const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
+        console.log("[HeartSpace login] Resolved role:", role, "→ redirect:", mapped.redirect);
 
         login({
           id:        data.user.id as any,
           email:     data.user.email ?? email,
-          name:      profile?.full_name ?? data.user.email ?? "User",
+          name:      resolvedProfile?.full_name ?? data.user.email ?? "User",
           role:      mapped.role,
           space:     mapped.space,
-          avatarUrl: profile?.avatar_url ?? null,
+          avatarUrl: resolvedProfile?.avatar_url ?? null,
         } as any, data.session.access_token);
 
         setIsPending(false);
