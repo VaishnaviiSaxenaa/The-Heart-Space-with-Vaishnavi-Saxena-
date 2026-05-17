@@ -10,8 +10,10 @@ export type SupabaseRole = 'admin' | 'prep_student' | 'counseling_client' | 'aca
 export interface Profile {
   id: string
   full_name: string | null
+  email: string | null
   role: SupabaseRole
   avatar_url: string | null
+  created_at: string | null
 }
 
 /* Service name + visual identity per role */

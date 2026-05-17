@@ -170,28 +170,48 @@ function StudentCard({ s }: { s: StudentCardData }) {
 interface Profile {
   id: string;
   full_name: string | null;
+  email: string | null;
   role: string;
   avatar_url: string | null;
+  created_at: string | null;
 }
+
+const ROLE_PLAN_LABELS: Record<string, { label: string; bg: string; color: string }> = {
+  prep_student:      { label: "Apex+ · Prep Space",        bg: `#C9A96E28`, color: "#7A5510" },
+  academy_student:   { label: "Zenith · Academy",          bg: `#A8BFA333`, color: "#3E6B3A" },
+  counseling_client: { label: "HeartSpace · Self Space",   bg: `#D4A5A533`, color: "#8B4A4A" },
+  admin:             { label: "Admin · Counsellor",        bg: `#3D231414`, color: "#3D2314" },
+};
 
 function StudentProfilesManager() {
   const { toast }         = useToast();
   const [profiles, setProfiles]   = useState<Profile[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole]   = useState<SupabaseRole>("prep_student");
   const [saving, setSaving]       = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("profiles")
-      .select("id, full_name, role, avatar_url")
-      .order("full_name", { ascending: true })
-      .then(({ data, error }) => {
-        if (!error && data) setProfiles(data as Profile[]);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    async function fetchProfiles() {
+      console.log("[HeartSpace admin] Fetching all student profiles from Supabase…");
+      const { data: students, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .neq("role", "admin")
+        .order("created_at", { ascending: false });
+
+      console.log("[HeartSpace admin] Students fetched:", students, "error:", error);
+
+      if (error) {
+        console.warn("[HeartSpace admin] Profile fetch error code:", error.code, error.message);
+        setFetchError(error.message);
+      } else {
+        setProfiles((students ?? []) as Profile[]);
+      }
+      setLoading(false);
+    }
+    fetchProfiles();
   }, []);
 
   async function handleSaveRole(id: string) {
@@ -213,46 +233,80 @@ function StudentProfilesManager() {
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 10px rgba(44,24,16,.07)" }}>
+      {/* Header */}
       <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: `1px solid ${BORDER}`, background: CREAM }}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${GOLD}22` }}>
             <Users className="w-4 h-4" style={{ color: GOLD }} />
           </div>
           <div>
-            <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>Manage Student Profiles</h3>
-            <p className="text-xs" style={{ color: MUTED }}>View and edit roles for all registered users</p>
+            <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>Registered Student Profiles</h3>
+            <p className="text-xs" style={{ color: MUTED }}>All users from Supabase — admins excluded</p>
           </div>
         </div>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: `${DARK}14`, color: DARK }}>
-          {profiles.length} users
+          {profiles.length} student{profiles.length !== 1 ? "s" : ""}
         </span>
       </div>
+
+      {/* RLS policy notice */}
+      {fetchError && (
+        <div className="mx-6 mt-4 p-4 rounded-xl text-xs leading-relaxed" style={{ background: "#FFF3CD", border: "1px solid #FFD980", color: "#7A5510" }}>
+          <p className="font-bold mb-1">⚠ Profile fetch blocked — RLS policy missing</p>
+          <p className="mb-2">Error: <code className="font-mono">{fetchError}</code></p>
+          <p className="font-semibold">Add this policy in Supabase → Table Editor → profiles → RLS Policies:</p>
+          <pre className="mt-1 p-2 rounded text-[10px] overflow-x-auto" style={{ background: "#FFF9E6" }}>{`CREATE POLICY "Admin full access"
+ON public.profiles FOR ALL
+USING (
+  auth.uid() IN (
+    SELECT id FROM public.profiles
+    WHERE role = 'admin'
+  )
+);`}</pre>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: GOLD }} />
         </div>
-      ) : profiles.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-sm" style={{ color: MUTED }}>No profiles found in Supabase yet.</p>
-          <p className="text-xs mt-1" style={{ color: MUTED }}>Users will appear here after they sign up.</p>
+      ) : profiles.length === 0 && !fetchError ? (
+        <div className="text-center py-12 px-6">
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No student profiles found</p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>
+            Students will appear here after signing up. If you expect to see profiles, check the RLS policy above.
+          </p>
         </div>
       ) : (
         <div className="divide-y" style={{ borderColor: BORDER }}>
           {profiles.map((p) => {
-            const isEditing = editingId === p.id;
-            const initials  = (p.full_name ?? "??").substring(0, 2).toUpperCase();
+            const isEditing  = editingId === p.id;
+            const displayName = p.full_name || p.email || "Unknown";
+            const initials   = displayName.substring(0, 2).toUpperCase();
+            const plan       = ROLE_PLAN_LABELS[p.role] ?? { label: p.role, bg: `${MUTED}18`, color: MUTED };
             return (
               <div key={p.id} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-[#FAF7F2]">
-                <Avatar className="h-9 w-9 flex-shrink-0">
+                <Avatar className="h-10 w-10 flex-shrink-0">
                   <AvatarImage src={p.avatar_url || undefined} />
                   <AvatarFallback className="text-xs font-bold" style={{ background: `${DARK}14`, color: DARK }}>{initials}</AvatarFallback>
                 </Avatar>
+
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: CHARCOAL }}>{p.full_name ?? "Unknown"}</p>
+                  <p className="text-sm font-semibold truncate" style={{ color: CHARCOAL }}>
+                    {p.full_name ?? <span style={{ color: MUTED }}>No name</span>}
+                  </p>
+                  {p.email && (
+                    <p className="text-xs truncate" style={{ color: MUTED }}>{p.email}</p>
+                  )}
+                  {p.created_at && (
+                    <p className="text-[10px] mt-0.5" style={{ color: MUTED }}>
+                      Joined {safeFormat(p.created_at, "MMM d, yyyy")}
+                    </p>
+                  )}
                 </div>
+
                 {isEditing ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="relative">
                       <select value={editRole} onChange={(e) => setEditRole(e.target.value as SupabaseRole)}
                         className="appearance-none pl-3 pr-8 py-1.5 rounded-xl text-xs font-semibold cursor-pointer outline-none"
@@ -273,18 +327,15 @@ function StudentProfilesManager() {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={{
-                        background: p.role === "admin" ? `${DARK}14` : p.role === "prep_student" ? `${GOLD}22` : p.role === "counseling_client" ? `${SAGE}33` : `${OLIVE}22`,
-                        color: p.role === "admin" ? DARK : p.role === "prep_student" ? "#7A5510" : OLIVE,
-                      }}>
-                      {ROLE_LABELS[p.role] ?? p.role}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+                      style={{ background: plan.bg, color: plan.color }}>
+                      {plan.label}
                     </span>
                     <button onClick={() => { setEditingId(p.id); setEditRole((p.role as SupabaseRole) ?? "prep_student"); }}
-                      className="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-70"
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-70 whitespace-nowrap"
                       style={{ background: `${GOLD}18`, color: "#7A5510" }}>
-                      Edit
+                      Edit role
                     </button>
                   </div>
                 )}

@@ -223,6 +223,7 @@ function DetailsForm({
         await supabase.from("profiles").upsert({
           id:        signInData.user.id,
           full_name: v.fullName,
+          email:     v.email.trim(),
           role:      selectedKey,           /* save the service role the user chose */
         }, { onConflict: "id", ignoreDuplicates: true });
       } catch { /* ignore */ }

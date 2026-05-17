@@ -240,6 +240,7 @@ export default function Login() {
             await supabase.from("profiles").upsert({
               id:        data.user.id,
               full_name: data.user.email?.split("@")[0] ?? "User",
+              email:     data.user.email ?? null,
               role:      "prep_student",
             }, { onConflict: "id" });
             const { data: fresh, error: freshErr } = await supabase
