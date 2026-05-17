@@ -209,6 +209,11 @@ export default function Login() {
     const email    = v.email.toLowerCase().trim();
     const password = v.password.trim();
 
+    /* Clear any stale cached user data so we always start fresh */
+    localStorage.removeItem("heartspace_user");
+    localStorage.removeItem("heartspace_token");
+    localStorage.removeItem("heartspace_role");
+
     /* ── Step 1: Try Supabase ───────────────────────────────── */
     try {
       const authResult = await withTimeout(

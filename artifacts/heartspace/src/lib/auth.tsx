@@ -71,6 +71,12 @@ async function resolveSupabaseUser(
   }
 }
 
+/* A Supabase JWT has the form header.payload.signature (two dots).
+   Demo/signup tokens are plain base64 and contain no dots. */
+function isSupabaseJwt(token: string | null): boolean {
+  return !!token && (token.match(/\./g) ?? []).length >= 2;
+}
+
 function readCachedUser(): User | null {
   try {
     const saved = localStorage.getItem("heartspace_user");
@@ -81,13 +87,19 @@ function readCachedUser(): User | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user,  setUser]  = useState<User | null>(readCachedUser);
-  const [token, setToken] = useState<string | null>(() => {
-    try { return localStorage.getItem("heartspace_token"); } catch { return null; }
-  });
+  /* Only seed from localStorage for demo/signup sessions.
+     Real Supabase users always start as null and wait for a fresh profile
+     fetch — this prevents stale role/name data from a previous session
+     from ever being shown. */
+  const cachedToken = (() => { try { return localStorage.getItem("heartspace_token"); } catch { return null; } })();
+  const isDemoSession = !isSupabaseJwt(cachedToken);
 
-  /* Don't block the UI if we already have a cached user */
-  const [isLoading, setIsLoading] = useState(() => !readCachedUser());
+  const [user,  setUser]  = useState<User | null>(() => isDemoSession ? readCachedUser() : null);
+  const [token, setToken] = useState<string | null>(() => isDemoSession ? cachedToken : null);
+
+  /* Show a loading spinner until Supabase responds for real users.
+     Demo users are shown immediately from cache. */
+  const [isLoading, setIsLoading] = useState(!isDemoSession);
 
   const persistUser = useCallback((u: User | null, t: string | null) => {
     setUser(u);
@@ -99,23 +111,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         localStorage.removeItem("heartspace_user");
         localStorage.removeItem("heartspace_token");
+        localStorage.removeItem("heartspace_role");
       }
     } catch { /* storage unavailable */ }
   }, []);
 
   useEffect(() => {
-    /* Absolute hard cap — app is ALWAYS shown within 3 seconds */
-    const hardCap = setTimeout(() => setIsLoading(false), 3000);
+    /* Absolute hard cap — app is ALWAYS shown within 5 seconds */
+    const hardCap = setTimeout(() => setIsLoading(false), 5000);
 
     (async () => {
       try {
-        const result = await withTimeout(supabase.auth.getSession(), 3000);
+        const result = await withTimeout(supabase.auth.getSession(), 4000);
         if (result?.data?.session) {
+          /* Real Supabase session → always fetch fresh profile, never use cache */
           const session  = result.data.session;
           const resolved = await resolveSupabaseUser(session.user, session.access_token);
-          if (resolved) persistUser(resolved.user, resolved.token);
+          if (resolved) {
+            persistUser(resolved.user, resolved.token);
+          }
+          /* If resolved is null (timeout/RLS), keep whatever state exists
+             rather than logging the user out — they can re-login if stale. */
+        } else {
+          /* No Supabase session.  If we have a demo token, keep it.
+             Otherwise clear any leftover Supabase user data. */
+          if (!isDemoSession) persistUser(null, null);
         }
-      } catch { /* supabase unreachable — stay with cached user */ }
+      } catch { /* supabase unreachable — keep current state */ }
       clearTimeout(hardCap);
       setIsLoading(false);
     })();
@@ -123,11 +145,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       try {
         if (session) {
+          /* SIGNED_IN / TOKEN_REFRESHED → always fetch fresh profile */
           const resolved = await resolveSupabaseUser(session.user, session.access_token);
           if (resolved) persistUser(resolved.user, resolved.token);
         } else {
-          const isDemoUser = !!localStorage.getItem("heartspace_token")?.includes("demo");
-          if (!isDemoUser) persistUser(null, null);
+          /* SIGNED_OUT */
+          const isDemoToken = !!localStorage.getItem("heartspace_token")?.includes(":demo:");
+          if (!isDemoToken) persistUser(null, null);
         }
       } catch { /* ignore */ }
     });
@@ -136,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(hardCap);
       subscription.unsubscribe();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persistUser]);
 
   const login = useCallback((newUser: User, newToken: string) => {
