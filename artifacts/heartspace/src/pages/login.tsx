@@ -252,17 +252,18 @@ export default function Login() {
         if (error) console.error("Profile fetch error:", error);
         console.log("Profile:", profile);
 
-        /* Only auto-create when the row genuinely doesn't exist (PGRST116).
-           Any other error must NOT trigger an upsert — it would overwrite an existing role. */
+        /* Only INSERT when the row genuinely doesn't exist (PGRST116).
+           Never use upsert here — it would overwrite an existing role on re-login. */
         let resolvedProfile = profile;
         if (!profile && error?.code === "PGRST116") {
-          console.log("[HeartSpace login] No profile row — creating with prep_student default");
-          await supabase.from("profiles").upsert({
+          console.log("[HeartSpace login] No profile row — creating new (insert only)");
+          const emailName = data.user.email?.split("@")[0] ?? "User";
+          await supabase.from("profiles").insert({
             id:        data.user.id,
-            full_name: data.user.email?.split("@")[0] ?? "User",
+            full_name: emailName,
             email:     data.user.email ?? null,
-            role:      "prep_student",
-          }, { onConflict: "id" });
+            role:      "prep_student",   /* default for brand-new users only */
+          });
           const { data: fresh } = await supabase
             .from("profiles")
             .select("id, email, full_name, role, avatar_url")
@@ -277,20 +278,15 @@ export default function Login() {
         const mapped   = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
         console.log("[HeartSpace login] Role:", supaRole, "→", mapped.redirect);
 
-        if (supaRole === "admin") {
-          console.log("[HeartSpace login] Admin detected → counsellor dashboard");
-        } else if (supaRole === "academy_student") {
-          console.log("[HeartSpace login] Zenith student → dashboard");
-        } else if (supaRole === "prep_student") {
-          console.log("[HeartSpace login] Apex+ student → dashboard");
-        } else if (supaRole === "counseling_client") {
-          console.log("[HeartSpace login] HeartSpace client → self-dashboard");
-        }
+        /* Display name: prefer full_name, fall back to email prefix — never show raw email */
+        const displayName =
+          resolvedProfile?.full_name?.trim() ||
+          (data.user.email?.split("@")[0] ?? "User");
 
         login({
           id:        data.user.id as any,
           email:     data.user.email ?? email,
-          name:      resolvedProfile?.full_name ?? data.user.email ?? "User",
+          name:      displayName,
           role:      mapped.role,
           space:     mapped.space,
           avatarUrl: resolvedProfile?.avatar_url ?? null,

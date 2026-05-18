@@ -73,10 +73,15 @@ async function resolveSupabaseUser(
     const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
     console.log("[HeartSpace auth] role resolved:", role, "space:", mapped.space);
 
+    /* Display name: prefer full_name, fall back to email prefix — never show raw email */
+    const displayName =
+      profile?.full_name?.trim() ||
+      (supabaseUser.email?.split("@")[0] ?? "User");
+
     const heartUser = {
       id:        supabaseUser.id as any,
       email:     supabaseUser.email ?? "",
-      name:      profile?.full_name ?? supabaseUser.email ?? "User",
+      name:      displayName,
       role:      mapped.role,
       space:     mapped.space,
       avatarUrl: profile?.avatar_url ?? null,
