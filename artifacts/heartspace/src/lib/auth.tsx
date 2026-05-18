@@ -53,12 +53,14 @@ async function resolveSupabaseUser(
   }
 
   try {
+    /* Convert Supabase query to real Promise using .then() so withTimeout works */
     const result = await withTimeout(
       supabase
         .from("profiles")
         .select("id, email, full_name, role, plan, avatar_url")
         .eq("id", supabaseUser.id)
-        .single(),
+        .single()
+        .then((r) => r),
       3000,
     );
 
@@ -85,13 +87,10 @@ async function resolveSupabaseUser(
 
     const supaRole = (profile?.role as SupabaseRole) ?? "prep_student";
     const mapped = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
-
-    /* Read plan from database — this is what determines the dashboard */
     const planFromDB = profile?.plan ?? mapped.space;
 
     console.log("[HeartSpace auth] role:", supaRole, "plan:", planFromDB);
 
-    /* Display name: prefer full_name, fall back to email prefix */
     const displayName =
       profile?.full_name?.trim() ||
       (supabaseUser.email?.split("@")[0] ?? "User");
@@ -114,15 +113,6 @@ async function resolveSupabaseUser(
 
 function isSupabaseJwt(token: string | null): boolean {
   return !!token && (token.match(/\./g) ?? []).length >= 2;
-}
-
-function readCachedUser(): User | null {
-  try {
-    const saved = localStorage.getItem("heartspace_user");
-    return saved ? JSON.parse(saved) : null;
-  } catch {
-    return null;
-  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -186,7 +176,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       try {
-        const result = await withTimeout(supabase.auth.getSession(), 4000);
+        const result = await withTimeout(
+          supabase.auth.getSession().then((r) => r),
+          4000,
+        );
         if (result?.data?.session) {
           const session = result.data.session;
           const resolved = await resolveSupabaseUser(

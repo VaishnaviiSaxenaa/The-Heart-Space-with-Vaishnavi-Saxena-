@@ -24,7 +24,8 @@ const SIDEBAR = "#3D2314";
 const MUTED = "#8C7B70";
 const BORDER = "#E8DDD0";
 
-const RESET_REDIRECT = "https://the-heart-space-with-vaishnavi-saxe.vercel.app";
+const RESET_REDIRECT =
+  "https://the-heart-space-with-vaishnavi-saxe-eight.vercel.app";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -248,8 +249,7 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
             Check your email
           </h2>
           <p className="text-sm mb-6" style={{ color: MUTED }}>
-            We've sent a password reset link to <strong>{email}</strong>. Check
-            your inbox and follow the link to reset your password.
+            We've sent a password reset link to <strong>{email}</strong>.
           </p>
           <button
             onClick={onBack}
@@ -270,7 +270,6 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
           <p className="text-sm mb-6" style={{ color: MUTED }}>
             Enter your email and we'll send you a reset link.
           </p>
-
           <div className="space-y-4">
             <div>
               <label
@@ -295,11 +294,10 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
                 }}
               />
             </div>
-
             <Button
               onClick={handleSend}
               disabled={sending}
-              className="w-full h-12 rounded-xl font-semibold text-base transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full h-12 rounded-xl font-semibold text-base transition-all duration-200"
               style={{
                 background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
                 color: CREAM,
@@ -309,7 +307,6 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
             >
               {sending ? "Sending…" : "Send Reset Link"}
             </Button>
-
             <p className="text-center text-sm" style={{ color: MUTED }}>
               <button
                 onClick={onBack}
@@ -334,13 +331,11 @@ export default function Login() {
   const [isPending, setIsPending] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
 
-  /* Already logged in → redirect to correct dashboard */
   useEffect(() => {
     if (!isAuthenticated || !user) return;
     const space = (user as any)?.space as string | null;
     if (user.role === "counsellor") setLocation("/counsellor");
-    else if (space === "heartspace" || space === "self")
-      setLocation("/self-dashboard");
+    else if (space === "heartspace") setLocation("/self-dashboard");
     else setLocation("/dashboard");
   }, [isAuthenticated, user, setLocation]);
 
@@ -354,15 +349,14 @@ export default function Login() {
     const email = v.email.toLowerCase().trim();
     const password = v.password.trim();
 
-    /* Clear any stale cached user data so we always start fresh */
     localStorage.removeItem("heartspace_user");
     localStorage.removeItem("heartspace_token");
     localStorage.removeItem("heartspace_role");
 
-    /* ── Step 1: Try Supabase ───────────────────────────────── */
+    /* ── Step 1: Try Supabase ── */
     try {
       const authResult = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
+        supabase.auth.signInWithPassword({ email, password }).then((r) => r),
         5000,
       );
 
@@ -370,12 +364,9 @@ export default function Login() {
         const { data } = authResult;
         console.log("[HeartSpace login] Auth success, user id:", data.user.id);
 
-        /* ── Hardcoded admin override ── */
+        /* Hardcoded admin override */
         const ADMIN_EMAIL = "theheartspacewithvs@gmail.com";
         if (data.user.email === ADMIN_EMAIL) {
-          console.log(
-            "[HeartSpace login] Admin detected → counsellor dashboard",
-          );
           login(
             {
               id: data.user.id as any,
@@ -392,43 +383,41 @@ export default function Login() {
           return;
         }
 
-        /* ── Fetch full profile including plan column ── */
+        /* Fetch profile — convert to real Promise with .then() */
         const { data: profile, error } = await supabase
           .from("profiles")
           .select("id, email, full_name, role, plan, avatar_url")
           .eq("id", data.user.id)
-          .single();
+          .single()
+          .then((r) => r);
 
         if (error) console.error("Profile fetch error:", error);
         console.log("Profile:", profile);
 
         let resolvedProfile = profile;
 
-        /* Only INSERT when row genuinely doesn't exist */
         if (!profile && error?.code === "PGRST116") {
-          console.log("[HeartSpace login] No profile row — creating new");
-          const emailName = data.user.email?.split("@")[0] ?? "User";
           await supabase.from("profiles").insert({
             id: data.user.id,
-            full_name: emailName,
+            full_name: data.user.email?.split("@")[0] ?? "User",
             email: data.user.email ?? null,
             role: "prep_student",
-            plan: "apex_plus",
+            plan: "apex",
           });
           const { data: fresh } = await supabase
             .from("profiles")
             .select("id, email, full_name, role, plan, avatar_url")
             .eq("id", data.user.id)
-            .single();
-          console.log("[HeartSpace login] Created profile:", fresh);
+            .single()
+            .then((r) => r);
           resolvedProfile = fresh ?? null;
         }
 
-        /* Map Supabase role → internal role + redirect */
         const supaRole =
           (resolvedProfile?.role as SupabaseRole) ?? "prep_student";
         const mapped = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
         const planFromDB = resolvedProfile?.plan ?? mapped.space;
+
         console.log(
           "[HeartSpace login] Role:",
           supaRole,
@@ -438,7 +427,6 @@ export default function Login() {
           mapped.redirect,
         );
 
-        /* Display name: prefer full_name, fall back to email prefix */
         const displayName =
           resolvedProfile?.full_name?.trim() ||
           (data.user.email?.split("@")[0] ?? "User");
@@ -460,13 +448,10 @@ export default function Login() {
         return;
       }
     } catch (authErr) {
-      console.warn(
-        "[HeartSpace login] Supabase error, falling through to demo:",
-        authErr,
-      );
+      console.warn("[HeartSpace login] Supabase error, trying demo:", authErr);
     }
 
-    /* ── Step 2: Demo account fallback ─────────────────────── */
+    /* ── Step 2: Demo account fallback ── */
     const demo = isDemoMatch(email, password);
     if (demo) {
       login(
@@ -485,7 +470,7 @@ export default function Login() {
       return;
     }
 
-    /* ── Step 3: Nothing worked ─────────────────────────────── */
+    /* ── Step 3: Nothing worked ── */
     setIsPending(false);
     toast({
       title: "Login failed",
@@ -623,7 +608,6 @@ export default function Login() {
               </p>
             </div>
 
-            {/* Demo hint */}
             <div
               className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
               style={{
