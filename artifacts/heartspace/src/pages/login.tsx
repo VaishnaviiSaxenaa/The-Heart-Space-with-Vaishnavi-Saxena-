@@ -8,39 +8,95 @@ import { supabase, ROLE_MAP, type SupabaseRole } from "../lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-const CREAM    = "#FAF7F2";
+const CREAM = "#FAF7F2";
 const CHARCOAL = "#3D3530";
-const GOLD     = "#E6A756";
-const SIDEBAR  = "#3D2314";
-const MUTED    = "#8C7B70";
-const BORDER   = "#E8DDD0";
+const GOLD = "#E6A756";
+const SIDEBAR = "#3D2314";
+const MUTED = "#8C7B70";
+const BORDER = "#E8DDD0";
 
 const RESET_REDIRECT = "https://the-heart-space-with-vaishnavi-saxe.vercel.app";
 
 const loginSchema = z.object({
-  email:    z.string().email("Please enter a valid email"),
+  email: z.string().email("Please enter a valid email"),
   password: z.string().min(1, "Password is required"),
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 /* ── Demo accounts ─────────────────────────────────────────── */
 interface DemoAccount {
-  email: string; name: string;
-  role: "student" | "counsellor"; space: "prep" | "self" | null; redirect: string;
+  email: string;
+  name: string;
+  role: "student" | "counsellor";
+  space: "prep" | "self" | null;
+  redirect: string;
 }
 const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
-  "vaishnavi@heartspace.com":   { email: "vaishnavi@heartspace.com",   name: "Vaishnavi Saxena",   role: "counsellor", space: null,   redirect: "/counsellor"     },
-  "counsellor@heartspace.com":  { email: "counsellor@heartspace.com",  name: "Dr. Priya Sharma",   role: "counsellor", space: null,   redirect: "/counsellor"     },
-  "student1@heartspace.com":    { email: "student1@heartspace.com",    name: "Arjun Mehta",        role: "student",    space: "prep", redirect: "/dashboard"      },
-  "student2@heartspace.com":    { email: "student2@heartspace.com",    name: "Sneha Kapoor",       role: "student",    space: "prep", redirect: "/dashboard"      },
-  "student3@heartspace.com":    { email: "student3@heartspace.com",    name: "Rohan Verma",        role: "student",    space: "self", redirect: "/self-dashboard" },
-  "prep@heartspace.com":        { email: "prep@heartspace.com",        name: "Prep Space Student", role: "student",    space: "prep", redirect: "/dashboard"      },
-  "counseling@heartspace.com":  { email: "counseling@heartspace.com",  name: "Counseling Client",  role: "student",    space: "self", redirect: "/self-dashboard" },
-  "academy@heartspace.com":     { email: "academy@heartspace.com",     name: "Academy Student",    role: "student",    space: "prep", redirect: "/dashboard"      },
+  "vaishnavi@heartspace.com": {
+    email: "vaishnavi@heartspace.com",
+    name: "Vaishnavi Saxena",
+    role: "counsellor",
+    space: null,
+    redirect: "/counsellor",
+  },
+  "counsellor@heartspace.com": {
+    email: "counsellor@heartspace.com",
+    name: "Dr. Priya Sharma",
+    role: "counsellor",
+    space: null,
+    redirect: "/counsellor",
+  },
+  "student1@heartspace.com": {
+    email: "student1@heartspace.com",
+    name: "Arjun Mehta",
+    role: "student",
+    space: "prep",
+    redirect: "/dashboard",
+  },
+  "student2@heartspace.com": {
+    email: "student2@heartspace.com",
+    name: "Sneha Kapoor",
+    role: "student",
+    space: "prep",
+    redirect: "/dashboard",
+  },
+  "student3@heartspace.com": {
+    email: "student3@heartspace.com",
+    name: "Rohan Verma",
+    role: "student",
+    space: "self",
+    redirect: "/self-dashboard",
+  },
+  "prep@heartspace.com": {
+    email: "prep@heartspace.com",
+    name: "Prep Space Student",
+    role: "student",
+    space: "prep",
+    redirect: "/dashboard",
+  },
+  "counseling@heartspace.com": {
+    email: "counseling@heartspace.com",
+    name: "Counseling Client",
+    role: "student",
+    space: "self",
+    redirect: "/self-dashboard",
+  },
+  "academy@heartspace.com": {
+    email: "academy@heartspace.com",
+    name: "Academy Student",
+    role: "student",
+    space: "prep",
+    redirect: "/dashboard",
+  },
 };
 const DEMO_PASSWORDS = ["heartspace123", "password123"];
 
@@ -61,11 +117,41 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
 function HeartLogo() {
   return (
     <svg width="28" height="26" viewBox="0 0 22 20" fill="none">
-      <path d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
-        stroke={GOLD} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="8"  y1="7"   x2="6"  y2="4"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-      <line x1="11" y1="5.5" x2="11" y2="2"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
-      <line x1="14" y1="7"   x2="16" y2="4"  stroke={GOLD} strokeWidth="1" strokeLinecap="round" />
+      <path
+        d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
+        stroke={GOLD}
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <line
+        x1="8"
+        y1="7"
+        x2="6"
+        y2="4"
+        stroke={GOLD}
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+      <line
+        x1="11"
+        y1="5.5"
+        x2="11"
+        y2="2"
+        stroke={GOLD}
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+      <line
+        x1="14"
+        y1="7"
+        x2="16"
+        y2="4"
+        stroke={GOLD}
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -75,10 +161,20 @@ function BrandHeader() {
     <div className="text-center mb-10">
       <div className="flex items-center justify-center gap-3 mb-2">
         <HeartLogo />
-        <h1 className="text-5xl font-serif font-bold tracking-tight" style={{ color: SIDEBAR }}>HeartSpace</h1>
+        <h1
+          className="text-5xl font-serif font-bold tracking-tight"
+          style={{ color: SIDEBAR }}
+        >
+          HeartSpace
+        </h1>
       </div>
-      <p className="font-serif italic" style={{ color: GOLD }}>with Vaishnavi Saxena</p>
-      <div className="mt-3 mx-auto w-12 h-px rounded-full" style={{ background: GOLD }} />
+      <p className="font-serif italic" style={{ color: GOLD }}>
+        with Vaishnavi Saxena
+      </p>
+      <div
+        className="mt-3 mx-auto w-12 h-px rounded-full"
+        style={{ background: GOLD }}
+      />
     </div>
   );
 }
@@ -86,14 +182,18 @@ function BrandHeader() {
 /* ── Forgot password view ─────────────────────────────────── */
 function ForgotPasswordView({ onBack }: { onBack: () => void }) {
   const { toast } = useToast();
-  const [email,   setEmail]   = useState("");
+  const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
-  const [sent,    setSent]    = useState(false);
+  const [sent, setSent] = useState(false);
 
   async function handleSend() {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed || !trimmed.includes("@")) {
-      toast({ title: "Invalid email", description: "Please enter a valid email address.", variant: "destructive" });
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
       return;
     }
     setSending(true);
@@ -104,7 +204,11 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
       if (error) throw error;
       setSent(true);
     } catch (err: any) {
-      toast({ title: "Failed to send", description: err?.message ?? "Please try again.", variant: "destructive" });
+      toast({
+        title: "Failed to send",
+        description: err?.message ?? "Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSending(false);
     }
@@ -114,46 +218,81 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
     <div
       className="rounded-2xl p-8"
       style={{
-        background:     "rgba(243,237,230,0.96)",
+        background: "rgba(243,237,230,0.96)",
         backdropFilter: "blur(20px)",
-        border:         `1px solid ${BORDER}`,
-        boxShadow:      "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
+        border: `1px solid ${BORDER}`,
+        boxShadow:
+          "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
       }}
     >
       {sent ? (
         <div className="text-center py-4">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: `${GOLD}22` }}>
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: `${GOLD}22` }}
+          >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M20 6L9 17L4 12" stroke={GOLD} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M20 6L9 17L4 12"
+                stroke={GOLD}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
-          <h2 className="font-serif text-xl font-bold mb-2" style={{ color: SIDEBAR }}>Check your email</h2>
+          <h2
+            className="font-serif text-xl font-bold mb-2"
+            style={{ color: SIDEBAR }}
+          >
+            Check your email
+          </h2>
           <p className="text-sm mb-6" style={{ color: MUTED }}>
-            We've sent a password reset link to <strong>{email}</strong>. Check your inbox and follow the link to reset your password.
+            We've sent a password reset link to <strong>{email}</strong>. Check
+            your inbox and follow the link to reset your password.
           </p>
-          <button onClick={onBack}
+          <button
+            onClick={onBack}
             className="text-sm font-semibold underline underline-offset-2"
-            style={{ color: GOLD }}>
+            style={{ color: GOLD }}
+          >
             Back to login
           </button>
         </div>
       ) : (
         <>
-          <h2 className="font-serif text-xl font-bold mb-1" style={{ color: SIDEBAR }}>Reset password</h2>
-          <p className="text-sm mb-6" style={{ color: MUTED }}>Enter your email and we'll send you a reset link.</p>
+          <h2
+            className="font-serif text-xl font-bold mb-1"
+            style={{ color: SIDEBAR }}
+          >
+            Reset password
+          </h2>
+          <p className="text-sm mb-6" style={{ color: MUTED }}>
+            Enter your email and we'll send you a reset link.
+          </p>
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-semibold block mb-1.5" style={{ color: SIDEBAR }}>Email</label>
+              <label
+                className="text-sm font-semibold block mb-1.5"
+                style={{ color: SIDEBAR }}
+              >
+                Email
+              </label>
               <Input
                 type="email"
                 placeholder="hello@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSend();
+                }}
                 className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
-                style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }}
+                style={{
+                  background: CREAM,
+                  borderColor: BORDER,
+                  color: CHARCOAL,
+                }}
               />
             </div>
 
@@ -163,7 +302,8 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
               className="w-full h-12 rounded-xl font-semibold text-base transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               style={{
                 background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
-                color: CREAM, border: "none",
+                color: CREAM,
+                border: "none",
                 boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
               }}
             >
@@ -171,7 +311,11 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
             </Button>
 
             <p className="text-center text-sm" style={{ color: MUTED }}>
-              <button onClick={onBack} className="font-semibold underline underline-offset-2" style={{ color: GOLD }}>
+              <button
+                onClick={onBack}
+                className="font-semibold underline underline-offset-2"
+                style={{ color: GOLD }}
+              >
                 Back to login
               </button>
             </p>
@@ -186,7 +330,7 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login, isAuthenticated, user } = useAuth();
-  const { toast }       = useToast();
+  const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
 
@@ -195,7 +339,8 @@ export default function Login() {
     if (!isAuthenticated || !user) return;
     const space = (user as any)?.space as string | null;
     if (user.role === "counsellor") setLocation("/counsellor");
-    else if (space === "heartspace" || space === "self") setLocation("/self-dashboard");
+    else if (space === "heartspace" || space === "self")
+      setLocation("/self-dashboard");
     else setLocation("/dashboard");
   }, [isAuthenticated, user, setLocation]);
 
@@ -206,7 +351,7 @@ export default function Login() {
 
   async function onSubmit(v: LoginFormValues) {
     setIsPending(true);
-    const email    = v.email.toLowerCase().trim();
+    const email = v.email.toLowerCase().trim();
     const password = v.password.trim();
 
     /* Clear any stale cached user data so we always start fresh */
@@ -225,48 +370,54 @@ export default function Login() {
         const { data } = authResult;
         console.log("[HeartSpace login] Auth success, user id:", data.user.id);
 
-        /* ── Hardcoded admin override — runs before any profile fetch ── */
+        /* ── Hardcoded admin override ── */
         const ADMIN_EMAIL = "theheartspacewithvs@gmail.com";
         if (data.user.email === ADMIN_EMAIL) {
-          console.log("[HeartSpace login] Hardcoded admin match → counsellor dashboard");
-          login({
-            id:        data.user.id as any,
-            email:     data.user.email,
-            name:      "Vaishnavi Saxena",
-            role:      "counsellor",
-            space:     null,
-            avatarUrl: null,
-          } as any, data.session.access_token);
+          console.log(
+            "[HeartSpace login] Admin detected → counsellor dashboard",
+          );
+          login(
+            {
+              id: data.user.id as any,
+              email: data.user.email,
+              name: "Vaishnavi Saxena",
+              role: "counsellor",
+              space: null,
+              avatarUrl: null,
+            } as any,
+            data.session.access_token,
+          );
           setIsPending(false);
           setLocation("/counsellor");
           return;
         }
 
-        /* ── Fetch profile ── */
+        /* ── Fetch full profile including plan column ── */
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("id, email, full_name, role, avatar_url")
+          .select("id, email, full_name, role, plan, avatar_url")
           .eq("id", data.user.id)
           .single();
 
         if (error) console.error("Profile fetch error:", error);
         console.log("Profile:", profile);
 
-        /* Only INSERT when the row genuinely doesn't exist (PGRST116).
-           Never use upsert here — it would overwrite an existing role on re-login. */
         let resolvedProfile = profile;
+
+        /* Only INSERT when row genuinely doesn't exist */
         if (!profile && error?.code === "PGRST116") {
-          console.log("[HeartSpace login] No profile row — creating new (insert only)");
+          console.log("[HeartSpace login] No profile row — creating new");
           const emailName = data.user.email?.split("@")[0] ?? "User";
           await supabase.from("profiles").insert({
-            id:        data.user.id,
+            id: data.user.id,
             full_name: emailName,
-            email:     data.user.email ?? null,
-            role:      "prep_student",   /* default for brand-new users only */
+            email: data.user.email ?? null,
+            role: "prep_student",
+            plan: "apex_plus",
           });
           const { data: fresh } = await supabase
             .from("profiles")
-            .select("id, email, full_name, role, avatar_url")
+            .select("id, email, full_name, role, plan, avatar_url")
             .eq("id", data.user.id)
             .single();
           console.log("[HeartSpace login] Created profile:", fresh);
@@ -274,39 +425,61 @@ export default function Login() {
         }
 
         /* Map Supabase role → internal role + redirect */
-        const supaRole = (resolvedProfile?.role as SupabaseRole) ?? "prep_student";
-        const mapped   = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
-        console.log("[HeartSpace login] Role:", supaRole, "→", mapped.redirect);
+        const supaRole =
+          (resolvedProfile?.role as SupabaseRole) ?? "prep_student";
+        const mapped = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
+        const planFromDB = resolvedProfile?.plan ?? mapped.space;
+        console.log(
+          "[HeartSpace login] Role:",
+          supaRole,
+          "Plan:",
+          planFromDB,
+          "→",
+          mapped.redirect,
+        );
 
-        /* Display name: prefer full_name, fall back to email prefix — never show raw email */
+        /* Display name: prefer full_name, fall back to email prefix */
         const displayName =
           resolvedProfile?.full_name?.trim() ||
           (data.user.email?.split("@")[0] ?? "User");
 
-        login({
-          id:        data.user.id as any,
-          email:     data.user.email ?? email,
-          name:      displayName,
-          role:      mapped.role,
-          space:     mapped.space,
-          avatarUrl: resolvedProfile?.avatar_url ?? null,
-        } as any, data.session.access_token);
+        login(
+          {
+            id: data.user.id as any,
+            email: data.user.email ?? email,
+            name: displayName,
+            role: mapped.role,
+            space: planFromDB,
+            avatarUrl: resolvedProfile?.avatar_url ?? null,
+          } as any,
+          data.session.access_token,
+        );
 
         setIsPending(false);
         setLocation(mapped.redirect);
         return;
       }
     } catch (authErr) {
-      console.warn("[HeartSpace login] Supabase auth error, falling through to demo:", authErr);
+      console.warn(
+        "[HeartSpace login] Supabase error, falling through to demo:",
+        authErr,
+      );
     }
 
     /* ── Step 2: Demo account fallback ─────────────────────── */
     const demo = isDemoMatch(email, password);
     if (demo) {
-      login({
-        id: email as any, email: demo.email, name: demo.name,
-        role: demo.role, space: demo.space, avatarUrl: null,
-      } as any, btoa(`${email}:demo:heartspace`));
+      login(
+        {
+          id: email as any,
+          email: demo.email,
+          name: demo.name,
+          role: demo.role,
+          space: demo.space,
+          avatarUrl: null,
+        } as any,
+        btoa(`${email}:demo:heartspace`),
+      );
       setIsPending(false);
       setLocation(demo.redirect);
       return;
@@ -315,9 +488,9 @@ export default function Login() {
     /* ── Step 3: Nothing worked ─────────────────────────────── */
     setIsPending(false);
     toast({
-      title:       "Login failed",
+      title: "Login failed",
       description: "Invalid email or password.",
-      variant:     "destructive",
+      variant: "destructive",
     });
   }
 
@@ -326,18 +499,30 @@ export default function Login() {
   };
 
   const cardStyle = {
-    background:     "rgba(243,237,230,0.96)",
+    background: "rgba(243,237,230,0.96)",
     backdropFilter: "blur(20px)",
-    border:         `1px solid ${BORDER}`,
-    boxShadow:      "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
+    border: `1px solid ${BORDER}`,
+    boxShadow: "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden" style={bgStyle}>
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
+      style={bgStyle}
+    >
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl" style={{ background: GOLD }} />
-        <div className="absolute bottom-10 -left-20 w-72 h-72 rounded-full opacity-15 blur-3xl" style={{ background: "#D4A5A5" }} />
-        <div className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full opacity-10 blur-2xl" style={{ background: "#A8BFA3" }} />
+        <div
+          className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl"
+          style={{ background: GOLD }}
+        />
+        <div
+          className="absolute bottom-10 -left-20 w-72 h-72 rounded-full opacity-15 blur-3xl"
+          style={{ background: "#D4A5A5" }}
+        />
+        <div
+          className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full opacity-10 blur-2xl"
+          style={{ background: "#A8BFA3" }}
+        />
       </div>
 
       <div className="w-full max-w-[420px] z-10">
@@ -348,23 +533,49 @@ export default function Login() {
         ) : (
           <>
             <div className="rounded-2xl p-8" style={cardStyle}>
-              <h2 className="font-serif text-xl font-bold mb-1" style={{ color: SIDEBAR }}>Welcome back</h2>
-              <p className="text-sm mb-6" style={{ color: MUTED }}>Sign in to your account</p>
+              <h2
+                className="font-serif text-xl font-bold mb-1"
+                style={{ color: SIDEBAR }}
+              >
+                Welcome back
+              </h2>
+              <p className="text-sm mb-6" style={{ color: MUTED }}>
+                Sign in to your account
+              </p>
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-5"
+                >
                   {(["email", "password"] as const).map((name) => (
-                    <FormField key={name} control={form.control} name={name}
+                    <FormField
+                      key={name}
+                      control={form.control}
+                      name={name}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-semibold capitalize" style={{ color: SIDEBAR }}>{name}</FormLabel>
+                          <FormLabel
+                            className="text-sm font-semibold capitalize"
+                            style={{ color: SIDEBAR }}
+                          >
+                            {name}
+                          </FormLabel>
                           <FormControl>
                             <Input
                               type={name === "password" ? "password" : "email"}
-                              placeholder={name === "email" ? "hello@example.com" : "••••••••"}
+                              placeholder={
+                                name === "email"
+                                  ? "hello@example.com"
+                                  : "••••••••"
+                              }
                               {...field}
                               className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
-                              style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }}
+                              style={{
+                                background: CREAM,
+                                borderColor: BORDER,
+                                color: CHARCOAL,
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
@@ -374,19 +585,24 @@ export default function Login() {
                   ))}
 
                   <div className="text-right -mt-2">
-                    <button type="button" onClick={() => setShowForgot(true)}
+                    <button
+                      type="button"
+                      onClick={() => setShowForgot(true)}
                       className="text-xs font-medium underline underline-offset-2"
-                      style={{ color: MUTED }}>
+                      style={{ color: MUTED }}
+                    >
                       Forgot password?
                     </button>
                   </div>
 
                   <Button
-                    type="submit" disabled={isPending}
+                    type="submit"
+                    disabled={isPending}
                     className="w-full h-12 rounded-xl font-semibold text-base transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                     style={{
                       background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
-                      color: CREAM, border: "none",
+                      color: CREAM,
+                      border: "none",
                       boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
                     }}
                   >
@@ -397,28 +613,45 @@ export default function Login() {
 
               <p className="text-center text-sm mt-5" style={{ color: MUTED }}>
                 New here?{" "}
-                <a href="/signup" className="font-semibold underline underline-offset-2" style={{ color: GOLD }}>
+                <a
+                  href="/signup"
+                  className="font-semibold underline underline-offset-2"
+                  style={{ color: GOLD }}
+                >
                   Create an account
                 </a>
               </p>
             </div>
 
             {/* Demo hint */}
-            <div className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
-              style={{ background: "rgba(230,167,86,.12)", border: "1px solid rgba(230,167,86,.25)", color: SIDEBAR }}>
-              <p className="font-semibold mb-1.5">Demo accounts — password: <code className="font-mono">password123</code> or <code className="font-mono">heartspace123</code></p>
-              <div className="grid grid-cols-1 gap-0.5" style={{ color: MUTED }}>
+            <div
+              className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
+              style={{
+                background: "rgba(230,167,86,.12)",
+                border: "1px solid rgba(230,167,86,.25)",
+                color: SIDEBAR,
+              }}
+            >
+              <p className="font-semibold mb-1.5">
+                Demo accounts — password:{" "}
+                <code className="font-mono">heartspace123</code>
+              </p>
+              <div
+                className="grid grid-cols-1 gap-0.5"
+                style={{ color: MUTED }}
+              >
                 <span>vaishnavi@heartspace.com → Counsellor</span>
-                <span>counsellor@heartspace.com → Counsellor</span>
-                <span>student1@heartspace.com → Prep student</span>
-                <span>student2@heartspace.com → Prep student</span>
-                <span>student3@heartspace.com → Self space</span>
+                <span>prep@heartspace.com → Apex+ student</span>
+                <span>counseling@heartspace.com → HeartSpace client</span>
+                <span>academy@heartspace.com → Zenith student</span>
               </div>
             </div>
           </>
         )}
 
-        <p className="text-center text-xs mt-4" style={{ color: MUTED }}>A safe space for student wellbeing</p>
+        <p className="text-center text-xs mt-4" style={{ color: MUTED }}>
+          A safe space for student wellbeing
+        </p>
       </div>
     </div>
   );
