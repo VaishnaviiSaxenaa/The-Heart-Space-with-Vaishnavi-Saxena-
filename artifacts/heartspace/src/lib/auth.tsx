@@ -25,10 +25,28 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   ]);
 }
 
+const ADMIN_EMAIL = "theheartspacewithvs@gmail.com";
+
 async function resolveSupabaseUser(
   supabaseUser: { id: string; email?: string },
   accessToken: string,
 ): Promise<{ user: User; token: string } | null> {
+  /* Hardcoded admin override — always wins regardless of profile table contents */
+  if (supabaseUser.email === ADMIN_EMAIL) {
+    console.log("[HeartSpace auth] Hardcoded admin match for", supabaseUser.email);
+    return {
+      user: {
+        id:        supabaseUser.id as any,
+        email:     supabaseUser.email,
+        name:      "Vaishnavi Saxena",
+        role:      "counsellor",
+        space:     null,
+        avatarUrl: null,
+      } as User,
+      token: accessToken,
+    };
+  }
+
   try {
     const result = await withTimeout(
       supabase.from("profiles").select("*").eq("id", supabaseUser.id).single(),

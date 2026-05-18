@@ -225,6 +225,23 @@ export default function Login() {
         const { data } = authResult;
         console.log("[HeartSpace login] Auth success, user id:", data.user.id);
 
+        /* ── Hardcoded admin override — runs before any profile fetch ── */
+        const ADMIN_EMAIL = "theheartspacewithvs@gmail.com";
+        if (data.user.email === ADMIN_EMAIL) {
+          console.log("[HeartSpace login] Hardcoded admin match → counsellor dashboard");
+          login({
+            id:        data.user.id as any,
+            email:     data.user.email,
+            name:      "Vaishnavi Saxena",
+            role:      "counsellor",
+            space:     null,
+            avatarUrl: null,
+          } as any, data.session.access_token);
+          setIsPending(false);
+          setLocation("/counsellor");
+          return;
+        }
+
         /* ── Fetch profile ── */
         const { data: profile, error } = await supabase
           .from("profiles")
