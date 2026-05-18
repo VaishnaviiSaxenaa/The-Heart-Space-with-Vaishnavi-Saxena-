@@ -1,5 +1,10 @@
 import {
-  createContext, useContext, useState, useEffect, useCallback, ReactNode,
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
 } from "react";
 import { User } from "./api-client-react";
 import { setAuthTokenGetter } from "./api-client-react";
@@ -31,16 +36,16 @@ async function resolveSupabaseUser(
   supabaseUser: { id: string; email?: string },
   accessToken: string,
 ): Promise<{ user: User; token: string } | null> {
-  /* Hardcoded admin override — always wins regardless of profile table contents */
+  /* Hardcoded admin override — always wins */
   if (supabaseUser.email === ADMIN_EMAIL) {
-    console.log("[HeartSpace auth] Hardcoded admin match for", supabaseUser.email);
+    console.log("[HeartSpace auth] Admin match for", supabaseUser.email);
     return {
       user: {
-        id:        supabaseUser.id as any,
-        email:     supabaseUser.email,
-        name:      "Vaishnavi Saxena",
-        role:      "counsellor",
-        space:     null,
+        id: supabaseUser.id as any,
+        email: supabaseUser.email,
+        name: "Vaishnavi Saxena",
+        role: "counsellor",
+        space: null,
         avatarUrl: null,
       } as User,
       token: accessToken,
@@ -49,41 +54,54 @@ async function resolveSupabaseUser(
 
   try {
     const result = await withTimeout(
-      supabase.from("profiles").select("*").eq("id", supabaseUser.id).single(),
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, role, plan, avatar_url")
+        .eq("id", supabaseUser.id)
+        .single(),
       3000,
     );
-    /* null = timed out */
+
     if (!result) {
-      console.warn("[HeartSpace auth] Profile fetch timed out for", supabaseUser.id);
+      console.warn(
+        "[HeartSpace auth] Profile fetch timed out for",
+        supabaseUser.id,
+      );
       return null;
     }
 
     const { data: profile, error: profileError } = result;
-    console.log("[HeartSpace auth] resolveSupabaseUser profile:", profile, "error:", profileError?.code);
+    console.log(
+      "[HeartSpace auth] profile:",
+      profile,
+      "error:",
+      profileError?.code,
+    );
 
-    /* If a non-"not found" error comes back (e.g. RLS policy blocks read),
-       return null so the caller keeps whatever user state it already has. */
     if (profileError && profileError.code !== "PGRST116") {
-      console.warn("[HeartSpace auth] Profile blocked:", profileError.message,
-        "— add RLS policy: CREATE POLICY \"Users can read own profile\" ON public.profiles FOR SELECT USING (auth.uid() = id);");
+      console.warn("[HeartSpace auth] Profile blocked:", profileError.message);
       return null;
     }
 
-    const role   = (profile?.role as SupabaseRole) ?? "prep_student";
-    const mapped = ROLE_MAP[role] ?? ROLE_MAP["prep_student"];
-    console.log("[HeartSpace auth] role resolved:", role, "space:", mapped.space);
+    const supaRole = (profile?.role as SupabaseRole) ?? "prep_student";
+    const mapped = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
 
-    /* Display name: prefer full_name, fall back to email prefix — never show raw email */
+    /* Read plan from database — this is what determines the dashboard */
+    const planFromDB = profile?.plan ?? mapped.space;
+
+    console.log("[HeartSpace auth] role:", supaRole, "plan:", planFromDB);
+
+    /* Display name: prefer full_name, fall back to email prefix */
     const displayName =
       profile?.full_name?.trim() ||
       (supabaseUser.email?.split("@")[0] ?? "User");
 
     const heartUser = {
-      id:        supabaseUser.id as any,
-      email:     supabaseUser.email ?? "",
-      name:      displayName,
-      role:      mapped.role,
-      space:     mapped.space,
+      id: supabaseUser.id as any,
+      email: supabaseUser.email ?? "",
+      name: displayName,
+      role: mapped.role,
+      space: planFromDB,
       avatarUrl: profile?.avatar_url ?? null,
     } as User;
 
@@ -94,8 +112,6 @@ async function resolveSupabaseUser(
   }
 }
 
-/* A Supabase JWT has the form header.payload.signature (two dots).
-   Demo/signup tokens are plain base64 and contain no dots. */
 function isSupabaseJwt(token: string | null): boolean {
   return !!token && (token.match(/\./g) ?? []).length >= 2;
 }
@@ -110,32 +126,43 @@ function readCachedUser(): User | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  /* All localStorage reads live inside lazy useState initialisers so they
-     execute exactly once (first render only) and never touch the DOM on
-     subsequent re-renders — this prevents the React #418 hydration error. */
-
   const [user, setUser] = useState<User | null>(() => {
     try {
       const t = localStorage.getItem("heartspace_token");
-      if (isSupabaseJwt(t)) return null;   // real Supabase user — always start fresh
+      if (isSupabaseJwt(t)) return null;
       const saved = localStorage.getItem("heartspace_user");
       return saved ? (JSON.parse(saved) as User) : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   });
 
   const [token, setToken] = useState<string | null>(() => {
     try {
       const t = localStorage.getItem("heartspace_token");
-      return isSupabaseJwt(t) ? null : t;  // only restore demo tokens
-    } catch { return null; }
+      return isSupabaseJwt(t) ? null : t;
+    } catch {
+      return null;
+    }
   });
 
-  /* Loading = true whenever we expect a Supabase session to validate. */
   const [isLoading, setIsLoading] = useState(() => {
     try {
       return isSupabaseJwt(localStorage.getItem("heartspace_token"));
-    } catch { return true; }
+    } catch {
+      return true;
+    }
   });
+
+  const isDemoSession = !isSupabaseJwt(
+    (() => {
+      try {
+        return localStorage.getItem("heartspace_token");
+      } catch {
+        return null;
+      }
+    })(),
+  );
 
   const persistUser = useCallback((u: User | null, t: string | null) => {
     setUser(u);
@@ -149,67 +176,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("heartspace_token");
         localStorage.removeItem("heartspace_role");
       }
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   }, []);
 
   useEffect(() => {
-    /* Absolute hard cap — app is ALWAYS shown within 5 seconds */
     const hardCap = setTimeout(() => setIsLoading(false), 5000);
 
     (async () => {
       try {
         const result = await withTimeout(supabase.auth.getSession(), 4000);
         if (result?.data?.session) {
-          /* Real Supabase session → always fetch fresh profile, never use cache */
-          const session  = result.data.session;
-          const resolved = await resolveSupabaseUser(session.user, session.access_token);
+          const session = result.data.session;
+          const resolved = await resolveSupabaseUser(
+            session.user,
+            session.access_token,
+          );
           if (resolved) {
             persistUser(resolved.user, resolved.token);
           }
-          /* If resolved is null (timeout/RLS), keep whatever state exists
-             rather than logging the user out — they can re-login if stale. */
         } else {
-          /* No Supabase session.  If we have a demo token, keep it.
-             Otherwise clear any leftover Supabase user data. */
           if (!isDemoSession) persistUser(null, null);
         }
-      } catch { /* supabase unreachable — keep current state */ }
+      } catch {
+        /* supabase unreachable */
+      }
       clearTimeout(hardCap);
       setIsLoading(false);
     })();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       try {
         if (session) {
-          /* SIGNED_IN / TOKEN_REFRESHED → always fetch fresh profile */
-          const resolved = await resolveSupabaseUser(session.user, session.access_token);
+          const resolved = await resolveSupabaseUser(
+            session.user,
+            session.access_token,
+          );
           if (resolved) persistUser(resolved.user, resolved.token);
         } else {
-          /* SIGNED_OUT */
-          const isDemoToken = !!localStorage.getItem("heartspace_token")?.includes(":demo:");
+          const isDemoToken = !!localStorage
+            .getItem("heartspace_token")
+            ?.includes(":demo:");
           if (!isDemoToken) persistUser(null, null);
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     });
 
     return () => {
       clearTimeout(hardCap);
       subscription.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persistUser]);
 
-  const login = useCallback((newUser: User, newToken: string) => {
-    persistUser(newUser, newToken);
-  }, [persistUser]);
+  const login = useCallback(
+    (newUser: User, newToken: string) => {
+      persistUser(newUser, newToken);
+    },
+    [persistUser],
+  );
 
   const logout = useCallback(async () => {
-    try { await supabase.auth.signOut(); } catch { /* ignore */ }
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* ignore */
+    }
     persistUser(null, null);
   }, [persistUser]);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!user, isLoading }}>
+    <AuthContext.Provider
+      value={{ user, token, login, logout, isAuthenticated: !!user, isLoading }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -217,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
+  if (context === undefined)
+    throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }
