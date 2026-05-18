@@ -87,19 +87,32 @@ function readCachedUser(): User | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  /* Only seed from localStorage for demo/signup sessions.
-     Real Supabase users always start as null and wait for a fresh profile
-     fetch — this prevents stale role/name data from a previous session
-     from ever being shown. */
-  const cachedToken = (() => { try { return localStorage.getItem("heartspace_token"); } catch { return null; } })();
-  const isDemoSession = !isSupabaseJwt(cachedToken);
+  /* All localStorage reads live inside lazy useState initialisers so they
+     execute exactly once (first render only) and never touch the DOM on
+     subsequent re-renders — this prevents the React #418 hydration error. */
 
-  const [user,  setUser]  = useState<User | null>(() => isDemoSession ? readCachedUser() : null);
-  const [token, setToken] = useState<string | null>(() => isDemoSession ? cachedToken : null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const t = localStorage.getItem("heartspace_token");
+      if (isSupabaseJwt(t)) return null;   // real Supabase user — always start fresh
+      const saved = localStorage.getItem("heartspace_user");
+      return saved ? (JSON.parse(saved) as User) : null;
+    } catch { return null; }
+  });
 
-  /* Show a loading spinner until Supabase responds for real users.
-     Demo users are shown immediately from cache. */
-  const [isLoading, setIsLoading] = useState(!isDemoSession);
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      const t = localStorage.getItem("heartspace_token");
+      return isSupabaseJwt(t) ? null : t;  // only restore demo tokens
+    } catch { return null; }
+  });
+
+  /* Loading = true whenever we expect a Supabase session to validate. */
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      return isSupabaseJwt(localStorage.getItem("heartspace_token"));
+    } catch { return true; }
+  });
 
   const persistUser = useCallback((u: User | null, t: string | null) => {
     setUser(u);
