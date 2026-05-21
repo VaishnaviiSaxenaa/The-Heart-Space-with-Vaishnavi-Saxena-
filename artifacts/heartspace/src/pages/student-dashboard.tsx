@@ -1,42 +1,66 @@
 import { useState, useMemo, Component, ReactNode } from "react";
 import { useAuth } from "../lib/auth";
 import {
-  useGetDashboardSummary, useListMoods, useCreateMood, useListSessions,
-  getGetDashboardSummaryQueryKey, getListMoodsQueryKey,
+  useGetDashboardSummary,
+  useListMoods,
+  useCreateMood,
+  useListSessions,
+  getGetDashboardSummaryQueryKey,
+  getListMoodsQueryKey,
 } from "../lib/api-client-react";
 import { format, subDays } from "date-fns";
 import {
-  LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
-import { Loader2, Calendar, Clock, Zap, BookOpen, Dumbbell, LeafyGreen, Plus, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Calendar,
+  Clock,
+  Zap,
+  BookOpen,
+  Dumbbell,
+  LeafyGreen,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 /* ─── Brand tokens ───────────────────────── */
-const CREAM    = "#FAF7F2";
+const CREAM = "#FAF7F2";
 const CHARCOAL = "#2C1810";
-const GOLD     = "#C9A96E";
-const CARD     = "#FFFFFF";
-const MUTED    = "#8C7B70";
-const BORDER   = "#E8DDD0";
-const SAGE     = "#A8BFA3";
-const OLIVE    = "#6E8B6B";
-const ROSE     = "#D4A5A5";
-const SIDEBAR  = "#3D2314";
+const GOLD = "#C9A96E";
+const CARD = "#FFFFFF";
+const MUTED = "#8C7B70";
+const BORDER = "#E8DDD0";
+const SAGE = "#A8BFA3";
+const OLIVE = "#6E8B6B";
+const ROSE = "#D4A5A5";
+const SIDEBAR = "#3D2314";
 
 /* Mood palette */
 const MOODS = [
   { label: "Struggling", color: "#C4785A", bg: "#F4E4DC", text: "#7A3A22" },
-  { label: "Low",        color: "#C9A05A", bg: "#F5EDD8", text: "#7A5520" },
-  { label: "Okay",       color: "#B5A060", bg: "#F0E8CC", text: "#605020" },
-  { label: "Good",       color: SAGE,      bg: "#E8F0E6", text: "#3A5A30" },
-  { label: "Great",      color: OLIVE,     bg: "#DFF0DA", text: "#2A5020" },
+  { label: "Low", color: "#C9A05A", bg: "#F5EDD8", text: "#7A5520" },
+  { label: "Okay", color: "#B5A060", bg: "#F0E8CC", text: "#605020" },
+  { label: "Good", color: SAGE, bg: "#E8F0E6", text: "#3A5A30" },
+  { label: "Great", color: OLIVE, bg: "#DFF0DA", text: "#2A5020" },
 ];
 
-
 /* Safe date formatter — never throws */
-function safeFormat(input: string | null | undefined, fmt: string, fallback = "—"): string {
+function safeFormat(
+  input: string | null | undefined,
+  fmt: string,
+  fallback = "—",
+): string {
   try {
     if (!input) return fallback;
     const d = new Date(input);
@@ -47,19 +71,31 @@ function safeFormat(input: string | null | undefined, fmt: string, fallback = "�
   }
 }
 
-/* Section-level error boundary — shows empty state instead of crashing the whole page */
-class SectionBoundary extends Component<{ label: string; children: ReactNode }, { crashed: boolean }> {
+/* Section-level error boundary */
+class SectionBoundary extends Component<
+  { label: string; children: ReactNode },
+  { crashed: boolean }
+> {
   constructor(props: { label: string; children: ReactNode }) {
     super(props);
     this.state = { crashed: false };
   }
-  static getDerivedStateFromError() { return { crashed: true }; }
-  componentDidCatch(err: unknown) { console.error(`[${this.props.label}] crashed:`, err); }
+  static getDerivedStateFromError() {
+    return { crashed: true };
+  }
+  componentDidCatch(err: unknown) {
+    console.error(`[${this.props.label}] crashed:`, err);
+  }
   render() {
     if (this.state.crashed) {
       return (
-        <div className="rounded-2xl p-6 text-center" style={{ background: "#FAF7F2", border: "1.5px dashed #E8DDD0" }}>
-          <p className="text-sm" style={{ color: "#8C7B70" }}>{this.props.label} is temporarily unavailable.</p>
+        <div
+          className="rounded-2xl p-6 text-center"
+          style={{ background: "#FAF7F2", border: "1.5px dashed #E8DDD0" }}
+        >
+          <p className="text-sm" style={{ color: "#8C7B70" }}>
+            {this.props.label} is temporarily unavailable.
+          </p>
         </div>
       );
     }
@@ -74,27 +110,34 @@ function AnalyticsSection({ userId }: { userId: string }) {
       const raw = localStorage.getItem(`hs_daily_${userId}`);
       const all: Record<string, any> = raw ? JSON.parse(raw) : {};
       return Array.from({ length: 7 }, (_, i) => {
-        const d   = subDays(new Date(), 6 - i);
+        const d = subDays(new Date(), 6 - i);
         const key = d.toISOString().split("T")[0];
-        const e   = all[key];
+        const e = all[key];
         return {
-          day:   format(d, "EEE"),
-          mood:  e?.mood   ?? null,
+          day: format(d, "EEE"),
+          mood: e?.mood ?? null,
           study: e?.studyHours ?? null,
         };
       });
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   }, [userId]);
 
   const hasData = data.some((d) => d.mood !== null || d.study !== null);
 
   if (!hasData) {
     return (
-      <div className="text-center py-10 rounded-2xl"
-        style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
-        <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No daily entries yet</p>
+      <div
+        className="text-center py-10 rounded-2xl"
+        style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
+      >
+        <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
+          No daily entries yet
+        </p>
         <p className="text-xs mt-1" style={{ color: MUTED }}>
-          Start logging in <strong>Daily Tracker</strong> to see your mood and study trends here.
+          Start logging in <strong>Daily Tracker</strong> to see your mood and
+          study trends here.
         </p>
       </div>
     );
@@ -103,30 +146,74 @@ function AnalyticsSection({ userId }: { userId: string }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: MUTED }}>Mood Trend — last 7 days</p>
+        <p
+          className="text-xs font-semibold uppercase tracking-wide mb-3"
+          style={{ color: MUTED }}
+        >
+          Mood Trend — last 7 days
+        </p>
         <ResponsiveContainer width="100%" height={150}>
-          <LineChart data={data} margin={{ top: 5, right: 8, left: -24, bottom: 0 }}>
+          <LineChart
+            data={data}
+            margin={{ top: 5, right: 8, left: -24, bottom: 0 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
             <XAxis dataKey="day" tick={{ fontSize: 10, fill: MUTED }} />
-            <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 10, fill: MUTED }} />
+            <YAxis
+              domain={[1, 5]}
+              ticks={[1, 2, 3, 4, 5]}
+              tick={{ fontSize: 10, fill: MUTED }}
+            />
             <Tooltip
-              formatter={(val: any) => [val !== null ? `${val}/5` : "–", "Mood"]}
-              contentStyle={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 11 }} />
-            <Line type="monotone" dataKey="mood" stroke={GOLD} strokeWidth={2.5}
-              dot={{ fill: GOLD, r: 4 }} connectNulls={false} />
+              formatter={(val: any) => [
+                val !== null ? `${val}/5` : "–",
+                "Mood",
+              ]}
+              contentStyle={{
+                background: "#fff",
+                border: `1px solid ${BORDER}`,
+                borderRadius: 10,
+                fontSize: 11,
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey="mood"
+              stroke={GOLD}
+              strokeWidth={2.5}
+              dot={{ fill: GOLD, r: 4 }}
+              connectNulls={false}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: MUTED }}>Study Hours — last 7 days</p>
+        <p
+          className="text-xs font-semibold uppercase tracking-wide mb-3"
+          style={{ color: MUTED }}
+        >
+          Study Hours — last 7 days
+        </p>
         <ResponsiveContainer width="100%" height={150}>
-          <BarChart data={data} margin={{ top: 5, right: 8, left: -24, bottom: 0 }}>
+          <BarChart
+            data={data}
+            margin={{ top: 5, right: 8, left: -24, bottom: 0 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
             <XAxis dataKey="day" tick={{ fontSize: 10, fill: MUTED }} />
             <YAxis tick={{ fontSize: 10, fill: MUTED }} />
             <Tooltip
-              formatter={(val: any) => [val !== null ? `${val}h` : "–", "Study"]}
-              contentStyle={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 11 }} />
+              formatter={(val: any) => [
+                val !== null ? `${val}h` : "–",
+                "Study",
+              ]}
+              contentStyle={{
+                background: "#fff",
+                border: `1px solid ${BORDER}`,
+                borderRadius: 10,
+                fontSize: 11,
+              }}
+            />
             <Bar dataKey="study" fill={OLIVE} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -136,11 +223,24 @@ function AnalyticsSection({ userId }: { userId: string }) {
 }
 
 /* ─── Sub-components ─────────────────────── */
-function Card({ children, className = "", style = {} }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+function Card({
+  children,
+  className = "",
+  style = {},
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
       className={`rounded-2xl ${className}`}
-      style={{ background: CARD, border: `1px solid ${BORDER}`, boxShadow: "0 2px 8px rgba(61,53,48,.06)", ...style }}
+      style={{
+        background: CARD,
+        border: `1px solid ${BORDER}`,
+        boxShadow: "0 2px 8px rgba(61,53,48,.06)",
+        ...style,
+      }}
     >
       {children}
     </div>
@@ -148,9 +248,15 @@ function Card({ children, className = "", style = {} }: { children: React.ReactN
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="font-serif text-lg font-semibold mb-4" style={{ color: CHARCOAL }}>{children}</h2>;
+  return (
+    <h2
+      className="font-serif text-lg font-semibold mb-4"
+      style={{ color: CHARCOAL }}
+    >
+      {children}
+    </h2>
+  );
 }
-
 
 /* ─── Today's Plan ───────────────────────── */
 type PlanCategory = "Study" | "Revision" | "Practice" | "Physical" | "Personal";
@@ -162,14 +268,23 @@ interface PlanTask {
   done: boolean;
 }
 
-const CATEGORIES: PlanCategory[] = ["Study", "Revision", "Practice", "Physical", "Personal"];
+const CATEGORIES: PlanCategory[] = [
+  "Study",
+  "Revision",
+  "Practice",
+  "Physical",
+  "Personal",
+];
 
-const CAT_COLORS: Record<PlanCategory, { bg: string; text: string; active: string }> = {
-  Study:    { bg: `${OLIVE}22`,      text: OLIVE,    active: OLIVE    },
-  Revision: { bg: `${GOLD}22`,       text: "#9A6010", active: "#9A6010" },
-  Practice: { bg: `${ROSE}22`,       text: "#A05050", active: "#A05050" },
-  Physical: { bg: `${SAGE}22`,       text: "#3A6A38", active: "#3A6A38" },
-  Personal: { bg: "rgba(61,53,48,.08)", text: MUTED,  active: MUTED   },
+const CAT_COLORS: Record<
+  PlanCategory,
+  { bg: string; text: string; active: string }
+> = {
+  Study: { bg: `${OLIVE}22`, text: OLIVE, active: OLIVE },
+  Revision: { bg: `${GOLD}22`, text: "#9A6010", active: "#9A6010" },
+  Practice: { bg: `${ROSE}22`, text: "#A05050", active: "#A05050" },
+  Physical: { bg: `${SAGE}22`, text: "#3A6A38", active: "#3A6A38" },
+  Personal: { bg: "rgba(61,53,48,.08)", text: MUTED, active: MUTED },
 };
 
 const PLAN_KEY = "heartspace_today_plan";
@@ -200,12 +315,18 @@ function TodaysPlan() {
   const [newName, setNewName] = useState("");
   const [newCat, setNewCat] = useState<PlanCategory>("Study");
 
-  const persist = (next: PlanTask[]) => { setTasks(next); savePlanTasks(next); };
+  const persist = (next: PlanTask[]) => {
+    setTasks(next);
+    savePlanTasks(next);
+  };
 
   const addTask = () => {
     const name = newName.trim();
     if (!name) return;
-    persist([...tasks, { id: `${Date.now()}`, name, category: newCat, done: false }]);
+    persist([
+      ...tasks,
+      { id: `${Date.now()}`, name, category: newCat, done: false },
+    ]);
     setNewName("");
     setNewCat("Study");
     setAdding(false);
@@ -214,26 +335,32 @@ function TodaysPlan() {
   const toggleDone = (id: string) =>
     persist(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
 
-  const deleteTask = (id: string) =>
-    persist(tasks.filter((t) => t.id !== id));
+  const deleteTask = (id: string) => persist(tasks.filter((t) => t.id !== id));
 
   const doneCount = tasks.filter((t) => t.done).length;
 
   return (
     <Card className="lg:col-span-2 p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <h2 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>
+        <h2
+          className="font-serif text-lg font-semibold"
+          style={{ color: CHARCOAL }}
+        >
           Today's Plan
           {tasks.length > 0 && (
-            <span className="ml-2 text-sm font-sans font-normal" style={{ color: MUTED }}>
+            <span
+              className="ml-2 text-sm font-sans font-normal"
+              style={{ color: MUTED }}
+            >
               {doneCount}/{tasks.length} done
             </span>
           )}
         </h2>
         {tasks.length > 0 && (
           <button
-            onClick={() => { setAdding(true); }}
+            onClick={() => {
+              setAdding(true);
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.03] active:scale-[0.98]"
             style={{
               background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
@@ -246,7 +373,6 @@ function TodaysPlan() {
         )}
       </div>
 
-      {/* Add-task form */}
       {adding && (
         <div
           className="mb-4 p-4 rounded-2xl space-y-3"
@@ -258,13 +384,15 @@ function TodaysPlan() {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") addTask();
-              if (e.key === "Escape") { setAdding(false); setNewName(""); }
+              if (e.key === "Escape") {
+                setAdding(false);
+                setNewName("");
+              }
             }}
             placeholder="What do you want to get done today?"
             className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-sm"
             style={{ color: CHARCOAL }}
           />
-          {/* Category pills */}
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.map((cat) => (
               <button
@@ -275,7 +403,10 @@ function TodaysPlan() {
                 style={
                   newCat === cat
                     ? { background: SIDEBAR, color: CREAM }
-                    : { background: CAT_COLORS[cat].bg, color: CAT_COLORS[cat].text }
+                    : {
+                        background: CAT_COLORS[cat].bg,
+                        color: CAT_COLORS[cat].text,
+                      }
                 }
               >
                 {cat}
@@ -291,7 +422,10 @@ function TodaysPlan() {
               Add
             </button>
             <button
-              onClick={() => { setAdding(false); setNewName(""); }}
+              onClick={() => {
+                setAdding(false);
+                setNewName("");
+              }}
               className="px-4 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
               style={{ background: `${BORDER}88`, color: MUTED }}
             >
@@ -301,17 +435,23 @@ function TodaysPlan() {
         </div>
       )}
 
-      {/* Empty state */}
       {tasks.length === 0 && !adding && (
         <div className="flex flex-col items-center justify-center py-14 text-center">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: `${GOLD}15`, border: `1.5px dashed ${GOLD}55` }}
+            style={{
+              background: `${GOLD}15`,
+              border: `1.5px dashed ${GOLD}55`,
+            }}
           >
             <Plus className="w-7 h-7" style={{ color: GOLD }} />
           </div>
-          <p className="text-sm font-semibold mb-1" style={{ color: CHARCOAL }}>No tasks yet</p>
-          <p className="text-xs mb-6" style={{ color: MUTED }}>Add your first task for today!</p>
+          <p className="text-sm font-semibold mb-1" style={{ color: CHARCOAL }}>
+            No tasks yet
+          </p>
+          <p className="text-xs mb-6" style={{ color: MUTED }}>
+            Add your first task for today!
+          </p>
           <button
             onClick={() => setAdding(true)}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -326,7 +466,6 @@ function TodaysPlan() {
         </div>
       )}
 
-      {/* Task list */}
       {tasks.length > 0 && (
         <div className="space-y-2">
           {tasks.map((task) => {
@@ -340,7 +479,6 @@ function TodaysPlan() {
                   border: `1px solid ${task.done ? OLIVE + "35" : BORDER}`,
                 }}
               >
-                {/* Animated checkbox */}
                 <button
                   onClick={() => toggleDone(task.id)}
                   className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200"
@@ -353,12 +491,16 @@ function TodaysPlan() {
                 >
                   {task.done && (
                     <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                      <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      <path
+                        d="M1 3.5L3.5 6L8 1"
+                        stroke="white"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   )}
                 </button>
-
-                {/* Task name */}
                 <span
                   className="flex-1 text-sm font-medium transition-all duration-200"
                   style={{
@@ -369,16 +511,12 @@ function TodaysPlan() {
                 >
                   {task.name}
                 </span>
-
-                {/* Category badge */}
                 <span
                   className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
                   style={{ background: cc.bg, color: cc.text }}
                 >
                   {task.category}
                 </span>
-
-                {/* Delete (visible on hover) */}
                 <button
                   onClick={() => deleteTask(task.id)}
                   className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-lg"
@@ -403,21 +541,31 @@ export default function StudentDashboard() {
   const qc = useQueryClient();
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
 
-  const { data: summary, isLoading: loadS } = useGetDashboardSummary(
-    { studentId: user?.id }, { query: { enabled: !!user?.id } }
+  const { data: summary } = useGetDashboardSummary(
+    { studentId: user?.id },
+    { query: { enabled: !!user?.id } },
   );
-  const { data: moods, isLoading: loadM } = useListMoods(
-    { studentId: user?.id, limit: 5 }, { query: { enabled: !!user?.id } }
+  const { data: moods } = useListMoods(
+    { studentId: user?.id, limit: 5 },
+    { query: { enabled: !!user?.id } },
   );
   const { data: sessions } = useListSessions(
-    { studentId: user?.id }, { query: { enabled: !!user?.id } }
+    { studentId: user?.id },
+    { query: { enabled: !!user?.id } },
   );
   const moodMutation = useCreateMood({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Mood logged ✨", description: "Thank you for checking in." });
-        qc.invalidateQueries({ queryKey: getListMoodsQueryKey({ studentId: user?.id, limit: 5 }) });
-        qc.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey({ studentId: user?.id }) });
+        toast({
+          title: "Mood logged ✨",
+          description: "Thank you for checking in.",
+        });
+        qc.invalidateQueries({
+          queryKey: getListMoodsQueryKey({ studentId: user?.id, limit: 5 }),
+        });
+        qc.invalidateQueries({
+          queryKey: getGetDashboardSummaryQueryKey({ studentId: user?.id }),
+        });
       },
     },
   });
@@ -430,43 +578,97 @@ export default function StudentDashboard() {
 
   /* Time-based greeting */
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const space = (user as any)?.space as string | null;
+  const examType = (user as any)?.exam_type as string | null;
 
   /* Service identity */
-  const SERVICE: Record<string, { name: string; emoji: string; color: string; sub: string }> = {
-    zenith:     { name: "Zenith",     emoji: "🏆", color: "#C9A96E", sub: "Full mentorship + counsellor support" },
-    apex:       { name: "Apex+",      emoji: "⚡", color: "#3D2314", sub: "Academic tracking + AI guidance"      },
-    heartspace: { name: "HeartSpace", emoji: "🌿", color: "#D4A5A5", sub: "Personal counselling + emotional support" },
+  const SERVICE: Record<
+    string,
+    { name: string; emoji: string; color: string; sub: string }
+  > = {
+    zenith: {
+      name: "Zenith",
+      emoji: "🏆",
+      color: "#C9A96E",
+      sub: "Full mentorship + counsellor support",
+    },
+    apex: {
+      name: "Apex+",
+      emoji: "⚡",
+      color: "#3D2314",
+      sub: "Academic tracking + AI guidance",
+    },
+    heartspace: {
+      name: "HeartSpace",
+      emoji: "🌿",
+      color: "#D4A5A5",
+      sub: "Personal counselling + emotional support",
+    },
   };
   const svc = space ? SERVICE[space] : null;
 
-  const sessionList      = Array.isArray(sessions) ? sessions : [];
-  const upcomingSessions = sessionList.filter((s) => s.status === "scheduled").slice(0, 5);
+  /* Exam label */
+  const EXAM_LABEL: Record<string, { label: string; emoji: string }> = {
+    JAM: { label: "IIT JAM", emoji: "🎓" },
+    NET_GATE: { label: "CSIR NET / GATE", emoji: "🔬" },
+  };
+  const exam = examType ? EXAM_LABEL[examType] : null;
+
+  const sessionList = Array.isArray(sessions) ? sessions : [];
+  const upcomingSessions = sessionList
+    .filter((s: any) => s.status === "scheduled")
+    .slice(0, 5);
 
   return (
     <div className="space-y-7 animate-in fade-in duration-500">
-
       {/* ── Greeting ── */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          {svc && (
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-base">{svc.emoji}</span>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
-                style={{ background: `${svc.color}20`, color: svc.color }}>
-                Welcome to {svc.name}
-              </span>
+          {/* Service + Exam badges */}
+          {(svc || exam) && (
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              {svc && (
+                <>
+                  <span className="text-base">{svc.emoji}</span>
+                  <span
+                    className="text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
+                    style={{ background: `${svc.color}20`, color: svc.color }}
+                  >
+                    {svc.name}
+                  </span>
+                </>
+              )}
+              {exam && (
+                <span
+                  className="text-xs font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
+                  style={{
+                    background: "rgba(61,35,20,0.08)",
+                    color: SIDEBAR,
+                    border: `1px solid ${BORDER}`,
+                  }}
+                >
+                  {exam.emoji} {exam.label}
+                </span>
+              )}
             </div>
           )}
-          <h1 className="text-3xl md:text-4xl font-serif font-bold" style={{ color: CHARCOAL }}>
+
+          <h1
+            className="text-3xl md:text-4xl font-serif font-bold"
+            style={{ color: CHARCOAL }}
+          >
             {greeting}, {firstName} ✨
           </h1>
           <p className="mt-1.5 text-sm" style={{ color: MUTED }}>
-            {svc ? svc.sub : "You're building your dream life, one intentional day at a time."}
+            {svc
+              ? svc.sub
+              : "You're building your dream life, one intentional day at a time."}
           </p>
         </div>
+
         <button
           className="self-start flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02]"
           style={{
@@ -475,22 +677,54 @@ export default function StudentDashboard() {
             boxShadow: "0 4px 14px rgba(230,167,86,.35)",
           }}
         >
-          <Zap className="w-4 h-4" />Focus Mode
+          <Zap className="w-4 h-4" />
+          Focus Mode
         </button>
       </div>
 
       {/* ── Stats row ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Sessions",  value: summary?.totalSessions ?? 0,   sub: "all time",   color: SIDEBAR },
-          { label: "Upcoming",         value: summary?.upcomingSessions ?? 0, sub: "scheduled", color: GOLD },
-          { label: "Completed",        value: summary?.completedSessions ?? 0, sub: "sessions", color: OLIVE },
-          { label: "Avg Mood",         value: summary?.averageMood ? `${summary.averageMood.toFixed(1)}/5` : "—", sub: "this month", color: ROSE },
+          {
+            label: "Total Sessions",
+            value: summary?.totalSessions ?? 0,
+            sub: "all time",
+            color: SIDEBAR,
+          },
+          {
+            label: "Upcoming",
+            value: summary?.upcomingSessions ?? 0,
+            sub: "scheduled",
+            color: GOLD,
+          },
+          {
+            label: "Completed",
+            value: summary?.completedSessions ?? 0,
+            sub: "sessions",
+            color: OLIVE,
+          },
+          {
+            label: "Avg Mood",
+            value: summary?.averageMood
+              ? `${summary.averageMood.toFixed(1)}/5`
+              : "—",
+            sub: "this month",
+            color: ROSE,
+          },
         ].map(({ label, value, sub, color }) => (
           <Card key={label} className="p-5">
-            <div className="text-2xl md:text-3xl font-serif font-bold mb-1" style={{ color }}>{value}</div>
-            <div className="text-xs font-semibold" style={{ color: CHARCOAL }}>{label}</div>
-            <div className="text-xs" style={{ color: MUTED }}>{sub}</div>
+            <div
+              className="text-2xl md:text-3xl font-serif font-bold mb-1"
+              style={{ color }}
+            >
+              {value}
+            </div>
+            <div className="text-xs font-semibold" style={{ color: CHARCOAL }}>
+              {label}
+            </div>
+            <div className="text-xs" style={{ color: MUTED }}>
+              {sub}
+            </div>
           </Card>
         ))}
       </div>
@@ -499,12 +733,18 @@ export default function StudentDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <TodaysPlan />
 
-        {/* Next session + quick links */}
+        {/* Next session */}
         <Card className="p-6 flex flex-col">
           <SectionTitle>Next Session</SectionTitle>
           {upcomingSessions[0] ? (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4" style={{ background: CREAM }}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${GOLD}22` }}>
+            <div
+              className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4"
+              style={{ background: CREAM }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: `${GOLD}22` }}
+              >
                 <Calendar className="w-4 h-4" style={{ color: GOLD }} />
               </div>
               <div>
@@ -517,11 +757,20 @@ export default function StudentDashboard() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-8 rounded-2xl"
-              style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
-              <Calendar className="w-8 h-8 mb-3 opacity-30" style={{ color: GOLD }} />
-              <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No upcoming sessions</p>
-              <p className="text-xs mt-1" style={{ color: MUTED }}>Book a session to get started</p>
+            <div
+              className="flex-1 flex flex-col items-center justify-center text-center py-8 rounded-2xl"
+              style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
+            >
+              <Calendar
+                className="w-8 h-8 mb-3 opacity-30"
+                style={{ color: GOLD }}
+              />
+              <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
+                No upcoming sessions
+              </p>
+              <p className="text-xs mt-1" style={{ color: MUTED }}>
+                Book a session to get started
+              </p>
             </div>
           )}
         </Card>
@@ -529,7 +778,6 @@ export default function StudentDashboard() {
 
       {/* ── Mood Check-in + Focus Mode ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Mood */}
         <Card className="p-6">
           <SectionTitle>How are you feeling today?</SectionTitle>
           <div className="flex gap-2 mb-5">
@@ -537,7 +785,9 @@ export default function StudentDashboard() {
               const val = idx + 1;
               const active = selectedMood === val;
               return (
-                <button key={val} onClick={() => setSelectedMood(active ? null : val)}
+                <button
+                  key={val}
+                  onClick={() => setSelectedMood(active ? null : val)}
                   className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-200 hover:scale-105"
                   style={{
                     background: active ? m.color : m.bg,
@@ -545,8 +795,16 @@ export default function StudentDashboard() {
                     boxShadow: active ? `0 4px 12px ${m.color}44` : "none",
                   }}
                 >
-                  <span className="text-xl font-bold font-serif" style={{ color: active ? "white" : m.color }}>{val}</span>
-                  <span className="text-[9px] font-semibold leading-tight text-center" style={{ color: active ? "rgba(255,255,255,.85)" : m.text }}>
+                  <span
+                    className="text-xl font-bold font-serif"
+                    style={{ color: active ? "white" : m.color }}
+                  >
+                    {val}
+                  </span>
+                  <span
+                    className="text-[9px] font-semibold leading-tight text-center"
+                    style={{ color: active ? "rgba(255,255,255,.85)" : m.text }}
+                  >
                     {m.label}
                   </span>
                 </button>
@@ -558,26 +816,44 @@ export default function StudentDashboard() {
             disabled={selectedMood === null || moodMutation.isPending}
             className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
             style={{
-              background: selectedMood ? `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)` : "#E8DDD0",
+              background: selectedMood
+                ? `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`
+                : "#E8DDD0",
               color: selectedMood ? CREAM : MUTED,
-              boxShadow: selectedMood ? "0 4px 12px rgba(230,167,86,.30)" : "none",
+              boxShadow: selectedMood
+                ? "0 4px 12px rgba(230,167,86,.30)"
+                : "none",
             }}
           >
             {moodMutation.isPending ? "Logging…" : "Log My Mood"}
           </button>
 
-          {/* Recent mood history */}
           {Array.isArray(moods) && moods.length > 0 && (
             <div className="mt-5 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Recent</p>
-              {moods.slice(0, 3).map((m) => {
+              <p
+                className="text-xs font-semibold uppercase tracking-wide mb-2"
+                style={{ color: MUTED }}
+              >
+                Recent
+              </p>
+              {moods.slice(0, 3).map((m: any) => {
                 const mood = MOODS[m.mood - 1];
                 return (
-                  <div key={m.id} className="flex items-center justify-between px-3 py-2 rounded-xl"
-                    style={{ background: mood?.bg ?? CARD }}>
-                    <span className="text-xs" style={{ color: MUTED }}>{safeFormat(m.createdAt, "MMM d")}</span>
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={{ background: mood?.color ?? GOLD, color: "white" }}>
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between px-3 py-2 rounded-xl"
+                    style={{ background: mood?.bg ?? CARD }}
+                  >
+                    <span className="text-xs" style={{ color: MUTED }}>
+                      {safeFormat(m.createdAt, "MMM d")}
+                    </span>
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                      style={{
+                        background: mood?.color ?? GOLD,
+                        color: "white",
+                      }}
+                    >
                       {mood?.label ?? m.mood}
                     </span>
                   </div>
@@ -588,26 +864,51 @@ export default function StudentDashboard() {
         </Card>
 
         {/* Focus Mode */}
-        <Card className="p-6 flex flex-col" style={{
-          background: `linear-gradient(145deg, ${SIDEBAR} 0%, #3A2518 100%)`,
-          border: "none",
-        }}>
+        <Card
+          className="p-6 flex flex-col"
+          style={{
+            background: `linear-gradient(145deg, ${SIDEBAR} 0%, #3A2518 100%)`,
+            border: "none",
+          }}
+        >
           <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-            {/* Minimal gradient circle */}
             <div className="relative w-28 h-28 mb-6">
-              <div className="absolute inset-0 rounded-full opacity-20" style={{ background: GOLD }} />
-              <div className="absolute inset-3 rounded-full opacity-30" style={{ background: GOLD }} />
-              <div className="absolute inset-6 rounded-full flex items-center justify-center" style={{ background: `${GOLD}50` }}>
+              <div
+                className="absolute inset-0 rounded-full opacity-20"
+                style={{ background: GOLD }}
+              />
+              <div
+                className="absolute inset-3 rounded-full opacity-30"
+                style={{ background: GOLD }}
+              />
+              <div
+                className="absolute inset-6 rounded-full flex items-center justify-center"
+                style={{ background: `${GOLD}50` }}
+              >
                 <Zap className="w-7 h-7" style={{ color: GOLD }} />
               </div>
             </div>
-            <h3 className="font-serif text-xl font-bold mb-2" style={{ color: "#FAF7F2" }}>Focus Mode</h3>
-            <p className="text-sm leading-relaxed mb-6" style={{ color: "rgba(250,247,242,.60)" }}>
-              Deep work. No distractions.<br />Just you and your goals.
+            <h3
+              className="font-serif text-xl font-bold mb-2"
+              style={{ color: "#FAF7F2" }}
+            >
+              Focus Mode
+            </h3>
+            <p
+              className="text-sm leading-relaxed mb-6"
+              style={{ color: "rgba(250,247,242,.60)" }}
+            >
+              Deep work. No distractions.
+              <br />
+              Just you and your goals.
             </p>
             <button
               className="px-7 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02]"
-              style={{ background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`, color: "#FAF7F2", boxShadow: `0 4px 14px ${GOLD}55` }}
+              style={{
+                background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+                color: "#FAF7F2",
+                boxShadow: `0 4px 14px ${GOLD}55`,
+              }}
             >
               Start Focus Session
             </button>
@@ -619,12 +920,20 @@ export default function StudentDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
           <SectionTitle>Habit Tracking</SectionTitle>
-          <div className="flex flex-col items-center justify-center py-8 text-center rounded-2xl"
-            style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
-            <LeafyGreen className="w-8 h-8 mb-3 opacity-30" style={{ color: OLIVE }} />
-            <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No habits tracked yet</p>
+          <div
+            className="flex flex-col items-center justify-center py-8 text-center rounded-2xl"
+            style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
+          >
+            <LeafyGreen
+              className="w-8 h-8 mb-3 opacity-30"
+              style={{ color: OLIVE }}
+            />
+            <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
+              No habits tracked yet
+            </p>
             <p className="text-xs mt-1" style={{ color: MUTED }}>
-              Log daily entries in the <strong>Daily Tracker</strong> to build streaks here.
+              Log daily entries in the <strong>Daily Tracker</strong> to build
+              streaks here.
             </p>
           </div>
         </Card>
@@ -632,18 +941,31 @@ export default function StudentDashboard() {
         <Card className="p-6">
           <SectionTitle>Weekly Rhythm</SectionTitle>
           <div className="flex gap-2 mb-4">
-            {["M","T","W","T","F","S","S"].map((day, idx) => {
+            {["M", "T", "W", "T", "F", "S", "S"].map((day, idx) => {
               const todayIdx = (new Date().getDay() + 6) % 7;
-              const isToday  = idx === todayIdx;
+              const isToday = idx === todayIdx;
               return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-[11px] font-semibold" style={{ color: isToday ? GOLD : MUTED }}>{day}</span>
-                  <div className="w-full aspect-square rounded-xl flex items-center justify-center"
+                <div
+                  key={idx}
+                  className="flex-1 flex flex-col items-center gap-2"
+                >
+                  <span
+                    className="text-[11px] font-semibold"
+                    style={{ color: isToday ? GOLD : MUTED }}
+                  >
+                    {day}
+                  </span>
+                  <div
+                    className="w-full aspect-square rounded-xl flex items-center justify-center"
                     style={{
                       background: isToday ? `${GOLD}22` : CREAM,
                       border: `1.5px solid ${isToday ? GOLD : BORDER}`,
-                    }}>
-                    <span className="text-[10px]" style={{ color: isToday ? GOLD : BORDER }}>
+                    }}
+                  >
+                    <span
+                      className="text-[10px]"
+                      style={{ color: isToday ? GOLD : BORDER }}
+                    >
                       {isToday ? "today" : "—"}
                     </span>
                   </div>
@@ -664,17 +986,41 @@ export default function StudentDashboard() {
       </Card>
 
       {/* ── Quote card ── */}
-      <Card className="p-7 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${CREAM} 0%, #EDE4D8 100%)` }}>
-        {/* Decorative gold lines */}
-        <svg className="absolute top-4 right-6 opacity-20" width="60" height="50" viewBox="0 0 60 50">
-          <path d="M10 40 Q30 5 50 40" stroke={GOLD} strokeWidth="1.5" fill="none" />
-          <path d="M5 45 Q25 10 45 45" stroke={GOLD} strokeWidth="1" fill="none" />
+      <Card
+        className="p-7 relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${CREAM} 0%, #EDE4D8 100%)`,
+        }}
+      >
+        <svg
+          className="absolute top-4 right-6 opacity-20"
+          width="60"
+          height="50"
+          viewBox="0 0 60 50"
+        >
+          <path
+            d="M10 40 Q30 5 50 40"
+            stroke={GOLD}
+            strokeWidth="1.5"
+            fill="none"
+          />
+          <path
+            d="M5 45 Q25 10 45 45"
+            stroke={GOLD}
+            strokeWidth="1"
+            fill="none"
+          />
           <circle cx="30" cy="10" r="3" fill={GOLD} />
         </svg>
-        <p className="font-serif italic text-lg leading-relaxed max-w-lg" style={{ color: SIDEBAR }}>
+        <p
+          className="font-serif italic text-lg leading-relaxed max-w-lg"
+          style={{ color: SIDEBAR }}
+        >
           "You don't have to do it all today. Just don't stop showing up."
         </p>
-        <p className="text-xs mt-3 font-medium" style={{ color: GOLD }}>Daily Affirmation</p>
+        <p className="text-xs mt-3 font-medium" style={{ color: GOLD }}>
+          Daily Affirmation
+        </p>
       </Card>
     </div>
   );
