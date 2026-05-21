@@ -15,7 +15,6 @@ import {
   Target,
   Calendar,
   FileText,
-  Clock,
 } from "lucide-react";
 
 /* ─── Brand tokens ─────────────────────── */
@@ -33,7 +32,7 @@ const ROSE = "#D4A5A5";
 /* ─── Constants ────────────────────────── */
 const MOOD_EMOJIS = ["😞", "😕", "😐", "🙂", "😄"];
 const MOOD_LABELS = ["Struggling", "Low", "Okay", "Good", "Great"];
-const EMOTIONAL_OPTS = [
+const BASE_EMOTIONAL = [
   "Calm",
   "Anxious",
   "Motivated",
@@ -45,7 +44,7 @@ const EMOTIONAL_OPTS = [
   "Grateful",
   "Irritable",
 ];
-const ACTIVITY_TYPES = [
+const BASE_ACTIVITY = [
   "Running",
   "Walking",
   "Gym",
@@ -53,14 +52,35 @@ const ACTIVITY_TYPES = [
   "Swimming",
   "Cycling",
   "Sports",
-  "Other",
 ];
-const HOURS = Array.from({ length: 24 }, (_, i) => {
-  const h = i % 12 === 0 ? 12 : i % 12;
-  const ampm = i < 12 ? "AM" : "PM";
-  return `${h}:00 ${ampm}`;
+
+const HOURS_24 = Array.from({ length: 49 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? "00" : "30";
+  const ampm = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${m} ${ampm}`;
 });
 
+/* ─── Memory keys ──────────────────────── */
+function memKey(userId: string, type: string) {
+  return `hs_mem_${type}_${userId}`;
+}
+
+function loadMemory(userId: string, type: string): string[] {
+  try {
+    const r = localStorage.getItem(memKey(userId, type));
+    return r ? JSON.parse(r) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMemory(userId: string, type: string, items: string[]) {
+  localStorage.setItem(memKey(userId, type), JSON.stringify(items));
+}
+
+/* ─── Types ────────────────────────────── */
 type EnergyLevel = "high" | "medium" | "low";
 interface EnergySlot {
   id: string;
@@ -68,7 +88,6 @@ interface EnergySlot {
   end: string;
 }
 type EnergySlots = Record<EnergyLevel, EnergySlot[]>;
-
 interface Priority {
   id: string;
   text: string;
@@ -79,13 +98,10 @@ interface NextDayTask {
   text: string;
 }
 
-/* ─── Full Entry Type ──────────────────── */
 export interface DailyEntry {
   date: string;
-  /* Shared */
   mood: number | null;
   note: string;
-  /* Zenith + HeartSpace */
   sleepHours: number | null;
   sleepQuality: number | null;
   physicalActivity: boolean;
@@ -94,7 +110,6 @@ export interface DailyEntry {
   stressLevel: number | null;
   emotionalState: string[];
   energySlots: EnergySlots;
-  /* Zenith + Apex+ */
   studyHours: number | null;
   sittingCapacityHours: number | null;
   studyCapacityHours: number | null;
@@ -197,13 +212,212 @@ function ScaleCircles({
   );
 }
 
-/* ─── Energy Management Component ─────── */
+/* ─── Activity Selector with "Other" + memory ── */
+function ActivitySelector({
+  value,
+  onChange,
+  userId,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  userId: string;
+}) {
+  const customActivities = loadMemory(userId, "activities");
+  const all = [...BASE_ACTIVITY, ...customActivities, "Other"];
+  const [showCustom, setShowCustom] = useState(false);
+  const [customText, setCustomText] = useState("");
+
+  function selectActivity(a: string) {
+    if (a === "Other") {
+      setShowCustom(true);
+      return;
+    }
+    onChange(a);
+    setShowCustom(false);
+  }
+
+  function saveCustom() {
+    const t = customText.trim();
+    if (!t) return;
+    const existing = loadMemory(userId, "activities");
+    if (!existing.includes(t)) {
+      const updated = [...existing, t];
+      saveMemory(userId, "activities", updated);
+    }
+    onChange(t);
+    setCustomText("");
+    setShowCustom(false);
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {all.map((a) => (
+          <button
+            key={a}
+            type="button"
+            onClick={() => selectActivity(a)}
+            className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+            style={
+              value === a
+                ? { background: OLIVE, color: "#fff" }
+                : { background: `${BORDER}88`, color: CHARCOAL }
+            }
+          >
+            {a}
+          </button>
+        ))}
+      </div>
+      {showCustom && (
+        <div className="flex gap-2 mt-2">
+          <input
+            autoFocus
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveCustom();
+              if (e.key === "Escape") setShowCustom(false);
+            }}
+            placeholder="Type activity name…"
+            className="flex-1 h-9 px-3 rounded-xl text-sm border-2 outline-none"
+            style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }}
+          />
+          <button
+            type="button"
+            onClick={saveCustom}
+            className="px-3 h-9 rounded-xl text-xs font-semibold"
+            style={{ background: `${GOLD}28`, color: "#9A6010" }}
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCustom(false)}
+            className="px-3 h-9 rounded-xl text-xs font-semibold"
+            style={{ background: BORDER, color: MUTED }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+      {value && value !== "Other" && (
+        <p className="text-xs mt-1" style={{ color: OLIVE }}>
+          ✓ Selected: {value}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ─── Emotional State with "Other" + memory ── */
+function EmotionalStateSelector({
+  value,
+  onChange,
+  userId,
+  accentColor,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  userId: string;
+  accentColor?: string;
+}) {
+  const accent = accentColor ?? DARK;
+  const customEmotions = loadMemory(userId, "emotions");
+  const all = [...BASE_EMOTIONAL, ...customEmotions, "Other"];
+  const [showCustom, setShowCustom] = useState(false);
+  const [customText, setCustomText] = useState("");
+
+  function toggleEmotion(opt: string) {
+    if (opt === "Other") {
+      setShowCustom(true);
+      return;
+    }
+    const next = value.includes(opt)
+      ? value.filter((e) => e !== opt)
+      : [...value, opt];
+    onChange(next);
+  }
+
+  function saveCustom() {
+    const t = customText.trim();
+    if (!t) return;
+    const existing = loadMemory(userId, "emotions");
+    if (!existing.includes(t)) {
+      saveMemory(userId, "emotions", [...existing, t]);
+    }
+    if (!value.includes(t)) onChange([...value, t]);
+    setCustomText("");
+    setShowCustom(false);
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {all.map((opt) => {
+          const active = value.includes(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => toggleEmotion(opt)}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
+              style={
+                active
+                  ? { background: accent, color: CREAM }
+                  : { background: `${BORDER}88`, color: CHARCOAL }
+              }
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+      {showCustom && (
+        <div className="flex gap-2 mt-2">
+          <input
+            autoFocus
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveCustom();
+              if (e.key === "Escape") setShowCustom(false);
+            }}
+            placeholder="Type emotional state…"
+            className="flex-1 h-9 px-3 rounded-xl text-sm border-2 outline-none"
+            style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }}
+          />
+          <button
+            type="button"
+            onClick={saveCustom}
+            className="px-3 h-9 rounded-xl text-xs font-semibold"
+            style={{ background: `${GOLD}28`, color: "#9A6010" }}
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCustom(false)}
+            className="px-3 h-9 rounded-xl text-xs font-semibold"
+            style={{ background: BORDER, color: MUTED }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+      <p className="text-[10px] mt-1" style={{ color: MUTED }}>
+        Select all that apply
+      </p>
+    </div>
+  );
+}
+
+/* ─── Energy Management ────────────────── */
 function EnergyManager({
   slots,
   onChange,
 }: {
   slots: EnergySlots;
-  onChange: (slots: EnergySlots) => void;
+  onChange: (s: EnergySlots) => void;
 }) {
   const levels: {
     key: EnergyLevel;
@@ -236,37 +450,29 @@ function EnergyManager({
   ];
 
   function addSlot(level: EnergyLevel) {
-    const next: EnergySlots = {
+    onChange({
       ...slots,
       [level]: [
         ...slots[level],
         { id: `${Date.now()}`, start: "9:00 AM", end: "12:00 PM" },
       ],
-    };
-    onChange(next);
+    });
   }
-
   function removeSlot(level: EnergyLevel, id: string) {
-    const next: EnergySlots = {
-      ...slots,
-      [level]: slots[level].filter((s) => s.id !== id),
-    };
-    onChange(next);
+    onChange({ ...slots, [level]: slots[level].filter((s) => s.id !== id) });
   }
-
   function updateSlot(
     level: EnergyLevel,
     id: string,
     field: "start" | "end",
-    value: string,
+    val: string,
   ) {
-    const next: EnergySlots = {
+    onChange({
       ...slots,
       [level]: slots[level].map((s) =>
-        s.id === id ? { ...s, [field]: value } : s,
+        s.id === id ? { ...s, [field]: val } : s,
       ),
-    };
-    onChange(next);
+    });
   }
 
   return (
@@ -279,7 +485,7 @@ function EnergyManager({
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-base">{emoji}</span>
+              <span>{emoji}</span>
               <span className="text-sm font-semibold" style={{ color }}>
                 {label}
               </span>
@@ -287,19 +493,17 @@ function EnergyManager({
             <button
               type="button"
               onClick={() => addSlot(key)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:scale-105"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
               style={{ background: `${color}22`, color }}
             >
               <Plus className="w-3 h-3" /> Add slot
             </button>
           </div>
-
           {slots[key].length === 0 && (
             <p className="text-xs" style={{ color: MUTED }}>
-              No slots added yet. Click + Add slot.
+              No slots added. Click + Add slot.
             </p>
           )}
-
           <div className="space-y-2">
             {slots[key].map((slot) => (
               <div key={slot.id} className="flex items-center gap-2">
@@ -315,7 +519,7 @@ function EnergyManager({
                     color: CHARCOAL,
                   }}
                 >
-                  {HOURS.map((h) => (
+                  {HOURS_24.map((h) => (
                     <option key={h}>{h}</option>
                   ))}
                 </select>
@@ -334,14 +538,14 @@ function EnergyManager({
                     color: CHARCOAL,
                   }}
                 >
-                  {HOURS.map((h) => (
+                  {HOURS_24.map((h) => (
                     <option key={h}>{h}</option>
                   ))}
                 </select>
                 <button
                   type="button"
                   onClick={() => removeSlot(key, slot.id)}
-                  className="p-1.5 rounded-lg transition-opacity hover:opacity-70"
+                  className="p-1.5 rounded-lg"
                   style={{ color: "#C0392B" }}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -355,7 +559,7 @@ function EnergyManager({
   );
 }
 
-/* ─── Priorities Component ─────────────── */
+/* ─── Priorities ───────────────────────── */
 function PrioritiesSection({
   priorities,
   onChange,
@@ -364,14 +568,12 @@ function PrioritiesSection({
   onChange: (p: Priority[]) => void;
 }) {
   const [newText, setNewText] = useState("");
-
   function add() {
-    const text = newText.trim();
-    if (!text) return;
-    onChange([...priorities, { id: `${Date.now()}`, text, done: false }]);
+    const t = newText.trim();
+    if (!t) return;
+    onChange([...priorities, { id: `${Date.now()}`, text: t, done: false }]);
     setNewText("");
   }
-
   return (
     <div>
       <div className="flex gap-2 mb-3">
@@ -444,7 +646,7 @@ function PrioritiesSection({
             <button
               type="button"
               onClick={() => onChange(priorities.filter((x) => x.id !== p.id))}
-              className="p-1 rounded-lg opacity-0 group-hover:opacity-100"
+              className="p-1 rounded-lg"
               style={{ color: "#C0392B" }}
             >
               <Trash2 className="w-3 h-3" />
@@ -456,7 +658,7 @@ function PrioritiesSection({
   );
 }
 
-/* ─── Next Day Tasks Component ─────────── */
+/* ─── Next Day Tasks ───────────────────── */
 function NextDaySection({
   tasks,
   onChange,
@@ -465,14 +667,12 @@ function NextDaySection({
   onChange: (t: NextDayTask[]) => void;
 }) {
   const [newText, setNewText] = useState("");
-
   function add() {
-    const text = newText.trim();
-    if (!text) return;
-    onChange([...tasks, { id: `${Date.now()}`, text }]);
+    const t = newText.trim();
+    if (!t) return;
+    onChange([...tasks, { id: `${Date.now()}`, text: t }]);
     setNewText("");
   }
-
   return (
     <div>
       <div className="flex gap-2 mb-3">
@@ -582,7 +782,6 @@ export default function DailyTracker() {
           {format(new Date(), "EEEE, MMMM d, yyyy")} ·{" "}
           {hasEntry ? "✓ Entry logged today" : "Log how you're doing"}
         </p>
-        {/* Plan badge */}
         <div className="mt-2">
           <span
             className="text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide"
@@ -609,7 +808,7 @@ export default function DailyTracker() {
           boxShadow: "0 4px 24px rgba(44,24,16,.08)",
         }}
       >
-        {/* ── MOOD (all plans) ── */}
+        {/* MOOD — all plans */}
         <section>
           <SectionHeader icon={Heart} title="How are you feeling today?" />
           <div className="flex gap-2">
@@ -643,7 +842,7 @@ export default function DailyTracker() {
           </div>
         </section>
 
-        {/* ── ZENITH + HEARTSPACE: Sleep ── */}
+        {/* SLEEP — Zenith + HeartSpace */}
         {(isZenith || isHeartSpace) && (
           <>
             <Divider />
@@ -655,17 +854,19 @@ export default function DailyTracker() {
                     className="text-xs font-semibold mb-2 block"
                     style={{ color: MUTED }}
                   >
-                    Hours of sleep
+                    Hours of sleep (0–24)
                   </label>
                   <input
                     type="number"
                     min={0}
-                    max={12}
+                    max={24}
                     step={0.5}
                     value={form.sleepHours ?? ""}
                     onChange={(e) =>
                       set("sleepHours")(
-                        e.target.value ? parseFloat(e.target.value) : null,
+                        e.target.value
+                          ? Math.min(24, parseFloat(e.target.value))
+                          : null,
                       )
                     }
                     placeholder="e.g. 7.5"
@@ -694,7 +895,7 @@ export default function DailyTracker() {
           </>
         )}
 
-        {/* ── ZENITH + HEARTSPACE: Physical Activity ── */}
+        {/* PHYSICAL ACTIVITY — Zenith + HeartSpace */}
         {(isZenith || isHeartSpace) && (
           <>
             <Divider />
@@ -732,30 +933,23 @@ export default function DailyTracker() {
                     className="text-xs font-semibold mb-2 block"
                     style={{ color: MUTED }}
                   >
-                    Activity type
+                    Activity type{" "}
+                    <span style={{ color: MUTED }}>
+                      (select or add your own)
+                    </span>
                   </label>
-                  <select
+                  <ActivitySelector
                     value={form.activityType}
-                    onChange={(e) => set("activityType")(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl text-sm border-2 outline-none"
-                    style={{
-                      background: CREAM,
-                      borderColor: BORDER,
-                      color: CHARCOAL,
-                    }}
-                  >
-                    <option value="">Select activity…</option>
-                    {ACTIVITY_TYPES.map((a) => (
-                      <option key={a}>{a}</option>
-                    ))}
-                  </select>
+                    onChange={set("activityType")}
+                    userId={userId}
+                  />
                 </div>
               )}
             </section>
           </>
         )}
 
-        {/* ── ZENITH + APEX+: Study Hours + Sitting + Study Capacity ── */}
+        {/* STUDY METRICS — Zenith + Apex+ */}
         {(isZenith || isApex) && (
           <>
             <Divider />
@@ -767,17 +961,19 @@ export default function DailyTracker() {
                     className="text-xs font-semibold mb-2 block"
                     style={{ color: MUTED }}
                   >
-                    Study hours today
+                    Study hours today (0–24)
                   </label>
                   <input
                     type="number"
                     min={0}
-                    max={16}
+                    max={24}
                     step={0.5}
                     value={form.studyHours ?? ""}
                     onChange={(e) =>
                       set("studyHours")(
-                        e.target.value ? parseFloat(e.target.value) : null,
+                        e.target.value
+                          ? Math.min(24, parseFloat(e.target.value))
+                          : null,
                       )
                     }
                     placeholder="e.g. 6"
@@ -794,20 +990,20 @@ export default function DailyTracker() {
                     className="text-xs font-semibold mb-2 block"
                     style={{ color: MUTED }}
                   >
-                    Sitting capacity
-                    <span className="ml-1 font-normal">
-                      (focus hrs without break)
-                    </span>
+                    Sitting capacity{" "}
+                    <span className="font-normal">(focus hrs)</span>
                   </label>
                   <input
                     type="number"
                     min={0}
-                    max={8}
+                    max={24}
                     step={0.5}
                     value={form.sittingCapacityHours ?? ""}
                     onChange={(e) =>
                       set("sittingCapacityHours")(
-                        e.target.value ? parseFloat(e.target.value) : null,
+                        e.target.value
+                          ? Math.min(24, parseFloat(e.target.value))
+                          : null,
                       )
                     }
                     placeholder="e.g. 2"
@@ -824,18 +1020,20 @@ export default function DailyTracker() {
                     className="text-xs font-semibold mb-2 block"
                     style={{ color: MUTED }}
                   >
-                    Study capacity
-                    <span className="ml-1 font-normal">(total hrs/day)</span>
+                    Study capacity{" "}
+                    <span className="font-normal">(total hrs/day)</span>
                   </label>
                   <input
                     type="number"
                     min={0}
-                    max={16}
+                    max={24}
                     step={0.5}
                     value={form.studyCapacityHours ?? ""}
                     onChange={(e) =>
                       set("studyCapacityHours")(
-                        e.target.value ? parseFloat(e.target.value) : null,
+                        e.target.value
+                          ? Math.min(24, parseFloat(e.target.value))
+                          : null,
                       )
                     }
                     placeholder="e.g. 8"
@@ -847,7 +1045,7 @@ export default function DailyTracker() {
                     }}
                   />
                   <p className="text-[10px] mt-1" style={{ color: MUTED }}>
-                    💡 Aim to increase by 30 mins each week
+                    💡 Increase by 30 mins each week
                   </p>
                 </div>
               </div>
@@ -855,47 +1053,39 @@ export default function DailyTracker() {
           </>
         )}
 
-        {/* ── ZENITH + HEARTSPACE: Me Time ── */}
+        {/* ME TIME — Zenith + HeartSpace */}
         {(isZenith || isHeartSpace) && (
           <>
             <Divider />
             <section>
               <SectionHeader icon={Sun} title="Me Time" />
-              <div>
-                <label
-                  className="text-xs font-semibold mb-2 block"
-                  style={{ color: MUTED }}
-                >
-                  Me time today (minutes)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={480}
-                  step={5}
-                  value={form.meTimeMinutes ?? ""}
-                  onChange={(e) =>
-                    set("meTimeMinutes")(
-                      e.target.value ? parseInt(e.target.value) : null,
-                    )
-                  }
-                  placeholder="e.g. 30"
-                  className="w-full h-11 px-4 rounded-xl text-sm border-2 outline-none"
-                  style={{
-                    background: CREAM,
-                    borderColor: BORDER,
-                    color: CHARCOAL,
-                  }}
-                />
-                <p className="text-[10px] mt-1" style={{ color: MUTED }}>
-                  Time spent on hobbies, relaxation, self-care — just for you
-                </p>
-              </div>
+              <input
+                type="number"
+                min={0}
+                max={1440}
+                step={5}
+                value={form.meTimeMinutes ?? ""}
+                onChange={(e) =>
+                  set("meTimeMinutes")(
+                    e.target.value ? parseInt(e.target.value) : null,
+                  )
+                }
+                placeholder="e.g. 30 minutes"
+                className="w-full h-11 px-4 rounded-xl text-sm border-2 outline-none"
+                style={{
+                  background: CREAM,
+                  borderColor: BORDER,
+                  color: CHARCOAL,
+                }}
+              />
+              <p className="text-[10px] mt-1" style={{ color: MUTED }}>
+                Time for hobbies, relaxation, self-care — just for you
+              </p>
             </section>
           </>
         )}
 
-        {/* ── ZENITH ONLY: Stress + Emotional State ── */}
+        {/* STRESS — Zenith only */}
         {isZenith && (
           <>
             <Divider />
@@ -914,85 +1104,34 @@ export default function DailyTracker() {
                 <span>Very stressed</span>
               </div>
             </section>
-            <Divider />
-            <section>
-              <SectionHeader icon={Heart} title="Emotional State" />
-              <div className="flex flex-wrap gap-2">
-                {EMOTIONAL_OPTS.map((opt) => {
-                  const active = form.emotionalState.includes(opt);
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        const next = active
-                          ? form.emotionalState.filter((e) => e !== opt)
-                          : [...form.emotionalState, opt];
-                        set("emotionalState")(next);
-                      }}
-                      className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
-                      style={
-                        active
-                          ? { background: DARK, color: CREAM }
-                          : { background: `${BORDER}88`, color: CHARCOAL }
-                      }
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[10px] mt-2" style={{ color: MUTED }}>
-                Select all that apply
-              </p>
-            </section>
           </>
         )}
 
-        {/* ── HEARTSPACE ONLY: Emotional State ── */}
-        {isHeartSpace && (
+        {/* EMOTIONAL STATE — Zenith + HeartSpace */}
+        {(isZenith || isHeartSpace) && (
           <>
             <Divider />
             <section>
               <SectionHeader icon={Heart} title="Emotional State" />
-              <div className="flex flex-wrap gap-2">
-                {EMOTIONAL_OPTS.map((opt) => {
-                  const active = form.emotionalState.includes(opt);
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        const next = active
-                          ? form.emotionalState.filter((e) => e !== opt)
-                          : [...form.emotionalState, opt];
-                        set("emotionalState")(next);
-                      }}
-                      className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
-                      style={
-                        active
-                          ? { background: "#8B3A3A", color: CREAM }
-                          : { background: `${ROSE}33`, color: "#8B3A3A" }
-                      }
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
+              <EmotionalStateSelector
+                value={form.emotionalState}
+                onChange={set("emotionalState")}
+                userId={userId}
+                accentColor={isHeartSpace ? "#8B3A3A" : DARK}
+              />
             </section>
           </>
         )}
 
-        {/* ── ZENITH ONLY: Energy Management ── */}
+        {/* ENERGY MANAGEMENT — Zenith only */}
         {isZenith && (
           <>
             <Divider />
             <section>
               <SectionHeader icon={Battery} title="Energy Management" />
               <p className="text-xs mb-4" style={{ color: MUTED }}>
-                Mark your high, medium, and low energy time slots to align your
-                study schedule.
+                Mark your energy time slots to align your study schedule with
+                your natural rhythms.
               </p>
               <EnergyManager
                 slots={form.energySlots}
@@ -1002,7 +1141,7 @@ export default function DailyTracker() {
           </>
         )}
 
-        {/* ── ZENITH + APEX+: Priorities ── */}
+        {/* PRIORITIES — Zenith + Apex+ */}
         {(isZenith || isApex) && (
           <>
             <Divider />
@@ -1016,15 +1155,14 @@ export default function DailyTracker() {
           </>
         )}
 
-        {/* ── ZENITH + APEX+: Plan Next Day ── */}
+        {/* PLAN TOMORROW — Zenith + Apex+ */}
         {(isZenith || isApex) && (
           <>
             <Divider />
             <section>
               <SectionHeader icon={Calendar} title="Plan Tomorrow" />
               <p className="text-xs mb-3" style={{ color: MUTED }}>
-                Plan the day before to start tomorrow with clarity and
-                intention.
+                Plan the day before to start tomorrow with clarity.
               </p>
               <NextDaySection
                 tasks={form.nextDayTasks}
@@ -1034,7 +1172,7 @@ export default function DailyTracker() {
           </>
         )}
 
-        {/* ── Note (all plans) ── */}
+        {/* NOTE — all plans */}
         <Divider />
         <section>
           <SectionHeader
@@ -1047,7 +1185,7 @@ export default function DailyTracker() {
             onChange={(e) => set("note")(e.target.value)}
             placeholder={
               isHeartSpace
-                ? "How are you feeling today? What's on your mind?"
+                ? "How are you feeling? What's on your mind?"
                 : "How was your day? Any wins, challenges, or reflections?"
             }
             className="w-full px-4 py-3 rounded-xl text-sm border-2 outline-none resize-none leading-relaxed"
@@ -1055,7 +1193,7 @@ export default function DailyTracker() {
           />
         </section>
 
-        {/* Save button */}
+        {/* Save */}
         <button
           type="button"
           onClick={handleSave}
@@ -1088,10 +1226,7 @@ export default function DailyTracker() {
           </h2>
           <div
             className="rounded-2xl overflow-hidden"
-            style={{
-              border: `1px solid ${BORDER}`,
-              boxShadow: "0 2px 8px rgba(44,24,16,.05)",
-            }}
+            style={{ border: `1px solid ${BORDER}` }}
           >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -1101,11 +1236,8 @@ export default function DailyTracker() {
                       "Date",
                       "Mood",
                       ...(isZenith || isHeartSpace ? ["Sleep"] : []),
-                      ...(isZenith || isApex
-                        ? ["Study hrs", "Sitting cap"]
-                        : []),
-                      ...(isZenith ? ["Stress", "Emotional"] : []),
-                      ...(isZenith || isHeartSpace ? ["Activity"] : []),
+                      ...(isZenith || isApex ? ["Study", "Sitting"] : []),
+                      ...(isZenith ? ["Stress"] : []),
                     ].map((h) => (
                       <th
                         key={h}
@@ -1154,44 +1286,24 @@ export default function DailyTracker() {
                         </>
                       )}
                       {isZenith && (
-                        <>
-                          <td className="px-4 py-3">
-                            {entry.stressLevel ? (
-                              <span
-                                className="font-semibold"
-                                style={{
-                                  color:
-                                    entry.stressLevel >= 4
-                                      ? "#C0392B"
-                                      : entry.stressLevel <= 2
-                                        ? "#27AE60"
-                                        : "#E67E22",
-                                }}
-                              >
-                                {entry.stressLevel}/5
-                              </span>
-                            ) : (
-                              "–"
-                            )}
-                          </td>
-                          <td
-                            className="px-4 py-3 text-xs"
-                            style={{ color: MUTED }}
-                          >
-                            {entry.emotionalState?.join(", ") || "–"}
-                          </td>
-                        </>
-                      )}
-                      {(isZenith || isHeartSpace) && (
-                        <td
-                          className="px-4 py-3 text-xs"
-                          style={{
-                            color: entry.physicalActivity ? "#27AE60" : MUTED,
-                          }}
-                        >
-                          {entry.physicalActivity
-                            ? `✓ ${entry.activityType || "Active"}`
-                            : "–"}
+                        <td className="px-4 py-3">
+                          {entry.stressLevel ? (
+                            <span
+                              className="font-semibold"
+                              style={{
+                                color:
+                                  entry.stressLevel >= 4
+                                    ? "#C0392B"
+                                    : entry.stressLevel <= 2
+                                      ? "#27AE60"
+                                      : "#E67E22",
+                              }}
+                            >
+                              {entry.stressLevel}/5
+                            </span>
+                          ) : (
+                            "–"
+                          )}
                         </td>
                       )}
                     </tr>
