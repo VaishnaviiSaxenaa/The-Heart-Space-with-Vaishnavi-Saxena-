@@ -81,7 +81,8 @@ function ProtectedRoute({
   return <Component />;
 }
 
-/* Redirects student to exam-select if they haven't chosen an exam yet */
+/* Redirects student to exam-select if they haven't chosen an exam yet.
+   HeartSpace (counseling_client) skips exam selection — no academics. */
 function StudentRoute({
   component: Component,
 }: {
@@ -96,9 +97,13 @@ function StudentRoute({
       setLocation("/");
       return;
     }
-    /* If student has no exam_type selected → send to exam selection */
     const examType = (user as any)?.exam_type as string | null;
-    if (user?.role === "student" && !examType) {
+    const space = (user as any)?.space as string | null;
+
+    /* HeartSpace is counselling only — never needs exam selection */
+    const isHeartSpace = space === "heartspace";
+
+    if (user?.role === "student" && !examType && !isHeartSpace) {
       setLocation("/exam-select");
     }
   }, [isLoading, isAuthenticated, user, setLocation]);

@@ -8,8 +8,6 @@ import {
   Clock,
   Edit3,
   Save,
-  X,
-  AlertCircle,
   User,
   Star,
   RefreshCw,
@@ -144,7 +142,8 @@ function VaishnaviNoteSection({ userId }: { userId: string }) {
         <div className="flex items-center gap-2">
           <Star className="w-4 h-4" style={{ color: GOLD }} />
           <h3 className="font-semibold text-sm" style={{ color: DARK }}>
-            What would you like to discuss with Vaishnavi Ma'am?
+            What would you like to discuss with Vaishnavi Ma'am in the next
+            session?
           </h3>
         </div>
         {!editing && (
@@ -205,7 +204,7 @@ function VaishnaviNoteSection({ userId }: { userId: string }) {
       ) : (
         <p className="text-xs" style={{ color: MUTED }}>
           Optional — write what you'd like Vaishnavi Ma'am to address in your
-          next session. This helps her prepare for a more focused discussion.
+          next session.
         </p>
       )}
     </div>
@@ -276,7 +275,6 @@ function SagarSessionSection({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <User className="w-4 h-4" style={{ color: GOLD }} />
@@ -298,7 +296,6 @@ function SagarSessionSection({ userId }: { userId: string }) {
         )}
       </div>
 
-      {/* Request form */}
       {showForm && (
         <div
           className="rounded-2xl p-5 space-y-3"
@@ -341,7 +338,6 @@ function SagarSessionSection({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* Active sessions */}
       {active.length > 0 && (
         <div className="space-y-3">
           <p
@@ -466,7 +462,6 @@ function SagarSessionSection({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* Past sessions */}
       {past.length > 0 && (
         <div className="space-y-3">
           <p
@@ -505,7 +500,6 @@ function SagarSessionSection({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* Empty state */}
       {sessions.length === 0 && !showForm && (
         <div
           className="text-center py-10 rounded-2xl"
@@ -680,7 +674,6 @@ export default function Sessions() {
   const isApex = space === "apex";
   const isHeartSpace = space === "heartspace";
 
-  /* Apex+ has no sessions */
   if (isApex) {
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
@@ -714,7 +707,6 @@ export default function Sessions() {
 
   return (
     <div className="space-y-7 animate-in fade-in duration-500">
-      {/* Header */}
       <div>
         <h1
           className="text-3xl font-serif font-bold"
@@ -729,7 +721,6 @@ export default function Sessions() {
         </p>
       </div>
 
-      {/* ZENITH: Vaishnavi note + Sagar sessions */}
       {isZenith && (
         <>
           <VaishnaviNoteSection userId={userId} />
@@ -738,7 +729,6 @@ export default function Sessions() {
         </>
       )}
 
-      {/* HEARTSPACE: Basic session request */}
       {isHeartSpace && <HeartSpaceSessionSection userId={userId} />}
     </div>
   );

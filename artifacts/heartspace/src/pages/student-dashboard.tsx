@@ -20,17 +20,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import {
-  Loader2,
-  Calendar,
-  Clock,
-  Zap,
-  BookOpen,
-  Dumbbell,
-  LeafyGreen,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Calendar, LeafyGreen, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -55,7 +45,6 @@ const MOODS = [
   { label: "Great", color: OLIVE, bg: "#DFF0DA", text: "#2A5020" },
 ];
 
-/* Safe date formatter — never throws */
 function safeFormat(
   input: string | null | undefined,
   fmt: string,
@@ -71,7 +60,6 @@ function safeFormat(
   }
 }
 
-/* Section-level error boundary */
 class SectionBoundary extends Component<
   { label: string; children: ReactNode },
   { crashed: boolean }
@@ -103,7 +91,6 @@ class SectionBoundary extends Component<
   }
 }
 
-/* ─── Real analytics from localStorage ───── */
 function AnalyticsSection({ userId }: { userId: string }) {
   const data = useMemo(() => {
     try {
@@ -222,7 +209,6 @@ function AnalyticsSection({ userId }: { userId: string }) {
   );
 }
 
-/* ─── Sub-components ─────────────────────── */
 function Card({
   children,
   className = "",
@@ -258,16 +244,13 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ─── Today's Plan ───────────────────────── */
 type PlanCategory = "Study" | "Revision" | "Practice" | "Physical" | "Personal";
-
 interface PlanTask {
   id: string;
   name: string;
   category: PlanCategory;
   done: boolean;
 }
-
 const CATEGORIES: PlanCategory[] = [
   "Study",
   "Revision",
@@ -275,7 +258,6 @@ const CATEGORIES: PlanCategory[] = [
   "Physical",
   "Personal",
 ];
-
 const CAT_COLORS: Record<
   PlanCategory,
   { bg: string; text: string; active: string }
@@ -286,13 +268,10 @@ const CAT_COLORS: Record<
   Physical: { bg: `${SAGE}22`, text: "#3A6A38", active: "#3A6A38" },
   Personal: { bg: "rgba(61,53,48,.08)", text: MUTED, active: MUTED },
 };
-
 const PLAN_KEY = "heartspace_today_plan";
-
 function todayDate() {
   return new Date().toISOString().split("T")[0];
 }
-
 function loadPlanTasks(): PlanTask[] {
   try {
     const raw = localStorage.getItem(PLAN_KEY);
@@ -304,7 +283,6 @@ function loadPlanTasks(): PlanTask[] {
     return [];
   }
 }
-
 function savePlanTasks(tasks: PlanTask[]) {
   localStorage.setItem(PLAN_KEY, JSON.stringify({ date: todayDate(), tasks }));
 }
@@ -319,7 +297,6 @@ function TodaysPlan() {
     setTasks(next);
     savePlanTasks(next);
   };
-
   const addTask = () => {
     const name = newName.trim();
     if (!name) return;
@@ -331,12 +308,9 @@ function TodaysPlan() {
     setNewCat("Study");
     setAdding(false);
   };
-
   const toggleDone = (id: string) =>
     persist(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
-
   const deleteTask = (id: string) => persist(tasks.filter((t) => t.id !== id));
-
   const doneCount = tasks.filter((t) => t.done).length;
 
   return (
@@ -358,9 +332,7 @@ function TodaysPlan() {
         </h2>
         {tasks.length > 0 && (
           <button
-            onClick={() => {
-              setAdding(true);
-            }}
+            onClick={() => setAdding(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.03] active:scale-[0.98]"
             style={{
               background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
@@ -534,7 +506,6 @@ function TodaysPlan() {
   );
 }
 
-/* ─── Main dashboard ─────────────────────── */
 export default function StudentDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -553,6 +524,7 @@ export default function StudentDashboard() {
     { studentId: user?.id },
     { query: { enabled: !!user?.id } },
   );
+
   const moodMutation = useCreateMood({
     mutation: {
       onSuccess: () => {
@@ -576,7 +548,6 @@ export default function StudentDashboard() {
     setSelectedMood(null);
   };
 
-  /* Time-based greeting */
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -584,7 +555,6 @@ export default function StudentDashboard() {
   const space = (user as any)?.space as string | null;
   const examType = (user as any)?.exam_type as string | null;
 
-  /* Service identity */
   const SERVICE: Record<
     string,
     { name: string; emoji: string; color: string; sub: string }
@@ -610,7 +580,6 @@ export default function StudentDashboard() {
   };
   const svc = space ? SERVICE[space] : null;
 
-  /* Exam label */
   const EXAM_LABEL: Record<string, { label: string; emoji: string }> = {
     JAM: { label: "IIT JAM", emoji: "🎓" },
     NET_GATE: { label: "CSIR NET / GATE", emoji: "🔬" },
@@ -625,61 +594,45 @@ export default function StudentDashboard() {
   return (
     <div className="space-y-7 animate-in fade-in duration-500">
       {/* ── Greeting ── */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          {/* Service + Exam badges */}
-          {(svc || exam) && (
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              {svc && (
-                <>
-                  <span className="text-base">{svc.emoji}</span>
-                  <span
-                    className="text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
-                    style={{ background: `${svc.color}20`, color: svc.color }}
-                  >
-                    {svc.name}
-                  </span>
-                </>
-              )}
-              {exam && (
+      <div>
+        {(svc || exam) && (
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            {svc && (
+              <>
+                <span className="text-base">{svc.emoji}</span>
                 <span
-                  className="text-xs font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
-                  style={{
-                    background: "rgba(61,35,20,0.08)",
-                    color: SIDEBAR,
-                    border: `1px solid ${BORDER}`,
-                  }}
+                  className="text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
+                  style={{ background: `${svc.color}20`, color: svc.color }}
                 >
-                  {exam.emoji} {exam.label}
+                  {svc.name}
                 </span>
-              )}
-            </div>
-          )}
-
-          <h1
-            className="text-3xl md:text-4xl font-serif font-bold"
-            style={{ color: CHARCOAL }}
-          >
-            {greeting}, {firstName} ✨
-          </h1>
-          <p className="mt-1.5 text-sm" style={{ color: MUTED }}>
-            {svc
-              ? svc.sub
-              : "You're building your dream life, one intentional day at a time."}
-          </p>
-        </div>
-
-        <button
-          className="self-start flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02]"
-          style={{
-            background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
-            color: "#FAF7F2",
-            boxShadow: "0 4px 14px rgba(230,167,86,.35)",
-          }}
+              </>
+            )}
+            {exam && (
+              <span
+                className="text-xs font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
+                style={{
+                  background: "rgba(61,35,20,0.08)",
+                  color: SIDEBAR,
+                  border: `1px solid ${BORDER}`,
+                }}
+              >
+                {exam.emoji} {exam.label}
+              </span>
+            )}
+          </div>
+        )}
+        <h1
+          className="text-3xl md:text-4xl font-serif font-bold"
+          style={{ color: CHARCOAL }}
         >
-          <Zap className="w-4 h-4" />
-          Focus Mode
-        </button>
+          {greeting}, {firstName} ✨
+        </h1>
+        <p className="mt-1.5 text-sm" style={{ color: MUTED }}>
+          {svc
+            ? svc.sub
+            : "You're building your dream life, one intentional day at a time."}
+        </p>
       </div>
 
       {/* ── Stats row ── */}
@@ -729,11 +682,9 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      {/* ── Today's Plan ── */}
+      {/* ── Today's Plan + Next Session ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <TodaysPlan />
-
-        {/* Next session */}
         <Card className="p-6 flex flex-col">
           <SectionTitle>Next Session</SectionTitle>
           {upcomingSessions[0] ? (
@@ -776,145 +727,87 @@ export default function StudentDashboard() {
         </Card>
       </div>
 
-      {/* ── Mood Check-in + Focus Mode ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <SectionTitle>How are you feeling today?</SectionTitle>
-          <div className="flex gap-2 mb-5">
-            {MOODS.map((m, idx) => {
-              const val = idx + 1;
-              const active = selectedMood === val;
-              return (
-                <button
-                  key={val}
-                  onClick={() => setSelectedMood(active ? null : val)}
-                  className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-200 hover:scale-105"
-                  style={{
-                    background: active ? m.color : m.bg,
-                    border: `1.5px solid ${active ? m.color : "transparent"}`,
-                    boxShadow: active ? `0 4px 12px ${m.color}44` : "none",
-                  }}
+      {/* ── Mood Check-in ── */}
+      <Card className="p-6">
+        <SectionTitle>How are you feeling today?</SectionTitle>
+        <div className="flex gap-2 mb-5">
+          {MOODS.map((m, idx) => {
+            const val = idx + 1;
+            const active = selectedMood === val;
+            return (
+              <button
+                key={val}
+                onClick={() => setSelectedMood(active ? null : val)}
+                className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-200 hover:scale-105"
+                style={{
+                  background: active ? m.color : m.bg,
+                  border: `1.5px solid ${active ? m.color : "transparent"}`,
+                  boxShadow: active ? `0 4px 12px ${m.color}44` : "none",
+                }}
+              >
+                <span
+                  className="text-xl font-bold font-serif"
+                  style={{ color: active ? "white" : m.color }}
                 >
-                  <span
-                    className="text-xl font-bold font-serif"
-                    style={{ color: active ? "white" : m.color }}
-                  >
-                    {val}
+                  {val}
+                </span>
+                <span
+                  className="text-[9px] font-semibold leading-tight text-center"
+                  style={{ color: active ? "rgba(255,255,255,.85)" : m.text }}
+                >
+                  {m.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <button
+          onClick={handleLogMood}
+          disabled={selectedMood === null || moodMutation.isPending}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
+          style={{
+            background: selectedMood
+              ? `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`
+              : "#E8DDD0",
+            color: selectedMood ? CREAM : MUTED,
+            boxShadow: selectedMood
+              ? "0 4px 12px rgba(230,167,86,.30)"
+              : "none",
+          }}
+        >
+          {moodMutation.isPending ? "Logging…" : "Log My Mood"}
+        </button>
+        {Array.isArray(moods) && moods.length > 0 && (
+          <div className="mt-5 space-y-2">
+            <p
+              className="text-xs font-semibold uppercase tracking-wide mb-2"
+              style={{ color: MUTED }}
+            >
+              Recent
+            </p>
+            {moods.slice(0, 3).map((m: any) => {
+              const mood = MOODS[m.mood - 1];
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between px-3 py-2 rounded-xl"
+                  style={{ background: mood?.bg ?? CARD }}
+                >
+                  <span className="text-xs" style={{ color: MUTED }}>
+                    {safeFormat(m.createdAt, "MMM d")}
                   </span>
                   <span
-                    className="text-[9px] font-semibold leading-tight text-center"
-                    style={{ color: active ? "rgba(255,255,255,.85)" : m.text }}
+                    className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: mood?.color ?? GOLD, color: "white" }}
                   >
-                    {m.label}
+                    {mood?.label ?? m.mood}
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
-          <button
-            onClick={handleLogMood}
-            disabled={selectedMood === null || moodMutation.isPending}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
-            style={{
-              background: selectedMood
-                ? `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`
-                : "#E8DDD0",
-              color: selectedMood ? CREAM : MUTED,
-              boxShadow: selectedMood
-                ? "0 4px 12px rgba(230,167,86,.30)"
-                : "none",
-            }}
-          >
-            {moodMutation.isPending ? "Logging…" : "Log My Mood"}
-          </button>
-
-          {Array.isArray(moods) && moods.length > 0 && (
-            <div className="mt-5 space-y-2">
-              <p
-                className="text-xs font-semibold uppercase tracking-wide mb-2"
-                style={{ color: MUTED }}
-              >
-                Recent
-              </p>
-              {moods.slice(0, 3).map((m: any) => {
-                const mood = MOODS[m.mood - 1];
-                return (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between px-3 py-2 rounded-xl"
-                    style={{ background: mood?.bg ?? CARD }}
-                  >
-                    <span className="text-xs" style={{ color: MUTED }}>
-                      {safeFormat(m.createdAt, "MMM d")}
-                    </span>
-                    <span
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={{
-                        background: mood?.color ?? GOLD,
-                        color: "white",
-                      }}
-                    >
-                      {mood?.label ?? m.mood}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        {/* Focus Mode */}
-        <Card
-          className="p-6 flex flex-col"
-          style={{
-            background: `linear-gradient(145deg, ${SIDEBAR} 0%, #3A2518 100%)`,
-            border: "none",
-          }}
-        >
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-            <div className="relative w-28 h-28 mb-6">
-              <div
-                className="absolute inset-0 rounded-full opacity-20"
-                style={{ background: GOLD }}
-              />
-              <div
-                className="absolute inset-3 rounded-full opacity-30"
-                style={{ background: GOLD }}
-              />
-              <div
-                className="absolute inset-6 rounded-full flex items-center justify-center"
-                style={{ background: `${GOLD}50` }}
-              >
-                <Zap className="w-7 h-7" style={{ color: GOLD }} />
-              </div>
-            </div>
-            <h3
-              className="font-serif text-xl font-bold mb-2"
-              style={{ color: "#FAF7F2" }}
-            >
-              Focus Mode
-            </h3>
-            <p
-              className="text-sm leading-relaxed mb-6"
-              style={{ color: "rgba(250,247,242,.60)" }}
-            >
-              Deep work. No distractions.
-              <br />
-              Just you and your goals.
-            </p>
-            <button
-              className="px-7 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02]"
-              style={{
-                background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
-                color: "#FAF7F2",
-                boxShadow: `0 4px 14px ${GOLD}55`,
-              }}
-            >
-              Start Focus Session
-            </button>
-          </div>
-        </Card>
-      </div>
+        )}
+      </Card>
 
       {/* ── Wellbeing prompts ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
