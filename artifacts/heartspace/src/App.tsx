@@ -10,6 +10,7 @@ import { Layout } from "./components/layout";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import ResetPassword from "./pages/reset-password";
+import ExamSelect from "./pages/exam-select";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import Sessions from "./pages/sessions";
@@ -22,20 +23,28 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
 
-const GOLD  = "#C9A96E";
+const GOLD = "#C9A96E";
 const CREAM = "#FAF7F2";
 const MUTED = "#8C7B70";
 
 function FullScreenLoader() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: CREAM }}>
+    <div
+      className="min-h-screen flex flex-col items-center justify-center gap-4"
+      style={{ background: CREAM }}
+    >
       <div className="relative w-14 h-14">
-        <div className="absolute inset-0 rounded-full opacity-20 animate-pulse" style={{ background: GOLD }} />
+        <div
+          className="absolute inset-0 rounded-full opacity-20 animate-pulse"
+          style={{ background: GOLD }}
+        />
         <div className="absolute inset-0 flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin" style={{ color: GOLD }} />
         </div>
       </div>
-      <p className="text-sm font-medium" style={{ color: MUTED }}>Loading HeartSpace…</p>
+      <p className="text-sm font-medium" style={{ color: MUTED }}>
+        Loading HeartSpace…
+      </p>
     </div>
   );
 }
@@ -50,7 +59,6 @@ function ProtectedRoute({
   const { isAuthenticated, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  /* NEVER call setLocation during render — use useEffect for navigation */
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) {
@@ -60,7 +68,8 @@ function ProtectedRoute({
     if (allowedRole && user?.role !== allowedRole) {
       const space = (user as any)?.space as string | null;
       if (user?.role === "counsellor") setLocation("/counsellor");
-      else if (space === "heartspace" || space === "self") setLocation("/self-dashboard");
+      else if (space === "heartspace" || space === "self")
+        setLocation("/self-dashboard");
       else setLocation("/dashboard");
     }
   }, [isLoading, isAuthenticated, user, allowedRole, setLocation]);
@@ -72,6 +81,34 @@ function ProtectedRoute({
   return <Component />;
 }
 
+/* Redirects student to exam-select if they haven't chosen an exam yet */
+function StudentRoute({
+  component: Component,
+}: {
+  component: React.ComponentType;
+}) {
+  const { isAuthenticated, user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      setLocation("/");
+      return;
+    }
+    /* If student has no exam_type selected → send to exam selection */
+    const examType = (user as any)?.exam_type as string | null;
+    if (user?.role === "student" && !examType) {
+      setLocation("/exam-select");
+    }
+  }, [isLoading, isAuthenticated, user, setLocation]);
+
+  if (isLoading) return <FullScreenLoader />;
+  if (!isAuthenticated) return null;
+
+  return <Component />;
+}
+
 function Router() {
   const { isLoading } = useAuth();
   if (isLoading) return <FullScreenLoader />;
@@ -79,18 +116,22 @@ function Router() {
   return (
     <Layout>
       <Switch>
-        <Route path="/"                component={Login}         />
-        <Route path="/signup"          component={Signup}        />
-        <Route path="/reset-password"  component={ResetPassword} />
+        <Route path="/" component={Login} />
+        <Route path="/signup" component={Signup} />
+        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/exam-select" component={ExamSelect} />
 
         <Route path="/dashboard">
-          <ProtectedRoute component={StudentDashboard} allowedRole="student" />
+          <StudentRoute component={StudentDashboard} />
         </Route>
         <Route path="/self-dashboard">
-          <ProtectedRoute component={StudentDashboard} allowedRole="student" />
+          <StudentRoute component={StudentDashboard} />
         </Route>
         <Route path="/counsellor">
-          <ProtectedRoute component={CounsellorDashboard} allowedRole="counsellor" />
+          <ProtectedRoute
+            component={CounsellorDashboard}
+            allowedRole="counsellor"
+          />
         </Route>
         <Route path="/student/:id">
           <ProtectedRoute component={StudentDetail} allowedRole="counsellor" />
@@ -102,10 +143,10 @@ function Router() {
           <ProtectedRoute component={DailyTracker} />
         </Route>
         <Route path="/syllabus">
-          <ProtectedRoute component={Syllabus} allowedRole="student" />
+          <StudentRoute component={Syllabus} />
         </Route>
         <Route path="/assignments">
-          <ProtectedRoute component={Assignments} allowedRole="student" />
+          <StudentRoute component={Assignments} />
         </Route>
 
         <Route component={NotFound} />

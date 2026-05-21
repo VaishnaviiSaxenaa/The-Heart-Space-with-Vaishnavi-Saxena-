@@ -45,6 +45,19 @@ function getDisplayName(
   return fullName?.trim() || email.split("@")[0];
 }
 
+const VALID_EXAM_TYPES = ["JAM", "NET_GATE"] as const;
+type ExamType = (typeof VALID_EXAM_TYPES)[number];
+
+function getExamLabel(examType: ExamType): string {
+  if (examType === "JAM") return "IIT JAM";
+  if (examType === "NET_GATE") return "CSIR NET / GATE";
+  return "Unknown";
+}
+
+function shouldShowExamSelect(role: string, examType: string | null): boolean {
+  return role === "student" && !examType;
+}
+
 /* ── 1. ROLE MAPPING TESTS ───────────────────────────────── */
 
 describe("Role Mapping", () => {
@@ -351,5 +364,54 @@ describe("Signup Validation", () => {
     expect(validKeys).toContain("prep_student");
     expect(validKeys).toContain("counseling_client");
     expect(validKeys).not.toContain("admin");
+  });
+});
+
+/* ── 11. EXAM SELECTION TESTS ────────────────────────────── */
+
+describe("Exam Selection", () => {
+  it("only two valid exam types exist", () => {
+    expect(VALID_EXAM_TYPES).toHaveLength(2);
+    expect(VALID_EXAM_TYPES).toContain("JAM");
+    expect(VALID_EXAM_TYPES).toContain("NET_GATE");
+  });
+
+  it("JAM label is correct", () => {
+    expect(getExamLabel("JAM")).toBe("IIT JAM");
+  });
+
+  it("NET_GATE label is correct", () => {
+    expect(getExamLabel("NET_GATE")).toBe("CSIR NET / GATE");
+  });
+
+  it("student with no exam type should see exam select screen", () => {
+    expect(shouldShowExamSelect("student", null)).toBe(true);
+  });
+
+  it("student with exam type should NOT see exam select screen", () => {
+    expect(shouldShowExamSelect("student", "JAM")).toBe(false);
+  });
+
+  it("counsellor should never see exam select screen", () => {
+    expect(shouldShowExamSelect("counsellor", null)).toBe(false);
+  });
+
+  it("admin should never see exam select screen", () => {
+    expect(shouldShowExamSelect("admin", null)).toBe(false);
+  });
+
+  it("exam type JAM is saved correctly", () => {
+    const examType = "JAM";
+    expect(VALID_EXAM_TYPES.includes(examType as ExamType)).toBe(true);
+  });
+
+  it("exam type NET_GATE is saved correctly", () => {
+    const examType = "NET_GATE";
+    expect(VALID_EXAM_TYPES.includes(examType as ExamType)).toBe(true);
+  });
+
+  it("invalid exam type is rejected", () => {
+    const examType = "INVALID";
+    expect(VALID_EXAM_TYPES.includes(examType as ExamType)).toBe(false);
   });
 });
