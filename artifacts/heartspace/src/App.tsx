@@ -18,6 +18,7 @@ import Syllabus from "./pages/syllabus";
 import Assignments from "./pages/assignments";
 import DailyTracker from "./pages/daily-tracker";
 import StudentDetail from "./pages/student-detail";
+import Roadmap from "./pages/roadmap";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -77,12 +78,11 @@ function ProtectedRoute({
   if (isLoading) return <FullScreenLoader />;
   if (!isAuthenticated) return null;
   if (allowedRole && user?.role !== allowedRole) return null;
-
   return <Component />;
 }
 
-/* Redirects student to exam-select if they haven't chosen an exam yet.
-   HeartSpace (counseling_client) skips exam selection — no academics. */
+/* Redirects student to exam-select if they haven't chosen yet.
+   HeartSpace skips exam selection — counselling only. */
 function StudentRoute({
   component: Component,
 }: {
@@ -99,10 +99,7 @@ function StudentRoute({
     }
     const examType = (user as any)?.exam_type as string | null;
     const space = (user as any)?.space as string | null;
-
-    /* HeartSpace is counselling only — never needs exam selection */
     const isHeartSpace = space === "heartspace";
-
     if (user?.role === "student" && !examType && !isHeartSpace) {
       setLocation("/exam-select");
     }
@@ -110,7 +107,6 @@ function StudentRoute({
 
   if (isLoading) return <FullScreenLoader />;
   if (!isAuthenticated) return null;
-
   return <Component />;
 }
 
@@ -152,6 +148,9 @@ function Router() {
         </Route>
         <Route path="/assignments">
           <StudentRoute component={Assignments} />
+        </Route>
+        <Route path="/roadmap">
+          <StudentRoute component={Roadmap} />
         </Route>
 
         <Route component={NotFound} />
