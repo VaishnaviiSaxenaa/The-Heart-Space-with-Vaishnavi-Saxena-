@@ -375,6 +375,7 @@ export default function Login() {
               role: "counsellor",
               space: null,
               avatarUrl: null,
+              exam_type: null,
             } as any,
             data.session.access_token,
           );
@@ -383,10 +384,10 @@ export default function Login() {
           return;
         }
 
-        /* Fetch profile — convert to real Promise with .then() */
+        /* Fetch profile — NOW includes exam_type */
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("id, email, full_name, role, plan, avatar_url")
+          .select("id, email, full_name, role, plan, avatar_url, exam_type")
           .eq("id", data.user.id)
           .single()
           .then((r) => r);
@@ -406,7 +407,7 @@ export default function Login() {
           });
           const { data: fresh } = await supabase
             .from("profiles")
-            .select("id, email, full_name, role, plan, avatar_url")
+            .select("id, email, full_name, role, plan, avatar_url, exam_type")
             .eq("id", data.user.id)
             .single()
             .then((r) => r);
@@ -417,12 +418,15 @@ export default function Login() {
           (resolvedProfile?.role as SupabaseRole) ?? "prep_student";
         const mapped = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
         const planFromDB = resolvedProfile?.plan ?? mapped.space;
+        const examType = resolvedProfile?.exam_type ?? null;
 
         console.log(
           "[HeartSpace login] Role:",
           supaRole,
           "Plan:",
           planFromDB,
+          "Exam:",
+          examType,
           "→",
           mapped.redirect,
         );
@@ -431,6 +435,7 @@ export default function Login() {
           resolvedProfile?.full_name?.trim() ||
           (data.user.email?.split("@")[0] ?? "User");
 
+        /* ← exam_type now saved into user object */
         login(
           {
             id: data.user.id as any,
@@ -439,6 +444,7 @@ export default function Login() {
             role: mapped.role,
             space: planFromDB,
             avatarUrl: resolvedProfile?.avatar_url ?? null,
+            exam_type: examType,
           } as any,
           data.session.access_token,
         );
@@ -462,6 +468,7 @@ export default function Login() {
           role: demo.role,
           space: demo.space,
           avatarUrl: null,
+          exam_type: null,
         } as any,
         btoa(`${email}:demo:heartspace`),
       );

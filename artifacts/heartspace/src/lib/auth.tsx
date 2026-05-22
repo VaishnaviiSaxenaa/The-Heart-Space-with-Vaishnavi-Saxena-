@@ -38,7 +38,6 @@ async function resolveSupabaseUser(
 ): Promise<{ user: User; token: string } | null> {
   /* Hardcoded admin override — always wins */
   if (supabaseUser.email === ADMIN_EMAIL) {
-    console.log("[HeartSpace auth] Admin match for", supabaseUser.email);
     return {
       user: {
         id: supabaseUser.id as any,
@@ -47,17 +46,18 @@ async function resolveSupabaseUser(
         role: "counsellor",
         space: null,
         avatarUrl: null,
-      } as User,
+        exam_type: null,
+      } as any,
       token: accessToken,
     };
   }
 
   try {
-    /* Convert Supabase query to real Promise using .then() so withTimeout works */
+    /* ← exam_type added to select */
     const result = await withTimeout(
       supabase
         .from("profiles")
-        .select("id, email, full_name, role, plan, avatar_url")
+        .select("id, email, full_name, role, plan, avatar_url, exam_type")
         .eq("id", supabaseUser.id)
         .single()
         .then((r) => r),
@@ -88,8 +88,16 @@ async function resolveSupabaseUser(
     const supaRole = (profile?.role as SupabaseRole) ?? "prep_student";
     const mapped = ROLE_MAP[supaRole] ?? ROLE_MAP["prep_student"];
     const planFromDB = profile?.plan ?? mapped.space;
+    const examType = profile?.exam_type ?? null;
 
-    console.log("[HeartSpace auth] role:", supaRole, "plan:", planFromDB);
+    console.log(
+      "[HeartSpace auth] role:",
+      supaRole,
+      "plan:",
+      planFromDB,
+      "exam_type:",
+      examType,
+    );
 
     const displayName =
       profile?.full_name?.trim() ||
@@ -102,7 +110,8 @@ async function resolveSupabaseUser(
       role: mapped.role,
       space: planFromDB,
       avatarUrl: profile?.avatar_url ?? null,
-    } as User;
+      exam_type: examType,
+    } as any;
 
     return { user: heartUser, token: accessToken };
   } catch (e) {
@@ -186,9 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             session.user,
             session.access_token,
           );
-          if (resolved) {
-            persistUser(resolved.user, resolved.token);
-          }
+          if (resolved) persistUser(resolved.user, resolved.token);
         } else {
           if (!isDemoSession) persistUser(null, null);
         }
