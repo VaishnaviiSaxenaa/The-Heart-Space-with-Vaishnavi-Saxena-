@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../lib/auth";
 import {
   Calendar,
@@ -13,16 +13,10 @@ import {
   Clock,
   TrendingUp,
   TrendingDown,
-  Minus,
   RotateCcw,
+  Map,
 } from "lucide-react";
-import {
-  format,
-  addWeeks,
-  addMonths,
-  differenceInWeeks,
-  parseISO,
-} from "date-fns";
+import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 
 /* ─── Brand tokens ─────────────────────── */
 const CREAM = "#FAF7F2";
@@ -61,7 +55,7 @@ interface RoadmapPhase {
   durationWeeks: number;
   status: PhaseStatus;
   topics: string[];
-  weekNumber?: number;
+  marks?: string;
 }
 
 interface Roadmap {
@@ -124,218 +118,133 @@ const ROADMAP_TYPES: Record<
   },
 };
 
-/* ─── Placeholder phase templates ─────── */
-function generatePhases(
-  type: RoadmapType,
-  totalMonths: number,
-  examType: string,
-): RoadmapPhase[] {
+/* ─── JAM Phases ───────────────────────── */
+const JAM_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
+  {
+    id: "jam_p1",
+    title: "Phase 1 — Foundation",
+    description:
+      "Build a strong foundation in the two highest-weightage topics. Complete time, practice, and revision required before moving ahead.",
+    marks: "28–31 marks (Linear Algebra 14–16 + Real Analysis 14–15)",
+    topics: [
+      "Linear Algebra — System of Linear Equations, Vector Spaces, Linear Transformations, Eigenvalues & Eigenvectors, Matrices",
+      "Real Analysis — Set Theory, Real Numbers, Sequences, Series, Limits & Continuity, Differentiability, Riemann Integration, Functions of Several Variables",
+    ],
+  },
+  {
+    id: "jam_p2",
+    title: "Phase 2 — Calculus & Algebra",
+    description:
+      "Differential Calculus (Functions of One Variable) and Group Theory. Both require deep practice and revision.",
+    marks: "24–26 marks (DC 14–15 + Group Theory 10–11)",
+    topics: [
+      "Differential Calculus — Limits, Continuity, Differentiability, MVT, Taylor's Theorem, Maxima-Minima, Curve Sketching",
+      "Group Theory — Basics (Subgroups, Cyclic Groups, Cosets, Lagrange), Intermediate (Normal Subgroups, Quotient Groups, Isomorphism Theorems, Permutation Groups)",
+    ],
+  },
+  {
+    id: "jam_p3",
+    title: "Phase 3 — ODEs, MVC & Integration",
+    description:
+      "ODE, Multivariable Calculus (Functions of Two Variables), and Integral Calculus. Final phase before revision and mock tests.",
+    marks: "~30 marks (ODE 10–11 + MVC 10 + Integration 10 + Miscellaneous 5)",
+    topics: [
+      "ODE — First Order (Separable, Exact, Bernoulli, Clairaut), Higher Order (Constant Coefficients, Variation of Parameters, Cauchy-Euler)",
+      "Multivariable Calculus — Limits in ℝⁿ, Partial Derivatives, Chain Rule, MVT, Taylor's Theorem, Lagrange Multipliers",
+      "Integration — Double Integrals (Cartesian & Polar), Triple Integrals (Spherical & Cylindrical), Surface Area, Solids of Revolution",
+      "Miscellaneous — remaining topics from syllabus",
+    ],
+  },
+  {
+    id: "jam_p4",
+    title: "Phase 4 — Revision & Mock Tests",
+    description:
+      "Full syllabus revision, topic-wise mock tests, error analysis, and exam strategy.",
+    marks: "All topics",
+    topics: [
+      "Complete Phase 1 revision — LA + RA",
+      "Complete Phase 2 revision — DC + Group Theory",
+      "Complete Phase 3 revision — ODE + MVC + Integration",
+      "Full-length mock tests — time management, accuracy",
+      "Weak area identification and focused practice",
+      "Formula sheets, quick notes, exam-day strategy",
+    ],
+  },
+];
+
+/* ─── NET Phases ───────────────────────── */
+const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
+  {
+    id: "net_p1",
+    title: "Phase 1 — Analysis & Algebra",
+    description:
+      "Real Analysis and Linear Algebra form the core of Phase 1. Complete mastery required before advancing.",
+    topics: [
+      "Real Analysis — Set Theory, Real Numbers, Topology of ℝ, Sequences, Series, Continuity, Differentiability, Riemann Integration, Functions of Several Variables, Sequences of Functions, Lebesgue Measure, Metric Spaces",
+      "Linear Algebra — System of Linear Equations, Vector Spaces, Linear Transformations, Eigenvalues & Eigenvectors, Matrices, Inner Product Spaces, Jordan Canonical Form, Dual Spaces",
+    ],
+  },
+  {
+    id: "net_p2",
+    title: "Phase 2 — Complex Analysis & Modern Algebra",
+    description:
+      "Complex Analysis and Modern Algebra (Abstract Algebra). Both are high-weightage and require deep conceptual clarity.",
+    topics: [
+      "Complex Analysis — Complex Numbers, Analytic Functions, Cauchy-Riemann Equations, Complex Integration, Cauchy's Theorem, Power Series, Laurent Series, Singularities, Residue Theorem, Möbius Transformations, Maximum Modulus, Conformal Mappings",
+      "Modern Algebra — Group Theory (Basics, Intermediate, Advanced, Sylow), Ring Theory (Basics, Advanced), Field Theory, Galois Theory (Statement)",
+      "Topology — Topological Spaces, Continuity, Separation Axioms, Compactness, Connectedness, Quotient Topology",
+      "Functional Analysis — Normed Spaces, Hilbert Spaces, Bounded Operators, Hahn-Banach, Open Mapping, Uniform Boundedness",
+    ],
+  },
+  {
+    id: "net_p3",
+    title: "Phase 3 — Optional & Applied Topics",
+    description:
+      "Students must complete ODE, PDE, and any two from: Integral Calculus (IA), Calculus of Variations (COV), Numerical Analysis.",
+    topics: [
+      "ODE — First Order, Higher Order, System of ODEs, Power Series Solutions, Frobenius Method, Sturm-Liouville",
+      "PDE — First Order PDEs, Classification, Wave Equation, Heat Equation, Laplace Equation, Fourier Methods",
+      "Integral Calculus (IA) — Double & Triple Integrals, Surface Area, Solids of Revolution",
+      "Calculus of Variations (COV) — Euler-Lagrange Equation, Brachistochrone, Geodesics, Isoperimetric Problems",
+      "Numerical Analysis — Root Finding, Interpolation, Numerical Integration, Numerical Linear Algebra, Numerical ODEs",
+      "Linear Programming — Simplex Method, Duality, Transportation & Assignment",
+      "Statistics & Probability — Distributions, Estimation, Hypothesis Testing",
+    ],
+  },
+  {
+    id: "net_p4",
+    title: "Phase 4 — Revision & Mock Tests",
+    description:
+      "Complete revision of all phases, full-length mock tests, weak area targeting, and exam strategy.",
+    topics: [
+      "Phase 1 full revision — Real Analysis + Linear Algebra",
+      "Phase 2 full revision — Complex Analysis + Modern Algebra + Topology + Functional Analysis",
+      "Phase 3 full revision — ODE + PDE + chosen optional topics",
+      "Full-length mock tests with time management",
+      "Weak area identification and focused revision",
+      "Formula sheets, theorem lists, exam-day strategy",
+    ],
+  },
+];
+
+/* ─── Generate phases with duration ───── */
+function generatePhases(examType: string, totalMonths: number): RoadmapPhase[] {
   const totalWeeks = totalMonths * 4;
+  const template = examType === "JAM" ? JAM_PHASES : NET_PHASES;
+  const weights =
+    examType === "JAM"
+      ? [0.3, 0.28, 0.27, 0.15] /* Phase 4 = revision */
+      : [0.28, 0.3, 0.27, 0.15];
 
-  if (totalMonths <= 6) {
-    return [
-      {
-        id: "p1",
-        title: "Foundation & Basics",
-        description:
-          "Core concepts, fundamental theorems, problem-solving techniques",
-        durationWeeks: Math.round(totalWeeks * 0.25),
-        status: "not_started",
-        topics: ["Core theory", "Basic problem solving", "Formula revision"],
-      },
-      {
-        id: "p2",
-        title: "Intermediate Topics",
-        description: "Mid-level topics, standard problems, past paper patterns",
-        durationWeeks: Math.round(totalWeeks * 0.3),
-        status: "not_started",
-        topics: [
-          "Standard problems",
-          "Topic-wise practice",
-          "Concept strengthening",
-        ],
-      },
-      {
-        id: "p3",
-        title: "Advanced Topics",
-        description:
-          "Complex problems, advanced theorems, tricky question types",
-        durationWeeks: Math.round(totalWeeks * 0.2),
-        status: "not_started",
-        topics: [
-          "Advanced problems",
-          "Tricky questions",
-          "High-weightage topics",
-        ],
-      },
-      {
-        id: "p4",
-        title: "Revision & Mock Tests",
-        description: "Full syllabus revision, mock tests, weak area focus",
-        durationWeeks: Math.round(totalWeeks * 0.15),
-        status: "not_started",
-        topics: ["Full revision", "Mock tests", "Error analysis"],
-      },
-      {
-        id: "p5",
-        title: "Final Sprint",
-        description: "Last-minute revision, formula sheets, exam strategy",
-        durationWeeks: Math.round(totalWeeks * 0.1),
-        status: "not_started",
-        topics: ["Formula sheets", "Quick revision", "Exam strategy"],
-      },
-    ];
-  }
-
-  if (totalMonths <= 12) {
-    return [
-      {
-        id: "p1",
-        title: "Foundation",
-        description: "Build strong basics across all subjects",
-        durationWeeks: Math.round(totalWeeks * 0.2),
-        status: "not_started",
-        topics: ["Basic concepts", "Standard textbooks", "Foundation problems"],
-      },
-      {
-        id: "p2",
-        title: "Topic-wise Study",
-        description: "Subject-by-subject deep study",
-        durationWeeks: Math.round(totalWeeks * 0.25),
-        status: "not_started",
-        topics: [
-          "Subject 1 deep dive",
-          "Subject 2 deep dive",
-          "Cross-topic linking",
-        ],
-      },
-      {
-        id: "p3",
-        title: "Problem Practice",
-        description: "Intensive problem solving across topics",
-        durationWeeks: Math.round(totalWeeks * 0.2),
-        status: "not_started",
-        topics: ["Past paper problems", "Standard questions", "Speed building"],
-      },
-      {
-        id: "p4",
-        title: "Advanced & Integration",
-        description: "Hard problems, multi-topic questions",
-        durationWeeks: Math.round(totalWeeks * 0.15),
-        status: "not_started",
-        topics: [
-          "Advanced problems",
-          "Integration of topics",
-          "High-level questions",
-        ],
-      },
-      {
-        id: "p5",
-        title: "Revision",
-        description: "Complete syllabus revision, topic summaries",
-        durationWeeks: Math.round(totalWeeks * 0.1),
-        status: "not_started",
-        topics: ["Full syllabus sweep", "Mind maps", "Key theorems"],
-      },
-      {
-        id: "p6",
-        title: "Mock Tests & Analysis",
-        description: "Full mock tests, analysis, weak areas",
-        durationWeeks: Math.round(totalWeeks * 0.07),
-        status: "not_started",
-        topics: ["Mock tests", "Time management", "Error logs"],
-      },
-      {
-        id: "p7",
-        title: "Final Sprint",
-        description: "Formula sheets, last-minute prep",
-        durationWeeks: Math.round(totalWeeks * 0.03),
-        status: "not_started",
-        topics: ["Formula revision", "Mental preparation", "Exam strategy"],
-      },
-    ];
-  }
-
-  /* Long plans (18+ months) */
-  return [
-    {
-      id: "p1",
-      title: "Awareness & Orientation",
-      description: "Understand exam pattern, syllabus, and planning",
-      durationWeeks: Math.round(totalWeeks * 0.05),
-      status: "not_started",
-      topics: ["Exam pattern", "Syllabus overview", "Resource selection"],
-    },
-    {
-      id: "p2",
-      title: "Foundation Building",
-      description: "Strong conceptual foundation across all subjects",
-      durationWeeks: Math.round(totalWeeks * 0.2),
-      status: "not_started",
-      topics: ["Basic concepts", "Textbook study", "Concept clarity"],
-    },
-    {
-      id: "p3",
-      title: "Topic-wise Deep Study",
-      description: "Go deep into each subject systematically",
-      durationWeeks: Math.round(totalWeeks * 0.25),
-      status: "not_started",
-      topics: ["Subject deep dives", "Notes making", "Topic tests"],
-    },
-    {
-      id: "p4",
-      title: "Problem Practice",
-      description: "Extensive problem solving, past papers",
-      durationWeeks: Math.round(totalWeeks * 0.18),
-      status: "not_started",
-      topics: ["Previous year questions", "Practice sets", "Speed drills"],
-    },
-    {
-      id: "p5",
-      title: "Advanced Topics",
-      description: "High-difficulty topics, integration questions",
-      durationWeeks: Math.round(totalWeeks * 0.12),
-      status: "not_started",
-      topics: [
-        "Advanced chapters",
-        "Tricky problem types",
-        "High-weightage areas",
-      ],
-    },
-    {
-      id: "p6",
-      title: "First Full Revision",
-      description: "Complete first pass revision of all topics",
-      durationWeeks: Math.round(totalWeeks * 0.08),
-      status: "not_started",
-      topics: [
-        "Full syllabus revision",
-        "Summary notes",
-        "Weak area identification",
-      ],
-    },
-    {
-      id: "p7",
-      title: "Mock Tests",
-      description: "Regular mock tests and detailed analysis",
-      durationWeeks: Math.round(totalWeeks * 0.07),
-      status: "not_started",
-      topics: ["Full-length mocks", "Section-wise tests", "Error analysis"],
-    },
-    {
-      id: "p8",
-      title: "Final Revision & Sprint",
-      description: "Final revision, formula sheets, exam readiness",
-      durationWeeks: Math.round(totalWeeks * 0.05),
-      status: "not_started",
-      topics: ["Formula sheets", "Quick revision", "Mental fitness"],
-    },
-  ];
+  return template.map((p, i) => ({
+    ...p,
+    durationWeeks: Math.max(1, Math.round(totalWeeks * weights[i])),
+    status: "not_started" as PhaseStatus,
+  }));
 }
 
 /* ─── AI Calculation Engine ────────────── */
-interface AICalculation {
-  totalWeeks: number;
+interface AICalc {
   effectiveWeeks: number;
   unavailableWeeks: number;
   estimatedEndDate: string;
@@ -343,36 +252,33 @@ interface AICalculation {
   completedPercent: number;
   status: "on_track" | "ahead" | "behind" | "critical";
   statusMessage: string;
-  adjustedPhases: RoadmapPhase[];
   recommendation: string;
+  adjustedPhases: RoadmapPhase[];
 }
 
-function runAIEngine(roadmap: Roadmap): AICalculation {
+function runAIEngine(roadmap: Roadmap): AICalc {
   const totalWeeks = roadmap.totalMonths * 4;
   const unavailableWeeks = roadmap.unavailablePeriods.reduce(
-    (sum, p) => sum + p.weeks,
+    (s, p) => s + p.weeks,
     0,
   );
-  const effectiveWeeks =
-    totalWeeks + unavailableWeeks; /* extend end date by unavailable weeks */
+  const effectiveWeeks = totalWeeks + unavailableWeeks;
 
   const startDate = parseISO(roadmap.startDate);
   const estimatedEnd = addWeeks(startDate, effectiveWeeks);
   const now = new Date();
   const weeksElapsed = Math.max(0, differenceInWeeks(now, startDate));
-  const weeksRemaining = Math.max(0, effectiveWeeks - weeksElapsed);
+  const weeksLeft = Math.max(0, effectiveWeeks - weeksElapsed);
 
-  /* Calculate completed phases */
   const donePhasesWeeks = roadmap.phases
     .filter((p) => p.status === "done")
-    .reduce((sum, p) => sum + p.durationWeeks, 0);
+    .reduce((s, p) => s + p.durationWeeks, 0);
 
   const completedPercent =
     totalWeeks > 0
       ? Math.min(100, Math.round((donePhasesWeeks / totalWeeks) * 100))
       : 0;
 
-  /* Expected progress at this point */
   const expectedPercent =
     effectiveWeeks > 0
       ? Math.min(100, Math.round((weeksElapsed / effectiveWeeks) * 100))
@@ -380,59 +286,46 @@ function runAIEngine(roadmap: Roadmap): AICalculation {
 
   const diff = completedPercent - expectedPercent;
 
-  let status: AICalculation["status"];
-  let statusMessage: string;
-  let recommendation: string;
+  let status: AICalc["status"], statusMessage: string, recommendation: string;
 
   if (weeksElapsed === 0) {
     status = "on_track";
-    statusMessage = "Roadmap just started — you're on track!";
-    recommendation =
-      "Begin with Phase 1 and aim to complete the weekly targets consistently.";
+    statusMessage = "Roadmap created — ready to begin! 🌱";
+    recommendation = "Start Phase 1 and aim for consistent daily progress.";
   } else if (diff >= 10) {
     status = "ahead";
-    statusMessage = `You're ahead by ~${Math.round((diff / 25) * effectiveWeeks)} week(s)! 🎉`;
-    recommendation =
-      "Great pace! Use extra time for deeper practice and mock tests.";
+    statusMessage = `Excellent! You're ahead of schedule. 🎉`;
+    recommendation = "Use extra time for deeper practice and mock tests.";
   } else if (diff >= -5) {
     status = "on_track";
     statusMessage = "You're right on track! Keep going. 💪";
-    recommendation =
-      "Maintain your current study pace and don't skip sessions.";
+    recommendation = "Maintain your current pace. Don't skip sessions.";
   } else if (diff >= -15) {
     status = "behind";
-    statusMessage = `You're slightly behind by ~${Math.round((Math.abs(diff) / 25) * effectiveWeeks)} week(s).`;
-    recommendation = `Try to add ${Math.ceil(Math.abs(diff) / 10)} extra study hours per week to get back on track.`;
+    statusMessage = `Slightly behind schedule. Don't worry — adjustable.`;
+    recommendation = `Add ${Math.ceil(Math.abs(diff) / 10)} extra study sessions per week to catch up.`;
   } else {
     status = "critical";
-    statusMessage = `Significantly behind. Immediate plan adjustment needed.`;
+    statusMessage = "Significantly behind. Immediate plan adjustment needed.";
     recommendation =
-      "Consider reducing scope of lower-priority topics and focus intensely on high-weightage areas.";
+      "Focus intensely on high-weightage topics. Consider reducing scope of lower-priority sections.";
   }
 
   /* Redistribute unavailable weeks across remaining phases */
-  const remainingPhases = roadmap.phases.filter((p) => p.status !== "done");
-  const totalRemainingWeeks = remainingPhases.reduce(
-    (sum, p) => sum + p.durationWeeks,
-    0,
-  );
+  const remaining = roadmap.phases.filter((p) => p.status !== "done");
+  const remainingTotal = remaining.reduce((s, p) => s + p.durationWeeks, 0);
 
-  /* Add unavailable weeks proportionally to remaining phases */
-  const adjustedPhases: RoadmapPhase[] = roadmap.phases.map((phase) => {
-    if (phase.status === "done") return phase;
-    const proportion =
-      totalRemainingWeeks > 0 ? phase.durationWeeks / totalRemainingWeeks : 0;
-    const extraWeeks = Math.round(unavailableWeeks * proportion);
-    return { ...phase, durationWeeks: phase.durationWeeks + extraWeeks };
+  const adjustedPhases = roadmap.phases.map((p) => {
+    if (p.status === "done") return p;
+    const prop = remainingTotal > 0 ? p.durationWeeks / remainingTotal : 0;
+    const extra = Math.round(unavailableWeeks * prop);
+    return { ...p, durationWeeks: p.durationWeeks + extra };
   });
 
   const weeklyTargetPercent =
-    weeksRemaining > 0
-      ? Math.ceil((100 - completedPercent) / weeksRemaining)
-      : 0;
+    weeksLeft > 0 ? Math.ceil((100 - completedPercent) / weeksLeft) : 0;
 
   return {
-    totalWeeks,
     effectiveWeeks,
     unavailableWeeks,
     estimatedEndDate: format(estimatedEnd, "MMMM d, yyyy"),
@@ -440,16 +333,15 @@ function runAIEngine(roadmap: Roadmap): AICalculation {
     completedPercent,
     status,
     statusMessage,
-    adjustedPhases,
     recommendation,
+    adjustedPhases,
   };
 }
 
-/* ─── localStorage helpers ─────────────── */
+/* ─── localStorage ─────────────────────── */
 function lsKey(userId: string) {
   return `hs_roadmap_${userId}`;
 }
-
 function loadRoadmap(userId: string): Roadmap | null {
   try {
     const r = localStorage.getItem(lsKey(userId));
@@ -458,12 +350,11 @@ function loadRoadmap(userId: string): Roadmap | null {
     return null;
   }
 }
-
-function saveRoadmap(userId: string, roadmap: Roadmap) {
-  localStorage.setItem(lsKey(userId), JSON.stringify(roadmap));
+function saveRoadmap(userId: string, rm: Roadmap) {
+  localStorage.setItem(lsKey(userId), JSON.stringify(rm));
 }
 
-/* ─── Status badge ─────────────────────── */
+/* ─── Status config ────────────────────── */
 const STATUS_CFG = {
   on_track: {
     label: "On Track",
@@ -486,10 +377,10 @@ const STATUS_CFG = {
   },
 };
 
-const PHASE_STATUS_CFG = {
-  not_started: { label: "Not Started", color: MUTED, bg: `${BORDER}88` },
-  in_progress: { label: "In Progress", color: GOLD, bg: `${GOLD}22` },
-  done: { label: "Done", color: OLIVE, bg: `${OLIVE}22` },
+const PHASE_STATUS = {
+  not_started: { label: "—", color: MUTED },
+  in_progress: { label: "▶", color: GOLD },
+  done: { label: "✓", color: OLIVE },
 };
 
 /* ─── Roadmap Selector ─────────────────── */
@@ -502,11 +393,6 @@ function RoadmapSelector({
 }) {
   const [selected, setSelected] = useState<RoadmapType | null>(null);
   const [months, setMonths] = useState(12);
-
-  function confirm() {
-    if (!selected) return;
-    onSelect(selected, months);
-  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -534,7 +420,7 @@ function RoadmapSelector({
           What is your current academic stage?
         </h2>
         <p className="text-xs mb-5" style={{ color: MUTED }}>
-          This helps us create the right preparation plan for you.
+          This sets your default preparation timeline. You can edit it anytime.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
@@ -587,7 +473,8 @@ function RoadmapSelector({
                 className="text-sm font-semibold block mb-2"
                 style={{ color: CHARCOAL }}
               >
-                Total preparation time (months)
+                Total preparation time:{" "}
+                <span style={{ color: GOLD }}>{months} months</span>
               </label>
               <div className="flex items-center gap-4">
                 <input
@@ -599,7 +486,7 @@ function RoadmapSelector({
                   className="flex-1 accent-amber-600"
                 />
                 <div
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl min-w-[80px] justify-center"
+                  className="px-4 py-2 rounded-xl flex items-center gap-1 min-w-[80px] justify-center"
                   style={{
                     background: `${GOLD}22`,
                     border: `1px solid ${GOLD}44`,
@@ -617,14 +504,48 @@ function RoadmapSelector({
                 </div>
               </div>
               <p className="text-xs mt-1" style={{ color: MUTED }}>
-                Default for {ROADMAP_TYPES[selected].label}:{" "}
-                {ROADMAP_TYPES[selected].defaultMonths} months. You can change
-                this anytime.
+                Recommended for {ROADMAP_TYPES[selected].label}:{" "}
+                {ROADMAP_TYPES[selected].defaultMonths} months
               </p>
             </div>
 
+            <div
+              className="rounded-xl p-4 space-y-2"
+              style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}33` }}
+            >
+              <p className="text-xs font-semibold" style={{ color: DARK }}>
+                Your roadmap will have {examType === "JAM" ? "4" : "4"} phases:
+              </p>
+              {(examType === "JAM" ? JAM_PHASES : NET_PHASES).map((p, i) => (
+                <div key={p.id} className="flex items-start gap-2">
+                  <span
+                    className="text-xs font-bold w-4 flex-shrink-0"
+                    style={{ color: GOLD }}
+                  >
+                    {i + 1}
+                  </span>
+                  <div>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: CHARCOAL }}
+                    >
+                      {p.title}
+                    </span>
+                    {p.marks && (
+                      <span
+                        className="text-[10px] ml-2"
+                        style={{ color: MUTED }}
+                      >
+                        · {p.marks}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <button
-              onClick={confirm}
+              onClick={() => onSelect(selected, months)}
               className="w-full h-12 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
               style={{
                 background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
@@ -641,7 +562,7 @@ function RoadmapSelector({
   );
 }
 
-/* ─── Main Roadmap View ────────────────── */
+/* ─── Roadmap View ─────────────────────── */
 function RoadmapView({
   roadmap,
   userId,
@@ -672,13 +593,12 @@ function RoadmapView({
     setRm(updated);
     saveRoadmap(userId, updated);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 2500);
   }
 
   function applyNewMonths() {
-    const recalcPhases = generatePhases(rm.type, newMonths, rm.examType);
-    /* Preserve done statuses */
-    const merged = recalcPhases.map((p, i) => ({
+    const newPhases = generatePhases(rm.examType, newMonths);
+    const merged = newPhases.map((p, i) => ({
       ...p,
       status: rm.phases[i]?.status ?? "not_started",
     }));
@@ -744,7 +664,7 @@ function RoadmapView({
       <div
         className="rounded-2xl p-5"
         style={{
-          background: `${statusCfg.bg}`,
+          background: statusCfg.bg,
           border: `1.5px solid ${statusCfg.color}44`,
         }}
       >
@@ -754,17 +674,15 @@ function RoadmapView({
             style={{ color: statusCfg.color }}
           />
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span
-                className="text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{
-                  background: `${statusCfg.color}22`,
-                  color: statusCfg.color,
-                }}
-              >
-                {statusCfg.label}
-              </span>
-            </div>
+            <span
+              className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mb-1"
+              style={{
+                background: `${statusCfg.color}22`,
+                color: statusCfg.color,
+              }}
+            >
+              {statusCfg.label}
+            </span>
             <p className="text-sm font-semibold" style={{ color: CHARCOAL }}>
               {calc.statusMessage}
             </p>
@@ -774,7 +692,6 @@ function RoadmapView({
           </div>
         </div>
 
-        {/* Stats grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             {
@@ -789,7 +706,7 @@ function RoadmapView({
               color: GOLD,
             },
             {
-              label: "Unavailable",
+              label: "Paused",
               value: `${calc.unavailableWeeks} wk(s)`,
               color: MUTED,
             },
@@ -809,7 +726,6 @@ function RoadmapView({
           ))}
         </div>
 
-        {/* Progress bar */}
         <div className="mt-4">
           <div
             className="flex justify-between text-xs mb-1"
@@ -820,7 +736,7 @@ function RoadmapView({
           </div>
           <div
             className="h-2 rounded-full overflow-hidden"
-            style={{ background: `${BORDER}` }}
+            style={{ background: BORDER }}
           >
             <div
               className="h-full rounded-full transition-all duration-700"
@@ -926,7 +842,7 @@ function RoadmapView({
           </div>
         ) : (
           <div
-            className="flex items-center gap-4 text-sm"
+            className="flex flex-wrap items-center gap-4 text-sm"
             style={{ color: CHARCOAL }}
           >
             <span>
@@ -950,7 +866,7 @@ function RoadmapView({
         className="rounded-2xl p-5"
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
       >
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4" style={{ color: ROSE }} />
             <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
@@ -963,14 +879,14 @@ function RoadmapView({
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
               style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
             >
-              <Plus className="w-3 h-3" /> Add Period
+              <Plus className="w-3 h-3" /> Add
             </button>
           )}
         </div>
 
         <p className="text-xs mb-3" style={{ color: MUTED }}>
-          Log periods when you can't study — AI will automatically extend your
-          roadmap and adjust targets.
+          Log periods when you can't study. AI extends your end date and adjusts
+          phase targets automatically.
         </p>
 
         {showUnavail && (
@@ -991,7 +907,7 @@ function RoadmapView({
                   onChange={(e) =>
                     setUnavailForm((p) => ({ ...p, label: e.target.value }))
                   }
-                  placeholder="e.g. Family event, exams…"
+                  placeholder="e.g. Family event, college exams…"
                   className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
                   style={{
                     background: CARD,
@@ -1072,10 +988,9 @@ function RoadmapView({
 
         {rm.unavailablePeriods.length === 0 && !showUnavail && (
           <p className="text-xs" style={{ color: MUTED }}>
-            No unavailable periods logged yet.
+            No unavailable periods logged.
           </p>
         )}
-
         <div className="space-y-2">
           {rm.unavailablePeriods.map((p) => (
             <div
@@ -1116,18 +1031,18 @@ function RoadmapView({
           Preparation Phases
         </h2>
         <p className="text-xs mb-4" style={{ color: MUTED }}>
-          Phase durations are automatically adjusted based on your timeline and
-          unavailable periods.
+          Phase durations adjust automatically when you edit your timeline or
+          add unavailable periods.
         </p>
 
         <div className="space-y-3">
           {calc.adjustedPhases.map((phase, idx) => {
             const isOpen = expandPhase[phase.id] ?? false;
-            const statusCfg = PHASE_STATUS_CFG[phase.status];
             const weekStart = calc.adjustedPhases
               .slice(0, idx)
-              .reduce((sum, p) => sum + p.durationWeeks, 0);
+              .reduce((s, p) => s + p.durationWeeks, 0);
             const phaseStart = addWeeks(parseISO(rm.startDate), weekStart);
+            const phaseEnd = addWeeks(phaseStart, phase.durationWeeks);
 
             return (
               <div
@@ -1135,7 +1050,6 @@ function RoadmapView({
                 className="rounded-2xl overflow-hidden"
                 style={{ background: CARD, border: `1px solid ${BORDER}` }}
               >
-                {/* Phase header */}
                 <div className="flex items-center gap-3 px-5 py-4">
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
@@ -1147,6 +1061,7 @@ function RoadmapView({
                   >
                     {idx + 1}
                   </div>
+
                   <button
                     onClick={() =>
                       setExpandPhase((p) => ({
@@ -1175,11 +1090,20 @@ function RoadmapView({
                         />
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
                       <span className="text-xs" style={{ color: MUTED }}>
-                        {phase.durationWeeks} week(s) · From{" "}
-                        {format(phaseStart, "MMM d")}
+                        {phase.durationWeeks} weeks ·{" "}
+                        {format(phaseStart, "MMM d")} →{" "}
+                        {format(phaseEnd, "MMM d")}
                       </span>
+                      {(phase as any).marks && (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded-full"
+                          style={{ background: `${GOLD}15`, color: DARK }}
+                        >
+                          {(phase as any).marks}
+                        </span>
+                      )}
                     </div>
                   </button>
 
@@ -1188,13 +1112,13 @@ function RoadmapView({
                     {(
                       ["not_started", "in_progress", "done"] as PhaseStatus[]
                     ).map((s) => {
-                      const cfg = PHASE_STATUS_CFG[s];
+                      const cfg = PHASE_STATUS[s];
                       const active = phase.status === s;
                       return (
                         <button
                           key={s}
                           onClick={() => updatePhaseStatus(phase.id, s)}
-                          className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                          className="w-8 h-8 rounded-lg text-xs font-bold transition-all"
                           style={
                             active
                               ? {
@@ -1205,18 +1129,13 @@ function RoadmapView({
                               : { background: `${BORDER}88`, color: MUTED }
                           }
                         >
-                          {s === "not_started"
-                            ? "—"
-                            : s === "in_progress"
-                              ? "▶"
-                              : "✓"}
+                          {cfg.label}
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Phase details */}
                 {isOpen && (
                   <div
                     className="px-5 pb-4"
@@ -1228,25 +1147,29 @@ function RoadmapView({
                     >
                       {phase.description}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {phase.topics.map((t) => (
-                        <span
-                          key={t}
-                          className="text-[11px] px-2.5 py-1 rounded-full font-medium"
+                    <div className="space-y-2">
+                      {phase.topics.map((t, ti) => (
+                        <div
+                          key={ti}
+                          className="flex items-start gap-2 px-3 py-2 rounded-xl"
                           style={{
-                            background: `${GOLD}15`,
-                            color: DARK,
-                            border: `1px solid ${GOLD}33`,
+                            background: CREAM,
+                            border: `1px solid ${BORDER}`,
                           }}
                         >
-                          {t}
-                        </span>
+                          <div
+                            className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
+                            style={{ background: GOLD }}
+                          />
+                          <span
+                            className="text-xs leading-relaxed"
+                            style={{ color: CHARCOAL }}
+                          >
+                            {t}
+                          </span>
+                        </div>
                       ))}
                     </div>
-                    <p className="text-[10px] mt-3" style={{ color: MUTED }}>
-                      📌 Detailed topic content will be added once your roadmap
-                      is finalised by your mentor.
-                    </p>
                   </div>
                 )}
               </div>
@@ -1255,10 +1178,9 @@ function RoadmapView({
         </div>
       </div>
 
-      {/* Save indicator */}
       {saved && (
         <div
-          className="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg"
+          className="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg z-50"
           style={{ background: OLIVE, color: "#fff" }}
         >
           ✓ Roadmap saved & recalculated
@@ -1280,8 +1202,8 @@ export default function Roadmap() {
   );
 
   function handleSelect(type: RoadmapType, months: number) {
-    const phases = generatePhases(type, months, examType ?? "JAM");
-    const newRoadmap: Roadmap = {
+    const phases = generatePhases(examType ?? "JAM", months);
+    const rm: Roadmap = {
       type,
       examType: examType ?? "JAM",
       totalMonths: months,
@@ -1291,22 +1213,16 @@ export default function Roadmap() {
       createdAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
     };
-    setRoadmap(newRoadmap);
-    saveRoadmap(userId, newRoadmap);
+    setRoadmap(rm);
+    saveRoadmap(userId, rm);
   }
 
   function handleReset() {
-    if (
-      !confirm(
-        "Are you sure you want to reset your roadmap? Your progress will be lost.",
-      )
-    )
-      return;
+    if (!confirm("Reset your roadmap? Your progress will be lost.")) return;
     localStorage.removeItem(lsKey(userId));
     setRoadmap(null);
   }
 
-  /* Apex+ and Zenith only */
   if (space === "heartspace") {
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
@@ -1320,6 +1236,10 @@ export default function Roadmap() {
           className="text-center py-20 rounded-2xl"
           style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
         >
+          <Map
+            className="w-10 h-10 mx-auto mb-3 opacity-30"
+            style={{ color: GOLD }}
+          />
           <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
             Roadmap not available for HeartSpace
           </p>
@@ -1331,12 +1251,10 @@ export default function Roadmap() {
     );
   }
 
-  if (!roadmap) {
+  if (!roadmap)
     return (
       <RoadmapSelector examType={examType ?? "JAM"} onSelect={handleSelect} />
     );
-  }
-
   return (
     <RoadmapView roadmap={roadmap} userId={userId} onReset={handleReset} />
   );
