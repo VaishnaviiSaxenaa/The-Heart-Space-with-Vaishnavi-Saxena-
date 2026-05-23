@@ -18,14 +18,9 @@ import {
   Brain,
   BookOpen,
   Zap,
+  Target,
 } from "lucide-react";
-import {
-  format,
-  addWeeks,
-  differenceInWeeks,
-  parseISO,
-  addDays,
-} from "date-fns";
+import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 
 /* ─── Brand tokens ─────────────────────── */
 const CREAM = "#FAF7F2";
@@ -77,6 +72,16 @@ interface ScheduleWeek {
   hoursRequired: number;
   hoursAvailable: number;
   startDate: string;
+  skipped?: boolean;
+}
+
+interface SubjectForecast {
+  name: string;
+  weeksNeeded: number;
+  weeksAvailable: number;
+  canComplete: boolean;
+  percentCompletable: number;
+  alreadyDone: boolean;
 }
 
 interface SmartSchedule {
@@ -90,6 +95,10 @@ interface SmartSchedule {
   isAchievable: boolean;
   minimumMonthsNeeded: number;
   weeks: ScheduleWeek[];
+  subjectForecasts: SubjectForecast[];
+  subjectsFullyCompletable: number;
+  totalSubjects: number;
+  completedSubjectsSkipped: number;
   generatedAt: string;
 }
 
@@ -105,7 +114,7 @@ interface Roadmap {
   lastUpdated: string;
 }
 
-/* ─── Subject time data (weeks) ─────────── */
+/* ─── Subject data ─────────────────────── */
 const JAM_SUBJECTS = [
   { id: "la", name: "Linear Algebra", studyWeeks: 4, assignmentWeeks: 0.5 },
   { id: "ra", name: "Real Analysis", studyWeeks: 4, assignmentWeeks: 0.5 },
@@ -139,7 +148,7 @@ const NET_SUBJECTS = [
     id: "ma",
     name: "Modern Algebra (Group + Ring + Field)",
     studyWeeks: 5,
-    assignmentWeeks: 1,
+    assignmentWeeks: 1.0,
   },
   { id: "top", name: "Topology", studyWeeks: 3, assignmentWeeks: 0.5 },
   {
@@ -170,7 +179,6 @@ const NET_SUBJECTS = [
   },
 ];
 
-/* ─── Week breakdown per subject ────────── */
 const JAM_WEEK_BREAKDOWN: Record<string, string[]> = {
   la: [
     "System of Linear Equations, Vector Spaces basics",
@@ -260,7 +268,22 @@ const NET_WEEK_BREAKDOWN: Record<string, string[]> = {
   cov: ["Euler-Lagrange, Brachistochrone, Geodesics + Assignment"],
 };
 
-/* ─── Roadmap type config ──────────────── */
+/* ─── Phase → subject mapping ──────────── */
+const JAM_PHASE_SUBJECTS: Record<string, string[]> = {
+  jam_p1: ["la", "ra"],
+  jam_p2: ["dc", "gt"],
+  jam_p3: ["ode", "mvc", "mi"],
+  jam_p4: [],
+};
+
+const NET_PHASE_SUBJECTS: Record<string, string[]> = {
+  net_p1: ["ra", "la"],
+  net_p2: ["ca", "ma", "top", "fa"],
+  net_p3: ["ode", "pde", "na", "ie", "cov"],
+  net_p4: [],
+};
+
+/* ─── Roadmap types ────────────────────── */
 const ROADMAP_TYPES: Record<
   RoadmapType,
   { label: string; emoji: string; defaultMonths: number; description: string }
@@ -309,7 +332,7 @@ const ROADMAP_TYPES: Record<
   },
 };
 
-/* ─── JAM + NET phase templates ─────────── */
+/* ─── Phase templates ──────────────────── */
 const JAM_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
   {
     id: "jam_p1",
@@ -365,7 +388,7 @@ const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
   {
     id: "net_p1",
     title: "Phase 1 — Analysis & Algebra",
-    description: "Real Analysis and Linear Algebra — core of Phase 1.",
+    description: "Real Analysis and Linear Algebra.",
     topics: [
       "Real Analysis — complete",
       "Linear Algebra — complete including Inner Product Spaces, Jordan CF, Dual Spaces",
@@ -386,8 +409,7 @@ const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
   {
     id: "net_p3",
     title: "Phase 3 — Applied Topics",
-    description:
-      "ODE, PDE, and optional topics (student must do ODE + PDE + any 2 others).",
+    description: "ODE, PDE, and optional topics.",
     topics: [
       "ODE — First Order, Higher Order, Power Series",
       "PDE — First Order, Wave, Heat, Laplace, Fourier",
@@ -422,6 +444,21 @@ function generatePhases(examType: string, totalMonths: number): RoadmapPhase[] {
   }));
 }
 
+/* ─── Get done subject IDs from phases ─── */
+function getDoneSubjectIds(
+  phases: RoadmapPhase[],
+  examType: string,
+): Set<string> {
+  const phaseMap = examType === "JAM" ? JAM_PHASE_SUBJECTS : NET_PHASE_SUBJECTS;
+  const done = new Set<string>();
+  phases.forEach((p) => {
+    if (p.status === "done" && phaseMap[p.id]) {
+      phaseMap[p.id].forEach((s) => done.add(s));
+    }
+  });
+  return done;
+}
+
 /* ─── Smart Schedule Engine ─────────────── */
 function generateSmartSchedule(
   examType: string,
@@ -430,57 +467,96 @@ function generateSmartSchedule(
   targetMonths: number,
   revisionPercent: number,
   startDate: string,
+  phases: RoadmapPhase[],
 ): SmartSchedule {
-  const subjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const allSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const weekBreakdown =
     examType === "JAM" ? JAM_WEEK_BREAKDOWN : NET_WEEK_BREAKDOWN;
   const hoursPerWeek = hoursPerDay * daysPerWeek;
   const targetWeeks = targetMonths * 4;
-  const totalHoursAvailable = targetWeeks * hoursPerWeek;
 
-  /* Calculate total weeks needed */
-  let studyWeeksTotal = 0;
-  let assignmentWeeksTotal = 0;
-  let revisionWeeksTotal = 0;
+  /* Which subjects are already done */
+  const doneIds = getDoneSubjectIds(phases, examType);
+  const pendingSubjs = allSubjects.filter((s) => !doneIds.has(s.id));
+  const doneSubjs = allSubjects.filter((s) => doneIds.has(s.id));
 
-  subjects.forEach((s) => {
+  /* Total weeks needed for PENDING subjects only */
+  let studyWeeksTotal = 0,
+    assignmentWeeksTotal = 0,
+    revisionWeeksTotal = 0;
+  pendingSubjs.forEach((s) => {
     studyWeeksTotal += s.studyWeeks;
     assignmentWeeksTotal += s.assignmentWeeks;
     revisionWeeksTotal += s.studyWeeks * (revisionPercent / 100);
   });
 
-  /* Add buffer week per phase */
   const bufferWeeks = examType === "JAM" ? 2 : 3;
-
   const totalWeeksRequired = Math.ceil(
     studyWeeksTotal + assignmentWeeksTotal + revisionWeeksTotal + bufferWeeks,
   );
-
   const totalHoursRequired = totalWeeksRequired * hoursPerWeek;
   const isAchievable = targetWeeks >= totalWeeksRequired;
   const minimumMonthsNeeded = Math.ceil(totalWeeksRequired / 4);
 
-  /* Generate week-by-week schedule */
+  /* Subject-level forecasts */
+  let weeksUsed = 0;
+  const subjectForecasts: SubjectForecast[] = allSubjects.map((s) => {
+    /* Already done subjects */
+    if (doneIds.has(s.id)) {
+      return {
+        name: s.name,
+        weeksNeeded:
+          s.studyWeeks +
+          s.assignmentWeeks +
+          Math.ceil((s.studyWeeks * revisionPercent) / 100),
+        weeksAvailable: 0,
+        canComplete: true,
+        percentCompletable: 100,
+        alreadyDone: true,
+      };
+    }
+
+    const subjectWeeks =
+      s.studyWeeks +
+      s.assignmentWeeks +
+      Math.ceil((s.studyWeeks * revisionPercent) / 100);
+    const remainingAvail = Math.max(0, targetWeeks - weeksUsed);
+    const canComplete = remainingAvail >= subjectWeeks;
+    const pct = canComplete
+      ? 100
+      : Math.round((remainingAvail / subjectWeeks) * 100);
+    weeksUsed += subjectWeeks;
+
+    return {
+      name: s.name,
+      weeksNeeded: subjectWeeks,
+      weeksAvailable: Math.min(remainingAvail, subjectWeeks),
+      canComplete,
+      percentCompletable: pct,
+      alreadyDone: false,
+    };
+  });
+
+  const subjectsFullyCompletable = subjectForecasts.filter(
+    (s) => s.canComplete,
+  ).length;
+
+  /* Generate week-by-week schedule for PENDING subjects only */
   const weeks: ScheduleWeek[] = [];
   let weekNumber = 1;
   const start = parseISO(startDate);
 
-  subjects.forEach((subject) => {
+  pendingSubjs.forEach((subject) => {
     const breakdown = weekBreakdown[subject.id] ?? [];
-    const studyWeekCount = subject.studyWeeks;
     const revWeekCount = Math.ceil(
       subject.studyWeeks * (revisionPercent / 100),
     );
 
-    /* Study weeks */
-    for (let w = 0; w < studyWeekCount; w++) {
-      const focusText = breakdown[w] ?? `${subject.name} — Part ${w + 1}`;
-      const isLastStudy = w === studyWeekCount - 1;
+    for (let w = 0; w < subject.studyWeeks; w++) {
       weeks.push({
         weekNumber,
         subject: subject.name,
-        focus:
-          isLastStudy && subject.assignmentWeeks > 0 ? focusText : focusText,
+        focus: breakdown[w] ?? `${subject.name} — Part ${w + 1}`,
         type: "study",
         hoursRequired: hoursPerWeek,
         hoursAvailable: hoursPerWeek,
@@ -489,7 +565,6 @@ function generateSmartSchedule(
       weekNumber++;
     }
 
-    /* Assignment (inline with last study week — shown separately) */
     if (subject.assignmentWeeks > 0) {
       weeks.push({
         weekNumber,
@@ -503,7 +578,6 @@ function generateSmartSchedule(
       weekNumber++;
     }
 
-    /* Revision weeks */
     for (let r = 0; r < revWeekCount; r++) {
       weeks.push({
         weekNumber,
@@ -521,7 +595,6 @@ function generateSmartSchedule(
     }
   });
 
-  /* Buffer weeks at the end */
   for (let b = 0; b < bufferWeeks; b++) {
     weeks.push({
       weekNumber,
@@ -543,12 +616,16 @@ function generateSmartSchedule(
     daysPerWeek,
     targetMonths,
     revisionPercent,
-    totalHoursAvailable,
+    totalHoursAvailable: targetWeeks * hoursPerWeek,
     totalHoursRequired,
     totalWeeksRequired,
     isAchievable,
     minimumMonthsNeeded,
     weeks,
+    subjectForecasts,
+    subjectsFullyCompletable,
+    totalSubjects: allSubjects.length,
+    completedSubjectsSkipped: doneSubjs.length,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -582,7 +659,7 @@ function saveRoadmap(userId: string, rm: Roadmap) {
   localStorage.setItem(lsKey(userId), JSON.stringify(rm));
 }
 
-/* ─── AI progress engine ───────────────── */
+/* ─── Progress engine ──────────────────── */
 interface AICalc {
   effectiveWeeks: number;
   unavailableWeeks: number;
@@ -695,14 +772,262 @@ function runAIEngine(roadmap: Roadmap): AICalc {
   };
 }
 
-/* ─── Smart Schedule Builder UI ─────────── */
-function SmartScheduleBuilder({
+/* ─── Completion Forecast Component ─────── */
+function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
+  const fullCount = schedule.subjectForecasts.filter(
+    (s) => s.canComplete && !s.alreadyDone,
+  ).length;
+  const partialCount = schedule.subjectForecasts.filter(
+    (s) => !s.canComplete && !s.alreadyDone && s.percentCompletable > 0,
+  ).length;
+  const zeroCount = schedule.subjectForecasts.filter(
+    (s) => !s.canComplete && s.percentCompletable === 0,
+  ).length;
+  const doneCount = schedule.subjectForecasts.filter(
+    (s) => s.alreadyDone,
+  ).length;
+
+  return (
+    <div
+      className="rounded-2xl p-5 space-y-4"
+      style={{ background: `${GOLD}08`, border: `1.5px solid ${GOLD}44` }}
+    >
+      {/* Summary */}
+      <div className="flex items-center gap-2 mb-1">
+        <Target className="w-4 h-4" style={{ color: GOLD }} />
+        <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
+          What You Can Complete
+        </h3>
+      </div>
+
+      <p className="text-xs leading-relaxed" style={{ color: MUTED }}>
+        With{" "}
+        <strong style={{ color: DARK }}>
+          {schedule.hoursPerDay} hrs/day × {schedule.daysPerWeek} days/week
+        </strong>{" "}
+        for{" "}
+        <strong style={{ color: DARK }}>{schedule.targetMonths} months</strong>:
+      </p>
+
+      {/* Summary boxes */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {doneCount > 0 && (
+          <div
+            className="rounded-xl p-3 text-center"
+            style={{ background: `${OLIVE}22`, border: `1px solid ${OLIVE}44` }}
+          >
+            <div
+              className="text-xl font-bold font-serif"
+              style={{ color: OLIVE }}
+            >
+              {doneCount}
+            </div>
+            <div className="text-[10px] mt-0.5" style={{ color: OLIVE }}>
+              Already Done ✓
+            </div>
+          </div>
+        )}
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{ background: `${OLIVE}15`, border: `1px solid ${OLIVE}33` }}
+        >
+          <div
+            className="text-xl font-bold font-serif"
+            style={{ color: OLIVE }}
+          >
+            {fullCount}
+          </div>
+          <div className="text-[10px] mt-0.5" style={{ color: OLIVE }}>
+            Fully Complete
+          </div>
+        </div>
+        {partialCount > 0 && (
+          <div
+            className="rounded-xl p-3 text-center"
+            style={{ background: "#FFF8DC", border: "1px solid #B8860B33" }}
+          >
+            <div
+              className="text-xl font-bold font-serif"
+              style={{ color: "#B8860B" }}
+            >
+              {partialCount}
+            </div>
+            <div className="text-[10px] mt-0.5" style={{ color: "#B8860B" }}>
+              Partially Done
+            </div>
+          </div>
+        )}
+        {zeroCount > 0 && (
+          <div
+            className="rounded-xl p-3 text-center"
+            style={{ background: "#FDE8E8", border: "1px solid #C0392B33" }}
+          >
+            <div
+              className="text-xl font-bold font-serif"
+              style={{ color: "#C0392B" }}
+            >
+              {zeroCount}
+            </div>
+            <div className="text-[10px] mt-0.5" style={{ color: "#C0392B" }}>
+              Not Reachable
+            </div>
+          </div>
+        )}
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+        >
+          <div className="text-xl font-bold font-serif" style={{ color: DARK }}>
+            {schedule.minimumMonthsNeeded} mo
+          </div>
+          <div className="text-[10px] mt-0.5" style={{ color: MUTED }}>
+            Minimum Needed
+          </div>
+        </div>
+      </div>
+
+      {/* Quick message */}
+      <div
+        className="rounded-xl px-4 py-3"
+        style={{
+          background: schedule.isAchievable ? `${OLIVE}15` : "#FDE8E8",
+          border: `1px solid ${schedule.isAchievable ? OLIVE : "#C0392B"}33`,
+        }}
+      >
+        {schedule.isAchievable ? (
+          <p className="text-sm font-semibold" style={{ color: OLIVE }}>
+            ✅ You can complete the full syllabus in {schedule.targetMonths}{" "}
+            months at this pace!
+          </p>
+        ) : (
+          <p className="text-sm font-semibold" style={{ color: "#C0392B" }}>
+            ⚠️ At this pace you can fully complete {fullCount + doneCount} of{" "}
+            {schedule.totalSubjects} subjects. You need at least{" "}
+            {schedule.minimumMonthsNeeded} months for the full syllabus.
+          </p>
+        )}
+        {schedule.completedSubjectsSkipped > 0 && (
+          <p className="text-xs mt-1" style={{ color: MUTED }}>
+            {schedule.completedSubjectsSkipped} subject(s) already completed are
+            excluded from your schedule.
+          </p>
+        )}
+      </div>
+
+      {/* Subject breakdown toggle */}
+      <button
+        onClick={() => setShowBreakdown(!showBreakdown)}
+        className="flex items-center gap-2 text-xs font-semibold"
+        style={{ color: GOLD }}
+      >
+        {showBreakdown ? (
+          <ChevronDown className="w-3.5 h-3.5" />
+        ) : (
+          <ChevronRight className="w-3.5 h-3.5" />
+        )}
+        {showBreakdown ? "Hide" : "Show"} subject-by-subject breakdown
+      </button>
+
+      {showBreakdown && (
+        <div className="space-y-2">
+          {schedule.subjectForecasts.map((sf) => (
+            <div
+              key={sf.name}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl"
+              style={{
+                background: sf.alreadyDone
+                  ? `${OLIVE}10`
+                  : sf.canComplete
+                    ? `${OLIVE}08`
+                    : sf.percentCompletable > 0
+                      ? "#FFF8DC"
+                      : "#FDE8E8",
+                border: `1px solid ${
+                  sf.alreadyDone
+                    ? `${OLIVE}44`
+                    : sf.canComplete
+                      ? `${OLIVE}33`
+                      : sf.percentCompletable > 0
+                        ? "#B8860B33"
+                        : "#C0392B33"
+                }`,
+              }}
+            >
+              <span className="text-base flex-shrink-0">
+                {sf.alreadyDone
+                  ? "✅"
+                  : sf.canComplete
+                    ? "✅"
+                    : sf.percentCompletable > 0
+                      ? "⚠️"
+                      : "❌"}
+              </span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: CHARCOAL }}
+                  >
+                    {sf.name}
+                  </span>
+                  {sf.alreadyDone && (
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: `${OLIVE}22`, color: OLIVE }}
+                    >
+                      already done
+                    </span>
+                  )}
+                </div>
+                {!sf.alreadyDone && (
+                  <>
+                    {/* Progress bar */}
+                    <div
+                      className="h-1 rounded-full mt-1.5 overflow-hidden"
+                      style={{ background: BORDER }}
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${sf.percentCompletable}%`,
+                          background: sf.canComplete
+                            ? OLIVE
+                            : sf.percentCompletable > 0
+                              ? "#B8860B"
+                              : "#C0392B",
+                        }}
+                      />
+                    </div>
+                    <p className="text-[10px] mt-1" style={{ color: MUTED }}>
+                      {sf.canComplete
+                        ? `${sf.weeksNeeded} weeks needed — fully completable`
+                        : sf.percentCompletable > 0
+                          ? `~${sf.percentCompletable}% completable (${sf.weeksAvailable} of ${sf.weeksNeeded} weeks available)`
+                          : `Not reachable in target timeframe`}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Schedule Builder ─────────────────── */
+function SchedulePlanner({
   examType,
   startDate,
+  phases,
   onGenerate,
 }: {
   examType: string;
   startDate: string;
+  phases: RoadmapPhase[];
   onGenerate: (schedule: SmartSchedule) => void;
 }) {
   const [hoursPerDay, setHoursPerDay] = useState(2);
@@ -710,6 +1035,10 @@ function SmartScheduleBuilder({
   const [targetMonths, setTargetMonths] = useState(6);
   const [revisionPercent, setRevisionPercent] = useState(30);
   const [preview, setPreview] = useState<SmartSchedule | null>(null);
+
+  const hoursPerWeek = hoursPerDay * daysPerWeek;
+  const doneIds = getDoneSubjectIds(phases, examType);
+  const doneCount = doneIds.size;
 
   function calculate() {
     const schedule = generateSmartSchedule(
@@ -719,11 +1048,10 @@ function SmartScheduleBuilder({
       targetMonths,
       revisionPercent,
       startDate,
+      phases,
     );
     setPreview(schedule);
   }
-
-  const hoursPerWeek = hoursPerDay * daysPerWeek;
 
   return (
     <div
@@ -731,20 +1059,32 @@ function SmartScheduleBuilder({
       style={{ background: CARD, border: `1px solid ${BORDER}` }}
     >
       <div className="flex items-center gap-2">
-        <Brain className="w-5 h-5" style={{ color: GOLD }} />
+        <Calendar className="w-5 h-5" style={{ color: GOLD }} />
         <h3
           className="font-serif text-lg font-semibold"
           style={{ color: CHARCOAL }}
         >
-          AI Schedule Generator
+          Study Schedule Planner
         </h3>
       </div>
       <p className="text-xs" style={{ color: MUTED }}>
-        Tell us your availability and target. AI will generate a complete
-        week-by-week study plan with assignments and revision built in.
+        Enter your study availability and target timeline. We'll generate a
+        complete week-by-week plan with assignments and revision built in —
+        automatically skipping subjects you've already completed.
       </p>
 
-      {/* Inputs */}
+      {doneCount > 0 && (
+        <div
+          className="rounded-xl px-4 py-3"
+          style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}
+        >
+          <p className="text-xs font-semibold" style={{ color: OLIVE }}>
+            ✅ {doneCount} phase(s) marked as done — those subjects will be
+            skipped in your schedule.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
           <label
@@ -853,13 +1193,13 @@ function SmartScheduleBuilder({
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Availability summary */}
       <div
         className="rounded-xl p-4"
         style={{ background: CREAM, border: `1px solid ${BORDER}` }}
       >
         <p className="text-xs font-semibold mb-2" style={{ color: CHARCOAL }}>
-          Your availability summary:
+          Your availability:
         </p>
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -894,85 +1234,12 @@ function SmartScheduleBuilder({
           boxShadow: "0 4px 16px rgba(201,169,110,.35)",
         }}
       >
-        ✨ Generate My Week-by-Week Schedule
+        Generate My Week-by-Week Schedule
       </button>
 
-      {/* Preview result */}
       {preview && (
         <div className="space-y-4">
-          {/* Feasibility banner */}
-          <div
-            className="rounded-xl p-4"
-            style={{
-              background: preview.isAchievable ? `${OLIVE}15` : "#FDE8E8",
-              border: `1.5px solid ${preview.isAchievable ? OLIVE : "#C0392B"}44`,
-            }}
-          >
-            {preview.isAchievable ? (
-              <div>
-                <p className="text-sm font-semibold" style={{ color: OLIVE }}>
-                  ✅ Target is achievable!
-                </p>
-                <p className="text-xs mt-1" style={{ color: MUTED }}>
-                  {preview.totalWeeksRequired} weeks needed · {targetMonths * 4}{" "}
-                  weeks available ·{preview.weeks.length} week schedule
-                  generated
-                </p>
-              </div>
-            ) : (
-              <div>
-                <p
-                  className="text-sm font-semibold"
-                  style={{ color: "#C0392B" }}
-                >
-                  ⚠️ Target too tight — minimum {preview.minimumMonthsNeeded}{" "}
-                  months needed
-                </p>
-                <p className="text-xs mt-1" style={{ color: MUTED }}>
-                  At {hoursPerDay} hrs/day × {daysPerWeek} days/week, you need
-                  at least {preview.minimumMonthsNeeded} months to complete the
-                  full syllabus including {revisionPercent}% revision. Either
-                  increase study hours or extend your target.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              {
-                label: "Total Weeks",
-                value: `${preview.totalWeeksRequired} wks`,
-                color: DARK,
-              },
-              {
-                label: "Hours Needed",
-                value: `${preview.totalHoursRequired} hrs`,
-                color: GOLD,
-              },
-              { label: "Revision", value: `${revisionPercent}%`, color: OLIVE },
-              {
-                label: "Min. Months",
-                value: `${preview.minimumMonthsNeeded} mo`,
-                color: MUTED,
-              },
-            ].map(({ label, value, color }) => (
-              <div
-                key={label}
-                className="rounded-xl p-3 text-center"
-                style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-              >
-                <div className="text-sm font-bold font-serif" style={{ color }}>
-                  {value}
-                </div>
-                <div className="text-[10px] mt-0.5" style={{ color: MUTED }}>
-                  {label}
-                </div>
-              </div>
-            ))}
-          </div>
-
+          <CompletionForecast schedule={preview} />
           <div className="flex gap-2">
             <button
               onClick={() => onGenerate(preview)}
@@ -998,8 +1265,8 @@ function SmartScheduleBuilder({
   );
 }
 
-/* ─── Smart Schedule View ──────────────── */
-function SmartScheduleView({
+/* ─── Schedule View ────────────────────── */
+function ScheduleView({
   schedule,
   onEdit,
 }: {
@@ -1007,14 +1274,12 @@ function SmartScheduleView({
   onEdit: () => void;
 }) {
   const [filter, setFilter] = useState<WeekType | "all">("all");
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const filtered =
     filter === "all"
       ? schedule.weeks
       : schedule.weeks.filter((w) => w.type === filter);
-
-  /* Group by subject */
   const subjects = [...new Set(schedule.weeks.map((w) => w.subject))];
 
   return (
@@ -1042,7 +1307,8 @@ function SmartScheduleView({
         </button>
       </div>
 
-      {/* Filter pills */}
+      <CompletionForecast schedule={schedule} />
+
       <div className="flex gap-2 flex-wrap">
         {(["all", "study", "assignment", "revision"] as const).map((f) => (
           <button
@@ -1060,7 +1326,6 @@ function SmartScheduleView({
         ))}
       </div>
 
-      {/* Legend */}
       <div className="flex gap-3 flex-wrap">
         {(
           Object.entries(WEEK_TYPE_CFG) as [
@@ -1080,12 +1345,11 @@ function SmartScheduleView({
         ))}
       </div>
 
-      {/* Subject blocks */}
       {subjects.map((subject) => {
         const subjectWeeks = filtered.filter((w) => w.subject === subject);
         if (subjectWeeks.length === 0) return null;
         const allWeeks = schedule.weeks.filter((w) => w.subject === subject);
-        const isExpanded = expanded[subjectWeeks[0].weekNumber] ?? false;
+        const isExpanded = expanded[subject] ?? false;
 
         return (
           <div
@@ -1095,10 +1359,7 @@ function SmartScheduleView({
           >
             <button
               onClick={() =>
-                setExpanded((p) => ({
-                  ...p,
-                  [subjectWeeks[0].weekNumber]: !p[subjectWeeks[0].weekNumber],
-                }))
+                setExpanded((p) => ({ ...p, [subject]: !p[subject] }))
               }
               className="w-full flex items-center gap-3 px-5 py-4 text-left"
               style={{ background: isExpanded ? `${GOLD}08` : CARD }}
@@ -1326,7 +1587,6 @@ function RoadmapSelector({
                 </div>
               </div>
             </div>
-
             <button
               onClick={() => onSelect(selected, months)}
               className="w-full h-12 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
@@ -1467,7 +1727,7 @@ function RoadmapView({
       {/* OVERVIEW TAB */}
       {activeTab === "overview" && (
         <div className="space-y-6">
-          {/* AI Status */}
+          {/* Status */}
           <div
             className="rounded-2xl p-5"
             style={{
@@ -1633,8 +1893,7 @@ function RoadmapView({
                     className="px-3 py-2 rounded-lg text-xs"
                     style={{ background: `${GOLD}12`, color: DARK }}
                   >
-                    ✨ AI will recalculate all phase durations for {newMonths}{" "}
-                    months
+                    Recalculates all phase durations for {newMonths} months
                   </div>
                 )}
                 <div className="flex gap-2">
@@ -1680,7 +1939,7 @@ function RoadmapView({
             )}
           </div>
 
-          {/* Unavailable */}
+          {/* Unavailable periods */}
           <div
             className="rounded-2xl p-5"
             style={{ background: CARD, border: `1px solid ${BORDER}` }}
@@ -1706,7 +1965,8 @@ function RoadmapView({
               )}
             </div>
             <p className="text-xs mb-3" style={{ color: MUTED }}>
-              AI extends your end date and adjusts targets automatically.
+              Log periods when you can't study — end date extends and targets
+              adjust automatically.
             </p>
             {showUnavail && (
               <div
@@ -2014,13 +2274,14 @@ function RoadmapView({
       {activeTab === "schedule" && (
         <div className="space-y-6">
           {showBuilder || !rm.smartSchedule ? (
-            <SmartScheduleBuilder
+            <SchedulePlanner
               examType={rm.examType}
               startDate={rm.startDate}
+              phases={rm.phases}
               onGenerate={saveSchedule}
             />
           ) : (
-            <SmartScheduleView
+            <ScheduleView
               schedule={rm.smartSchedule}
               onEdit={() => setShowBuilder(true)}
             />
@@ -2033,7 +2294,7 @@ function RoadmapView({
           className="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg z-50"
           style={{ background: OLIVE, color: "#fff" }}
         >
-          ✓ Roadmap saved & recalculated
+          ✓ Roadmap saved
         </div>
       )}
     </div>
