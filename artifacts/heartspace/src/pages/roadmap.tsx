@@ -19,8 +19,16 @@ import {
   BookOpen,
   Zap,
   Target,
+  BarChart2,
+  Circle,
+  PlayCircle,
 } from "lucide-react";
 import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
+import {
+  loadSyllabusProgress,
+  SYLLABUS,
+  type SyllabusProgress,
+} from "./syllabus";
 
 /* ─── Brand tokens ─────────────────────── */
 const CREAM = "#FAF7F2";
@@ -32,7 +40,6 @@ const MUTED = "#8C7B70";
 const BORDER = "#E8DDD0";
 const OLIVE = "#6E8B6B";
 const ROSE = "#D4A5A5";
-const SAGE = "#A8BFA3";
 
 /* ─── Types ────────────────────────────── */
 type RoadmapType =
@@ -72,16 +79,17 @@ interface ScheduleWeek {
   hoursRequired: number;
   hoursAvailable: number;
   startDate: string;
-  skipped?: boolean;
 }
 
 interface SubjectForecast {
   name: string;
+  syllabusId: string;
   weeksNeeded: number;
   weeksAvailable: number;
   canComplete: boolean;
   percentCompletable: number;
-  alreadyDone: boolean;
+  syllabusPercent: number;
+  adjustedWeeks: number;
 }
 
 interface SmartSchedule {
@@ -116,24 +124,51 @@ interface Roadmap {
 
 /* ─── Subject data ─────────────────────── */
 const JAM_SUBJECTS = [
-  { id: "la", name: "Linear Algebra", studyWeeks: 4, assignmentWeeks: 0.5 },
-  { id: "ra", name: "Real Analysis", studyWeeks: 4, assignmentWeeks: 0.5 },
+  {
+    id: "la",
+    syllabusId: "linear_algebra",
+    name: "Linear Algebra",
+    studyWeeks: 4,
+    assignmentWeeks: 0.5,
+  },
+  {
+    id: "ra",
+    syllabusId: "real_analysis",
+    name: "Real Analysis",
+    studyWeeks: 4,
+    assignmentWeeks: 0.5,
+  },
   {
     id: "dc",
+    syllabusId: "differential_calculus",
     name: "Functions of One Variable",
     studyWeeks: 4,
     assignmentWeeks: 0.5,
   },
-  { id: "gt", name: "Group Theory", studyWeeks: 4, assignmentWeeks: 0.5 },
-  { id: "ode", name: "ODE", studyWeeks: 3, assignmentWeeks: 0.5 },
+  {
+    id: "gt",
+    syllabusId: "abstract_algebra",
+    name: "Group Theory",
+    studyWeeks: 4,
+    assignmentWeeks: 0.5,
+  },
+  {
+    id: "ode",
+    syllabusId: "ode",
+    name: "ODE",
+    studyWeeks: 3,
+    assignmentWeeks: 0.5,
+  },
   {
     id: "mvc",
+    syllabusId: "real_analysis",
     name: "Functions of Two Variables",
     studyWeeks: 2,
     assignmentWeeks: 0.5,
   },
   {
     id: "mi",
+    syllabusId: "integration",
     name: "Multiple Integration",
     studyWeeks: 2,
     assignmentWeeks: 0.5,
@@ -141,38 +176,79 @@ const JAM_SUBJECTS = [
 ];
 
 const NET_SUBJECTS = [
-  { id: "ra", name: "Real Analysis", studyWeeks: 4, assignmentWeeks: 0.5 },
-  { id: "la", name: "Linear Algebra", studyWeeks: 4, assignmentWeeks: 0.5 },
-  { id: "ca", name: "Complex Analysis", studyWeeks: 3, assignmentWeeks: 0.5 },
+  {
+    id: "ra",
+    syllabusId: "real_analysis",
+    name: "Real Analysis",
+    studyWeeks: 4,
+    assignmentWeeks: 0.5,
+  },
+  {
+    id: "la",
+    syllabusId: "linear_algebra",
+    name: "Linear Algebra",
+    studyWeeks: 4,
+    assignmentWeeks: 0.5,
+  },
+  {
+    id: "ca",
+    syllabusId: "complex_analysis",
+    name: "Complex Analysis",
+    studyWeeks: 3,
+    assignmentWeeks: 0.5,
+  },
   {
     id: "ma",
+    syllabusId: "abstract_algebra",
     name: "Modern Algebra (Group + Ring + Field)",
     studyWeeks: 5,
     assignmentWeeks: 1.0,
   },
-  { id: "top", name: "Topology", studyWeeks: 3, assignmentWeeks: 0.5 },
+  {
+    id: "top",
+    syllabusId: "topology",
+    name: "Topology",
+    studyWeeks: 3,
+    assignmentWeeks: 0.5,
+  },
   {
     id: "fa",
+    syllabusId: "functional_analysis",
     name: "Functional Analysis",
     studyWeeks: 2,
     assignmentWeeks: 0.5,
   },
-  { id: "ode", name: "ODE", studyWeeks: 3, assignmentWeeks: 0.5 },
-  { id: "pde", name: "PDE", studyWeeks: 2, assignmentWeeks: 0.5 },
+  {
+    id: "ode",
+    syllabusId: "ode",
+    name: "ODE",
+    studyWeeks: 3,
+    assignmentWeeks: 0.5,
+  },
+  {
+    id: "pde",
+    syllabusId: "pde",
+    name: "PDE",
+    studyWeeks: 2,
+    assignmentWeeks: 0.5,
+  },
   {
     id: "na",
+    syllabusId: "numerical_analysis",
     name: "Numerical Analysis",
     studyWeeks: 1,
     assignmentWeeks: 0.25,
   },
   {
     id: "ie",
+    syllabusId: "calculus_of_variations",
     name: "Integral Equations",
     studyWeeks: 1,
     assignmentWeeks: 0.25,
   },
   {
     id: "cov",
+    syllabusId: "calculus_of_variations",
     name: "Calculus of Variations",
     studyWeeks: 1,
     assignmentWeeks: 0.25,
@@ -268,20 +344,31 @@ const NET_WEEK_BREAKDOWN: Record<string, string[]> = {
   cov: ["Euler-Lagrange, Brachistochrone, Geodesics + Assignment"],
 };
 
-/* ─── Phase → subject mapping ──────────── */
-const JAM_PHASE_SUBJECTS: Record<string, string[]> = {
-  jam_p1: ["la", "ra"],
-  jam_p2: ["dc", "gt"],
-  jam_p3: ["ode", "mvc", "mi"],
-  jam_p4: [],
-};
+/* ─── Get syllabus % per subject ────────── */
+function getSyllabusPercents(
+  syllabusProgress: SyllabusProgress,
+  examType: string,
+): Record<string, number> {
+  const isJAM = examType === "JAM";
+  const result: Record<string, number> = {};
 
-const NET_PHASE_SUBJECTS: Record<string, string[]> = {
-  net_p1: ["ra", "la"],
-  net_p2: ["ca", "ma", "top", "fa"],
-  net_p3: ["ode", "pde", "na", "ie", "cov"],
-  net_p4: [],
-};
+  SYLLABUS.forEach((subject) => {
+    if (subject.netOnly && isJAM) return;
+    if (subject.jamOnly && !isJAM) return;
+
+    const subtopics = subject.topics
+      .filter((t) => !(t.netOnly && isJAM))
+      .flatMap((t) => t.subtopics.filter((st: any) => !(st.netOnly && isJAM)));
+
+    const total = subtopics.length;
+    const done = subtopics.filter(
+      (st) => syllabusProgress[st.id]?.status === "done",
+    ).length;
+    result[subject.id] = total ? Math.round((done / total) * 100) : 0;
+  });
+
+  return result;
+}
 
 /* ─── Roadmap types ────────────────────── */
 const ROADMAP_TYPES: Record<
@@ -332,28 +419,25 @@ const ROADMAP_TYPES: Record<
   },
 };
 
-/* ─── Phase templates ──────────────────── */
 const JAM_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
   {
     id: "jam_p1",
     title: "Phase 1 — Foundation",
-    description:
-      "Linear Algebra and Real Analysis. Complete study, assignment, and revision before moving ahead.",
+    description: "Linear Algebra and Real Analysis.",
     marks: "28–31 marks",
     topics: [
-      "Linear Algebra — System of Linear Equations, Vector Spaces, Linear Transformations, Eigenvalues & Eigenvectors, Matrices",
-      "Real Analysis — Set Theory, Real Numbers, Sequences, Series, Limits & Continuity, Differentiability, Riemann Integration, Functions of Several Variables",
+      "Linear Algebra — System of Equations, Vector Spaces, Linear Transformations, Eigenvalues, Matrices",
+      "Real Analysis — Set Theory, Real Numbers, Sequences, Series, Limits, Differentiability, Riemann Integration, FSV",
     ],
   },
   {
     id: "jam_p2",
     title: "Phase 2 — Calculus & Algebra",
-    description:
-      "Differential Calculus and Group Theory with full practice and revision.",
+    description: "Differential Calculus and Group Theory.",
     marks: "24–26 marks",
     topics: [
       "Differential Calculus — Limits, Continuity, Differentiability, MVT, Taylor, Maxima-Minima",
-      "Group Theory — Basics, Normal Subgroups, Quotient Groups, Isomorphism Theorems, Permutation Groups",
+      "Group Theory — Basics, Normal Subgroups, Quotient Groups, Isomorphism Theorems",
     ],
   },
   {
@@ -364,21 +448,20 @@ const JAM_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
     topics: [
       "ODE — First Order, Higher Order, Cauchy-Euler",
       "Functions of Two Variables — Partial Derivatives, Chain Rule, Lagrange Multipliers",
-      "Multiple Integration — Double & Triple Integrals, Surface Area, Solids of Revolution",
+      "Multiple Integration — Double & Triple Integrals, Surface Area, Solids",
     ],
   },
   {
     id: "jam_p4",
     title: "Phase 4 — Full Revision & Mock Tests",
-    description:
-      "Complete syllabus revision, mock tests, weak area targeting, and exam strategy.",
+    description: "Complete syllabus revision and mock tests.",
     marks: "All topics",
     topics: [
       "Phase 1 full revision — LA + RA",
       "Phase 2 full revision — DC + GT",
       "Phase 3 full revision — ODE + MVC + MI",
       "Full-length mock tests",
-      "Error analysis, weak area practice",
+      "Error analysis",
       "Formula sheets + exam strategy",
     ],
   },
@@ -400,10 +483,10 @@ const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
     description:
       "Complex Analysis, Modern Algebra, Topology, Functional Analysis.",
     topics: [
-      "Complex Analysis — Analytic Functions, Cauchy, Residues, Möbius, Conformal Mappings",
+      "Complex Analysis",
       "Modern Algebra — Group Theory (Sylow), Ring Theory, Field Theory",
-      "Topology — Topological Spaces, Separation Axioms, Compactness, Connectedness",
-      "Functional Analysis — Banach, Hilbert, Bounded Operators, Hahn-Banach",
+      "Topology",
+      "Functional Analysis",
     ],
   },
   {
@@ -411,8 +494,8 @@ const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
     title: "Phase 3 — Applied Topics",
     description: "ODE, PDE, and optional topics.",
     topics: [
-      "ODE — First Order, Higher Order, Power Series",
-      "PDE — First Order, Wave, Heat, Laplace, Fourier",
+      "ODE",
+      "PDE",
       "Numerical Analysis",
       "Integral Equations",
       "Calculus of Variations",
@@ -421,7 +504,7 @@ const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
   {
     id: "net_p4",
     title: "Phase 4 — Full Revision & Mock Tests",
-    description: "Complete revision, full-length mocks, exam strategy.",
+    description: "Complete revision and full-length mocks.",
     topics: [
       "Phase 1 revision",
       "Phase 2 revision",
@@ -444,21 +527,6 @@ function generatePhases(examType: string, totalMonths: number): RoadmapPhase[] {
   }));
 }
 
-/* ─── Get done subject IDs from phases ─── */
-function getDoneSubjectIds(
-  phases: RoadmapPhase[],
-  examType: string,
-): Set<string> {
-  const phaseMap = examType === "JAM" ? JAM_PHASE_SUBJECTS : NET_PHASE_SUBJECTS;
-  const done = new Set<string>();
-  phases.forEach((p) => {
-    if (p.status === "done" && phaseMap[p.id]) {
-      phaseMap[p.id].forEach((s) => done.add(s));
-    }
-  });
-  return done;
-}
-
 /* ─── Smart Schedule Engine ─────────────── */
 function generateSmartSchedule(
   examType: string,
@@ -467,96 +535,92 @@ function generateSmartSchedule(
   targetMonths: number,
   revisionPercent: number,
   startDate: string,
-  phases: RoadmapPhase[],
+  syllabusProgress: SyllabusProgress,
 ): SmartSchedule {
   const allSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const weekBreakdown =
     examType === "JAM" ? JAM_WEEK_BREAKDOWN : NET_WEEK_BREAKDOWN;
   const hoursPerWeek = hoursPerDay * daysPerWeek;
   const targetWeeks = targetMonths * 4;
+  const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
 
-  /* Which subjects are already done */
-  const doneIds = getDoneSubjectIds(phases, examType);
-  const pendingSubjs = allSubjects.filter((s) => !doneIds.has(s.id));
-  const doneSubjs = allSubjects.filter((s) => doneIds.has(s.id));
-
-  /* Total weeks needed for PENDING subjects only */
-  let studyWeeksTotal = 0,
-    assignmentWeeksTotal = 0,
-    revisionWeeksTotal = 0;
-  pendingSubjs.forEach((s) => {
-    studyWeeksTotal += s.studyWeeks;
-    assignmentWeeksTotal += s.assignmentWeeks;
-    revisionWeeksTotal += s.studyWeeks * (revisionPercent / 100);
+  /* Calculate adjusted weeks per subject based on syllabus % */
+  const subjectsWithAdjusted = allSubjects.map((s) => {
+    const pct = syllabusPercs[s.syllabusId] ?? 0;
+    const remaining = Math.max(0, 1 - pct / 100);
+    const adjStudy = Math.ceil(s.studyWeeks * remaining);
+    const adjAssign = pct >= 100 ? 0 : s.assignmentWeeks;
+    const adjRevision =
+      adjStudy > 0 ? Math.ceil(adjStudy * (revisionPercent / 100)) : 0;
+    const totalAdj = adjStudy + adjAssign + adjRevision;
+    return {
+      ...s,
+      syllabusPercent: pct,
+      adjustedWeeks: totalAdj,
+      adjStudy,
+      adjAssign,
+      adjRevision,
+    };
   });
 
   const bufferWeeks = examType === "JAM" ? 2 : 3;
   const totalWeeksRequired = Math.ceil(
-    studyWeeksTotal + assignmentWeeksTotal + revisionWeeksTotal + bufferWeeks,
+    subjectsWithAdjusted.reduce((s, x) => s + x.adjustedWeeks, 0) + bufferWeeks,
   );
   const totalHoursRequired = totalWeeksRequired * hoursPerWeek;
   const isAchievable = targetWeeks >= totalWeeksRequired;
   const minimumMonthsNeeded = Math.ceil(totalWeeksRequired / 4);
 
-  /* Subject-level forecasts */
+  /* Subject forecasts */
   let weeksUsed = 0;
-  const subjectForecasts: SubjectForecast[] = allSubjects.map((s) => {
-    /* Already done subjects */
-    if (doneIds.has(s.id)) {
-      return {
-        name: s.name,
-        weeksNeeded:
-          s.studyWeeks +
-          s.assignmentWeeks +
-          Math.ceil((s.studyWeeks * revisionPercent) / 100),
-        weeksAvailable: 0,
-        canComplete: true,
-        percentCompletable: 100,
-        alreadyDone: true,
-      };
-    }
-
-    const subjectWeeks =
-      s.studyWeeks +
-      s.assignmentWeeks +
-      Math.ceil((s.studyWeeks * revisionPercent) / 100);
-    const remainingAvail = Math.max(0, targetWeeks - weeksUsed);
-    const canComplete = remainingAvail >= subjectWeeks;
-    const pct = canComplete
-      ? 100
-      : Math.round((remainingAvail / subjectWeeks) * 100);
-    weeksUsed += subjectWeeks;
-
+  const subjectForecasts: SubjectForecast[] = subjectsWithAdjusted.map((s) => {
+    const weeksNeeded = s.adjustedWeeks;
+    const remaining = Math.max(0, targetWeeks - weeksUsed);
+    const canComplete = remaining >= weeksNeeded;
+    const pct =
+      weeksNeeded === 0
+        ? 100
+        : canComplete
+          ? 100
+          : Math.round((remaining / weeksNeeded) * 100);
+    weeksUsed += weeksNeeded;
     return {
       name: s.name,
-      weeksNeeded: subjectWeeks,
-      weeksAvailable: Math.min(remainingAvail, subjectWeeks),
+      syllabusId: s.syllabusId,
+      weeksNeeded,
+      weeksAvailable: Math.min(remaining, weeksNeeded),
       canComplete,
       percentCompletable: pct,
-      alreadyDone: false,
+      syllabusPercent: s.syllabusPercent,
+      adjustedWeeks: s.adjustedWeeks,
     };
   });
 
-  const subjectsFullyCompletable = subjectForecasts.filter(
-    (s) => s.canComplete,
-  ).length;
-
-  /* Generate week-by-week schedule for PENDING subjects only */
+  /* Week-by-week schedule — skip fully done subjects */
   const weeks: ScheduleWeek[] = [];
   let weekNumber = 1;
   const start = parseISO(startDate);
 
-  pendingSubjs.forEach((subject) => {
+  subjectsWithAdjusted.forEach((subject) => {
+    if (subject.adjustedWeeks === 0) return; /* fully done in syllabus */
     const breakdown = weekBreakdown[subject.id] ?? [];
-    const revWeekCount = Math.ceil(
-      subject.studyWeeks * (revisionPercent / 100),
-    );
+    const studyCount = subject.adjStudy;
+    const hasAssign = subject.adjAssign > 0;
+    const revCount = subject.adjRevision;
 
-    for (let w = 0; w < subject.studyWeeks; w++) {
+    /* Label if partially done */
+    const partialLabel =
+      subject.syllabusPercent > 0 && subject.syllabusPercent < 100
+        ? ` (continuing from ${subject.syllabusPercent}% done)`
+        : "";
+
+    for (let w = 0; w < studyCount; w++) {
       weeks.push({
         weekNumber,
         subject: subject.name,
-        focus: breakdown[w] ?? `${subject.name} — Part ${w + 1}`,
+        focus:
+          (breakdown[w] ?? `${subject.name} — Part ${w + 1}`) +
+          (w === 0 ? partialLabel : ""),
         type: "study",
         hoursRequired: hoursPerWeek,
         hoursAvailable: hoursPerWeek,
@@ -565,20 +629,20 @@ function generateSmartSchedule(
       weekNumber++;
     }
 
-    if (subject.assignmentWeeks > 0) {
+    if (hasAssign) {
       weeks.push({
         weekNumber,
         subject: subject.name,
         focus: `${subject.name} — Assignments & Problem Practice`,
         type: "assignment",
-        hoursRequired: Math.ceil(subject.assignmentWeeks * hoursPerWeek),
+        hoursRequired: hoursPerWeek,
         hoursAvailable: hoursPerWeek,
         startDate: format(addWeeks(start, weekNumber - 1), "MMM d"),
       });
       weekNumber++;
     }
 
-    for (let r = 0; r < revWeekCount; r++) {
+    for (let r = 0; r < revCount; r++) {
       weeks.push({
         weekNumber,
         subject: subject.name,
@@ -611,6 +675,10 @@ function generateSmartSchedule(
     weekNumber++;
   }
 
+  const skipped = subjectsWithAdjusted.filter(
+    (s) => s.adjustedWeeks === 0,
+  ).length;
+
   return {
     hoursPerDay,
     daysPerWeek,
@@ -623,9 +691,10 @@ function generateSmartSchedule(
     minimumMonthsNeeded,
     weeks,
     subjectForecasts,
-    subjectsFullyCompletable,
+    subjectsFullyCompletable: subjectForecasts.filter((s) => s.canComplete)
+      .length,
     totalSubjects: allSubjects.length,
-    completedSubjectsSkipped: doneSubjs.length,
+    completedSubjectsSkipped: skipped,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -712,7 +781,6 @@ function runAIEngine(roadmap: Roadmap): AICalc {
   const now = new Date();
   const weeksElapsed = Math.max(0, differenceInWeeks(now, startDate));
   const weeksLeft = Math.max(0, effectiveWeeks - weeksElapsed);
-
   const donePhasesWeeks = roadmap.phases
     .filter((p) => p.status === "done")
     .reduce((s, p) => s + p.durationWeeks, 0);
@@ -742,7 +810,7 @@ function runAIEngine(roadmap: Roadmap): AICalc {
   } else if (diff >= -15) {
     status = "behind";
     statusMessage = "Slightly behind — adjustable.";
-    recommendation = `Add ${Math.ceil(Math.abs(diff) / 10)} extra study sessions per week to catch up.`;
+    recommendation = `Add ${Math.ceil(Math.abs(diff) / 10)} extra sessions per week to catch up.`;
   } else {
     status = "critical";
     statusMessage = "Significantly behind. Plan adjustment needed.";
@@ -754,8 +822,10 @@ function runAIEngine(roadmap: Roadmap): AICalc {
   const adjustedPhases = roadmap.phases.map((p) => {
     if (p.status === "done") return p;
     const prop = remainingTotal > 0 ? p.durationWeeks / remainingTotal : 0;
-    const extra = Math.round(unavailableWeeks * prop);
-    return { ...p, durationWeeks: p.durationWeeks + extra };
+    return {
+      ...p,
+      durationWeeks: p.durationWeeks + Math.round(unavailableWeeks * prop),
+    };
   });
 
   return {
@@ -772,21 +842,455 @@ function runAIEngine(roadmap: Roadmap): AICalc {
   };
 }
 
-/* ─── Completion Forecast Component ─────── */
+/* ─── My Progress Tab ──────────────────── */
+function MyProgressTab({
+  userId,
+  examType,
+}: {
+  userId: string;
+  examType: string;
+}) {
+  const syllabusProgress = loadSyllabusProgress(userId);
+  const isJAM = examType === "JAM";
+  const [expandedSubj, setExpandedSubj] = useState<Record<string, boolean>>({});
+  const [expandedTopic, setExpandedTopic] = useState<Record<string, boolean>>(
+    {},
+  );
+
+  const filteredSyllabus = SYLLABUS.filter(
+    (s) => !(s.netOnly && isJAM) && !(s.jamOnly && !isJAM),
+  ).map((s) => ({
+    ...s,
+    topics: s.topics
+      .filter((t) => !(t.netOnly && isJAM) && !(t.jamOnly && !isJAM))
+      .map((t) => ({
+        ...t,
+        subtopics: t.subtopics.filter((st: any) => !(st.netOnly && isJAM)),
+      })),
+  }));
+
+  const totalSubs = filteredSyllabus.reduce(
+    (a, s) => a + s.topics.reduce((b, t) => b + t.subtopics.length, 0),
+    0,
+  );
+  const doneSubs = Object.values(syllabusProgress).filter(
+    (v) => v.status === "done",
+  ).length;
+  const inProgSubs = Object.values(syllabusProgress).filter(
+    (v) => v.status === "in_progress",
+  ).length;
+  const overallPct = totalSubs ? Math.round((doneSubs / totalSubs) * 100) : 0;
+
+  /* Recent completions */
+  const recentDone = Object.entries(syllabusProgress)
+    .filter(([, v]) => v.status === "done" && v.doneAt)
+    .sort(([, a], [, b]) => (b.doneAt ?? "").localeCompare(a.doneAt ?? ""))
+    .slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      {/* Overall summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          {
+            label: "Overall",
+            value: `${overallPct}%`,
+            color: OLIVE,
+            sub: "complete",
+          },
+          { label: "Done", value: doneSubs, color: OLIVE, sub: "subtopics" },
+          {
+            label: "In Progress",
+            value: inProgSubs,
+            color: GOLD,
+            sub: "subtopics",
+          },
+          {
+            label: "Remaining",
+            value: totalSubs - doneSubs - inProgSubs,
+            color: MUTED,
+            sub: "not started",
+          },
+        ].map(({ label, value, color, sub }) => (
+          <div
+            key={label}
+            className="rounded-2xl p-5 text-center"
+            style={{ background: CARD, border: `1px solid ${BORDER}` }}
+          >
+            <div className="text-2xl font-bold font-serif" style={{ color }}>
+              {value}
+            </div>
+            <div
+              className="text-xs font-semibold mt-1"
+              style={{ color: CHARCOAL }}
+            >
+              {label}
+            </div>
+            <div className="text-[10px]" style={{ color: MUTED }}>
+              {sub}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Overall progress bar */}
+      <div
+        className="rounded-2xl p-5"
+        style={{ background: CARD, border: `1px solid ${BORDER}` }}
+      >
+        <div className="flex justify-between text-sm mb-2">
+          <span className="font-semibold" style={{ color: CHARCOAL }}>
+            Syllabus Progress
+          </span>
+          <span className="font-bold" style={{ color: OLIVE }}>
+            {overallPct}%
+          </span>
+        </div>
+        <div
+          className="h-3 rounded-full overflow-hidden"
+          style={{ background: BORDER }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${overallPct}%`,
+              background: `linear-gradient(90deg, ${OLIVE} 0%, ${GOLD} 100%)`,
+            }}
+          />
+        </div>
+        <p className="text-xs mt-2" style={{ color: MUTED }}>
+          {doneSubs} of {totalSubs} subtopics completed
+        </p>
+      </div>
+
+      {/* Recent completions */}
+      {recentDone.length > 0 && (
+        <div
+          className="rounded-2xl p-5"
+          style={{ background: CARD, border: `1px solid ${BORDER}` }}
+        >
+          <h3
+            className="font-semibold text-sm mb-3"
+            style={{ color: CHARCOAL }}
+          >
+            Recently Completed
+          </h3>
+          <div className="space-y-2">
+            {recentDone.map(([id, entry]) => {
+              /* Find subtopic name */
+              let subtopicName = id;
+              SYLLABUS.forEach((subj) =>
+                subj.topics.forEach((t) =>
+                  t.subtopics.forEach((st) => {
+                    if (st.id === id) subtopicName = st.name;
+                  }),
+                ),
+              );
+              return (
+                <div
+                  key={id}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                  style={{
+                    background: `${OLIVE}10`,
+                    border: `1px solid ${OLIVE}33`,
+                  }}
+                >
+                  <CheckCircle2
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: OLIVE }}
+                  />
+                  <span className="flex-1 text-sm" style={{ color: CHARCOAL }}>
+                    {subtopicName}
+                  </span>
+                  {entry.doneAt && (
+                    <span
+                      className="text-[10px] flex-shrink-0"
+                      style={{ color: OLIVE }}
+                    >
+                      {format(new Date(entry.doneAt), "MMM d, yyyy")}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Subject-wise breakdown */}
+      <div>
+        <h3
+          className="font-serif text-lg font-semibold mb-3"
+          style={{ color: CHARCOAL }}
+        >
+          Subject Breakdown
+        </h3>
+        <div className="space-y-3">
+          {filteredSyllabus.map((subject) => {
+            const subtopics = subject.topics.flatMap((t) => t.subtopics);
+            const total = subtopics.length;
+            const done = subtopics.filter(
+              (st) => syllabusProgress[st.id]?.status === "done",
+            ).length;
+            const inProg = subtopics.filter(
+              (st) => syllabusProgress[st.id]?.status === "in_progress",
+            ).length;
+            const pct = total ? Math.round((done / total) * 100) : 0;
+            const isOpen = expandedSubj[subject.id] ?? false;
+
+            return (
+              <div
+                key={subject.id}
+                className="rounded-2xl overflow-hidden"
+                style={{ background: CARD, border: `1px solid ${BORDER}` }}
+              >
+                <button
+                  onClick={() =>
+                    setExpandedSubj((p) => ({
+                      ...p,
+                      [subject.id]: !p[subject.id],
+                    }))
+                  }
+                  className="w-full flex items-center gap-4 px-5 py-4 text-left"
+                  style={{ background: isOpen ? `${GOLD}08` : CARD }}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span
+                        className="font-semibold text-sm"
+                        style={{ color: CHARCOAL }}
+                      >
+                        {subject.name}
+                      </span>
+                      {pct === 100 && (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                          style={{ background: `${OLIVE}22`, color: OLIVE }}
+                        >
+                          ✓ Complete
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex-1 h-1.5 rounded-full overflow-hidden"
+                        style={{ background: BORDER }}
+                      >
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${pct}%`,
+                            background: pct === 100 ? OLIVE : GOLD,
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="text-xs flex-shrink-0"
+                        style={{ color: pct === 100 ? OLIVE : MUTED }}
+                      >
+                        {pct}% · {done}/{total}
+                        {inProg > 0 && ` · ${inProg} in progress`}
+                      </span>
+                    </div>
+                  </div>
+                  {isOpen ? (
+                    <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
+                  ) : (
+                    <ChevronRight
+                      className="w-4 h-4"
+                      style={{ color: MUTED }}
+                    />
+                  )}
+                </button>
+
+                {isOpen && (
+                  <div style={{ borderTop: `1px solid ${BORDER}` }}>
+                    {subject.topics.map((topic, tIdx) => {
+                      const topicDone = topic.subtopics.filter(
+                        (st) => syllabusProgress[st.id]?.status === "done",
+                      ).length;
+                      const isTopicOpen = expandedTopic[topic.id] ?? false;
+
+                      return (
+                        <div
+                          key={topic.id}
+                          style={{
+                            borderBottom:
+                              tIdx < subject.topics.length - 1
+                                ? `1px solid ${BORDER}`
+                                : "none",
+                          }}
+                        >
+                          <button
+                            onClick={() =>
+                              setExpandedTopic((p) => ({
+                                ...p,
+                                [topic.id]: !p[topic.id],
+                              }))
+                            }
+                            className="w-full flex items-center gap-3 px-5 py-3 text-left"
+                            style={{
+                              background: isTopicOpen ? `${GOLD}06` : CREAM,
+                            }}
+                          >
+                            <div className="w-4 flex-shrink-0">
+                              {isTopicOpen ? (
+                                <ChevronDown
+                                  className="w-3.5 h-3.5"
+                                  style={{ color: MUTED }}
+                                />
+                              ) : (
+                                <ChevronRight
+                                  className="w-3.5 h-3.5"
+                                  style={{ color: MUTED }}
+                                />
+                              )}
+                            </div>
+                            <span
+                              className="flex-1 text-sm font-semibold"
+                              style={{ color: CHARCOAL }}
+                            >
+                              {topic.name}
+                            </span>
+                            <span className="text-xs" style={{ color: MUTED }}>
+                              {topicDone}/{topic.subtopics.length}
+                            </span>
+                          </button>
+
+                          {isTopicOpen && (
+                            <div
+                              className="px-5 pb-3 space-y-1.5"
+                              style={{ background: "#FDFBF8" }}
+                            >
+                              {topic.subtopics.map((st) => {
+                                const entry = syllabusProgress[st.id] ?? {
+                                  status: "not_started",
+                                };
+                                const status = entry.status;
+                                const Icon =
+                                  status === "done"
+                                    ? CheckCircle2
+                                    : status === "in_progress"
+                                      ? PlayCircle
+                                      : Circle;
+                                const color =
+                                  status === "done"
+                                    ? OLIVE
+                                    : status === "in_progress"
+                                      ? GOLD
+                                      : MUTED;
+                                const bg =
+                                  status === "done"
+                                    ? `${OLIVE}12`
+                                    : status === "in_progress"
+                                      ? `${GOLD}12`
+                                      : `${BORDER}55`;
+
+                                return (
+                                  <div
+                                    key={st.id}
+                                    className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
+                                    style={{
+                                      background: bg,
+                                      border: `1px solid ${color}33`,
+                                    }}
+                                  >
+                                    <Icon
+                                      className="w-4 h-4 flex-shrink-0 mt-0.5"
+                                      style={{ color }}
+                                    />
+                                    <div className="flex-1">
+                                      <span
+                                        className="text-sm"
+                                        style={{
+                                          color:
+                                            status === "done"
+                                              ? OLIVE
+                                              : CHARCOAL,
+                                          textDecoration:
+                                            status === "done"
+                                              ? "line-through"
+                                              : "none",
+                                          textDecorationColor: MUTED,
+                                        }}
+                                      >
+                                        {st.name}
+                                      </span>
+                                      {status === "done" && entry.doneAt && (
+                                        <p
+                                          className="text-[10px] mt-0.5"
+                                          style={{ color: OLIVE }}
+                                        >
+                                          Completed on{" "}
+                                          {format(
+                                            new Date(entry.doneAt),
+                                            "MMMM d, yyyy",
+                                          )}
+                                        </p>
+                                      )}
+                                      {status === "in_progress" && (
+                                        <p
+                                          className="text-[10px] mt-0.5"
+                                          style={{ color: GOLD }}
+                                        >
+                                          In Progress
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {doneSubs === 0 && (
+        <div
+          className="text-center py-12 rounded-2xl"
+          style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
+        >
+          <BarChart2
+            className="w-10 h-10 mx-auto mb-3 opacity-30"
+            style={{ color: GOLD }}
+          />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
+            No topics completed yet
+          </p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>
+            Go to Syllabus Tracker and mark topics as done to see your progress
+            here.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Completion Forecast ──────────────── */
 function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
   const [showBreakdown, setShowBreakdown] = useState(false);
-
   const fullCount = schedule.subjectForecasts.filter(
-    (s) => s.canComplete && !s.alreadyDone,
+    (s) => s.canComplete && s.syllabusPercent < 100,
   ).length;
   const partialCount = schedule.subjectForecasts.filter(
-    (s) => !s.canComplete && !s.alreadyDone && s.percentCompletable > 0,
+    (s) =>
+      !s.canComplete && s.percentCompletable > 0 && s.syllabusPercent < 100,
   ).length;
   const zeroCount = schedule.subjectForecasts.filter(
-    (s) => !s.canComplete && s.percentCompletable === 0,
+    (s) =>
+      !s.canComplete && s.percentCompletable === 0 && s.syllabusPercent < 100,
   ).length;
   const doneCount = schedule.subjectForecasts.filter(
-    (s) => s.alreadyDone,
+    (s) => s.syllabusPercent === 100,
   ).length;
 
   return (
@@ -794,24 +1298,22 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
       className="rounded-2xl p-5 space-y-4"
       style={{ background: `${GOLD}08`, border: `1.5px solid ${GOLD}44` }}
     >
-      {/* Summary */}
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2">
         <Target className="w-4 h-4" style={{ color: GOLD }} />
         <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
           What You Can Complete
         </h3>
       </div>
-
-      <p className="text-xs leading-relaxed" style={{ color: MUTED }}>
+      <p className="text-xs" style={{ color: MUTED }}>
         With{" "}
         <strong style={{ color: DARK }}>
           {schedule.hoursPerDay} hrs/day × {schedule.daysPerWeek} days/week
         </strong>{" "}
         for{" "}
-        <strong style={{ color: DARK }}>{schedule.targetMonths} months</strong>:
+        <strong style={{ color: DARK }}>{schedule.targetMonths} months</strong>,
+        factoring in your syllabus progress:
       </p>
 
-      {/* Summary boxes */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {doneCount > 0 && (
           <div
@@ -888,7 +1390,6 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
         </div>
       </div>
 
-      {/* Quick message */}
       <div
         className="rounded-xl px-4 py-3"
         style={{
@@ -898,25 +1399,24 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
       >
         {schedule.isAchievable ? (
           <p className="text-sm font-semibold" style={{ color: OLIVE }}>
-            ✅ You can complete the full syllabus in {schedule.targetMonths}{" "}
-            months at this pace!
+            ✅ You can complete the remaining syllabus in{" "}
+            {schedule.targetMonths} months at this pace!
           </p>
         ) : (
           <p className="text-sm font-semibold" style={{ color: "#C0392B" }}>
-            ⚠️ At this pace you can fully complete {fullCount + doneCount} of{" "}
+            ⚠️ At this pace you can fully cover {fullCount + doneCount} of{" "}
             {schedule.totalSubjects} subjects. You need at least{" "}
             {schedule.minimumMonthsNeeded} months for the full syllabus.
           </p>
         )}
         {schedule.completedSubjectsSkipped > 0 && (
           <p className="text-xs mt-1" style={{ color: MUTED }}>
-            {schedule.completedSubjectsSkipped} subject(s) already completed are
-            excluded from your schedule.
+            {schedule.completedSubjectsSkipped} subject(s) are 100% done in your
+            syllabus tracker — skipped from schedule.
           </p>
         )}
       </div>
 
-      {/* Subject breakdown toggle */}
       <button
         onClick={() => setShowBreakdown(!showBreakdown)}
         className="flex items-center gap-2 text-xs font-semibold"
@@ -937,15 +1437,16 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
               key={sf.name}
               className="flex items-center gap-3 px-4 py-3 rounded-xl"
               style={{
-                background: sf.alreadyDone
-                  ? `${OLIVE}10`
-                  : sf.canComplete
-                    ? `${OLIVE}08`
-                    : sf.percentCompletable > 0
-                      ? "#FFF8DC"
-                      : "#FDE8E8",
+                background:
+                  sf.syllabusPercent === 100
+                    ? `${OLIVE}10`
+                    : sf.canComplete
+                      ? `${OLIVE}08`
+                      : sf.percentCompletable > 0
+                        ? "#FFF8DC"
+                        : "#FDE8E8",
                 border: `1px solid ${
-                  sf.alreadyDone
+                  sf.syllabusPercent === 100
                     ? `${OLIVE}44`
                     : sf.canComplete
                       ? `${OLIVE}33`
@@ -956,7 +1457,7 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
               }}
             >
               <span className="text-base flex-shrink-0">
-                {sf.alreadyDone
+                {sf.syllabusPercent === 100
                   ? "✅"
                   : sf.canComplete
                     ? "✅"
@@ -965,25 +1466,32 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
                       : "❌"}
               </span>
               <div className="flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span
                     className="text-sm font-semibold"
                     style={{ color: CHARCOAL }}
                   >
                     {sf.name}
                   </span>
-                  {sf.alreadyDone && (
+                  {sf.syllabusPercent > 0 && sf.syllabusPercent < 100 && (
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: `${GOLD}22`, color: DARK }}
+                    >
+                      {sf.syllabusPercent}% done in syllabus
+                    </span>
+                  )}
+                  {sf.syllabusPercent === 100 && (
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
                       style={{ background: `${OLIVE}22`, color: OLIVE }}
                     >
-                      already done
+                      100% in syllabus
                     </span>
                   )}
                 </div>
-                {!sf.alreadyDone && (
+                {sf.syllabusPercent < 100 && (
                   <>
-                    {/* Progress bar */}
                     <div
                       className="h-1 rounded-full mt-1.5 overflow-hidden"
                       style={{ background: BORDER }}
@@ -1001,11 +1509,13 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
                       />
                     </div>
                     <p className="text-[10px] mt-1" style={{ color: MUTED }}>
-                      {sf.canComplete
-                        ? `${sf.weeksNeeded} weeks needed — fully completable`
-                        : sf.percentCompletable > 0
-                          ? `~${sf.percentCompletable}% completable (${sf.weeksAvailable} of ${sf.weeksNeeded} weeks available)`
-                          : `Not reachable in target timeframe`}
+                      {sf.adjustedWeeks === 0
+                        ? "Fully covered in syllabus — skipped"
+                        : sf.canComplete
+                          ? `${sf.weeksNeeded} weeks needed — completable`
+                          : sf.percentCompletable > 0
+                            ? `~${sf.percentCompletable}% completable (${sf.weeksAvailable}/${sf.weeksNeeded} wks)`
+                            : "Not reachable in target timeframe"}
                     </p>
                   </>
                 )}
@@ -1018,16 +1528,16 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
   );
 }
 
-/* ─── Schedule Builder ─────────────────── */
+/* ─── Schedule Planner ─────────────────── */
 function SchedulePlanner({
   examType,
   startDate,
-  phases,
+  syllabusProgress,
   onGenerate,
 }: {
   examType: string;
   startDate: string;
-  phases: RoadmapPhase[];
+  syllabusProgress: SyllabusProgress;
   onGenerate: (schedule: SmartSchedule) => void;
 }) {
   const [hoursPerDay, setHoursPerDay] = useState(2);
@@ -1037,20 +1547,21 @@ function SchedulePlanner({
   const [preview, setPreview] = useState<SmartSchedule | null>(null);
 
   const hoursPerWeek = hoursPerDay * daysPerWeek;
-  const doneIds = getDoneSubjectIds(phases, examType);
-  const doneCount = doneIds.size;
+  const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
+  const skipped = Object.values(syllabusPercs).filter((p) => p === 100).length;
 
   function calculate() {
-    const schedule = generateSmartSchedule(
-      examType,
-      hoursPerDay,
-      daysPerWeek,
-      targetMonths,
-      revisionPercent,
-      startDate,
-      phases,
+    setPreview(
+      generateSmartSchedule(
+        examType,
+        hoursPerDay,
+        daysPerWeek,
+        targetMonths,
+        revisionPercent,
+        startDate,
+        syllabusProgress,
+      ),
     );
-    setPreview(schedule);
   }
 
   return (
@@ -1068,19 +1579,19 @@ function SchedulePlanner({
         </h3>
       </div>
       <p className="text-xs" style={{ color: MUTED }}>
-        Enter your study availability and target timeline. We'll generate a
-        complete week-by-week plan with assignments and revision built in —
-        automatically skipping subjects you've already completed.
+        Your schedule is automatically adjusted based on your Syllabus Tracker
+        progress. Subjects you've fully completed are skipped. Partially done
+        subjects get fewer weeks.
       </p>
 
-      {doneCount > 0 && (
+      {skipped > 0 && (
         <div
           className="rounded-xl px-4 py-3"
           style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}
         >
           <p className="text-xs font-semibold" style={{ color: OLIVE }}>
-            ✅ {doneCount} phase(s) marked as done — those subjects will be
-            skipped in your schedule.
+            ✅ {skipped} subject(s) are 100% complete in your Syllabus Tracker —
+            they'll be skipped.
           </p>
         </div>
       )}
@@ -1111,7 +1622,6 @@ function SchedulePlanner({
             <span>12 hrs</span>
           </div>
         </div>
-
         <div>
           <label
             className="text-xs font-semibold mb-2 block"
@@ -1137,7 +1647,6 @@ function SchedulePlanner({
             <span>7 days</span>
           </div>
         </div>
-
         <div>
           <label
             className="text-xs font-semibold mb-2 block"
@@ -1163,7 +1672,6 @@ function SchedulePlanner({
             <span>36 months</span>
           </div>
         </div>
-
         <div>
           <label
             className="text-xs font-semibold mb-2 block"
@@ -1193,7 +1701,6 @@ function SchedulePlanner({
         </div>
       </div>
 
-      {/* Availability summary */}
       <div
         className="rounded-xl p-4"
         style={{ background: CREAM, border: `1px solid ${BORDER}` }}
@@ -1275,7 +1782,6 @@ function ScheduleView({
 }) {
   const [filter, setFilter] = useState<WeekType | "all">("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-
   const filtered =
     filter === "all"
       ? schedule.weeks
@@ -1294,8 +1800,7 @@ function ScheduleView({
           </h3>
           <p className="text-xs mt-0.5" style={{ color: MUTED }}>
             {schedule.hoursPerDay} hrs/day · {schedule.daysPerWeek} days/week ·
-            {schedule.revisionPercent}% revision · Generated{" "}
-            {format(parseISO(schedule.generatedAt), "MMM d, yyyy")}
+            {schedule.revisionPercent}% revision · Synced with syllabus tracker
           </p>
         </div>
         <button
@@ -1442,7 +1947,7 @@ function ScheduleView({
                           className="text-[10px] mt-0.5"
                           style={{ color: MUTED }}
                         >
-                          ~{week.hoursAvailable} hrs available this week
+                          ~{week.hoursAvailable} hrs available
                         </p>
                       </div>
                       <span
@@ -1491,7 +1996,6 @@ function RoadmapSelector({
           preparation roadmap.
         </p>
       </div>
-
       <div
         className="rounded-2xl p-6"
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
@@ -1505,7 +2009,6 @@ function RoadmapSelector({
         <p className="text-xs mb-5" style={{ color: MUTED }}>
           This sets your default preparation timeline. You can edit it anytime.
         </p>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
           {(
             Object.entries(ROADMAP_TYPES) as [
@@ -1545,7 +2048,6 @@ function RoadmapSelector({
             );
           })}
         </div>
-
         {selected && (
           <div
             className="space-y-4 pt-4"
@@ -1626,10 +2128,14 @@ function RoadmapView({
   });
   const [expandPhase, setExpandPhase] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "schedule">(
-    "overview",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "progress" | "schedule"
+  >("overview");
   const [showBuilder, setShowBuilder] = useState(!rm.smartSchedule);
+
+  /* Load syllabus progress fresh each render */
+  const syllabusProgress = loadSyllabusProgress(userId);
+  const examType = rm.examType;
 
   const calc = runAIEngine(rm);
   const statusCfg = STATUS_CFG[calc.status];
@@ -1683,7 +2189,6 @@ function RoadmapView({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1
@@ -1707,8 +2212,8 @@ function RoadmapView({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        {(["overview", "schedule"] as const).map((tab) => (
+      <div className="flex gap-2 flex-wrap">
+        {(["overview", "progress", "schedule"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1719,7 +2224,11 @@ function RoadmapView({
                 : { background: `${BORDER}88`, color: MUTED }
             }
           >
-            {tab === "overview" ? "📋 Overview" : "📅 Schedule"}
+            {tab === "overview"
+              ? "📋 Overview"
+              : tab === "progress"
+                ? "📊 My Progress"
+                : "📅 Schedule"}
           </button>
         ))}
       </div>
@@ -1727,7 +2236,6 @@ function RoadmapView({
       {/* OVERVIEW TAB */}
       {activeTab === "overview" && (
         <div className="space-y-6">
-          {/* Status */}
           <div
             className="rounded-2xl p-5"
             style={{
@@ -1888,14 +2396,6 @@ function RoadmapView({
                     </span>
                   </div>
                 </div>
-                {newMonths !== rm.totalMonths && (
-                  <div
-                    className="px-3 py-2 rounded-lg text-xs"
-                    style={{ background: `${GOLD}12`, color: DARK }}
-                  >
-                    Recalculates all phase durations for {newMonths} months
-                  </div>
-                )}
                 <div className="flex gap-2">
                   <button
                     onClick={applyNewMonths}
@@ -2270,6 +2770,11 @@ function RoadmapView({
         </div>
       )}
 
+      {/* MY PROGRESS TAB */}
+      {activeTab === "progress" && (
+        <MyProgressTab userId={userId} examType={examType} />
+      )}
+
       {/* SCHEDULE TAB */}
       {activeTab === "schedule" && (
         <div className="space-y-6">
@@ -2277,7 +2782,7 @@ function RoadmapView({
             <SchedulePlanner
               examType={rm.examType}
               startDate={rm.startDate}
-              phases={rm.phases}
+              syllabusProgress={syllabusProgress}
               onGenerate={saveSchedule}
             />
           ) : (
@@ -2307,7 +2812,6 @@ export default function Roadmap() {
   const userId = String(user?.id ?? "guest");
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
-
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
     loadRoadmap(userId),
   );
@@ -2329,7 +2833,7 @@ export default function Roadmap() {
   }
 
   function handleReset() {
-    if (!confirm("Reset your roadmap? Your progress will be lost.")) return;
+    if (!confirm("Reset your roadmap? Progress will be lost.")) return;
     localStorage.removeItem(lsKey(userId));
     setRoadmap(null);
   }

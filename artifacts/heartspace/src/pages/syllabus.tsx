@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../lib/auth";
+import { format } from "date-fns";
 import {
   ChevronDown,
   ChevronRight,
@@ -22,6 +23,13 @@ const ROSE = "#D4A5A5";
 /* ─── Types ────────────────────────────── */
 type TopicStatus = "not_started" | "in_progress" | "done";
 
+export interface SubtopicEntry {
+  status: TopicStatus;
+  doneAt?: string /* ISO date string — when marked done */;
+}
+
+export type SyllabusProgress = Record<string, SubtopicEntry>;
+
 interface Subtopic {
   id: string;
   name: string;
@@ -43,8 +51,7 @@ interface Subject {
 }
 
 /* ─── Full Syllabus ────────────────────── */
-const SYLLABUS: Subject[] = [
-  /* ── LINEAR ALGEBRA ── */
+export const SYLLABUS: Subject[] = [
   {
     id: "linear_algebra",
     name: "Linear Algebra",
@@ -131,8 +138,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── REAL ANALYSIS ── */
   {
     id: "real_analysis",
     name: "Real Analysis",
@@ -232,10 +237,7 @@ const SYLLABUS: Subject[] = [
         name: "Riemann Integration",
         subtopics: [
           { id: "ra_ri_1", name: "Partitions, Upper & Lower Sums" },
-          {
-            id: "ra_ri_2",
-            name: "Riemann Integrable Functions, Conditions for Integrability",
-          },
+          { id: "ra_ri_2", name: "Riemann Integrable Functions, Conditions" },
           { id: "ra_ri_3", name: "Fundamental Theorem of Calculus" },
           { id: "ra_ri_4", name: "Beta and Gamma Functions" },
         ],
@@ -287,8 +289,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── DIFFERENTIAL CALCULUS (JAM: Functions of One Variable) ── */
   {
     id: "differential_calculus",
     name: "Differential Calculus (Functions of One Variable)",
@@ -322,8 +322,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── INTEGRATION (JAM) ── */
   {
     id: "integration",
     name: "Integration",
@@ -360,8 +358,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── ABSTRACT ALGEBRA ── */
   {
     id: "abstract_algebra",
     name: "Abstract Algebra",
@@ -439,8 +435,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── COMPLEX ANALYSIS (NET only) ── */
   {
     id: "complex_analysis",
     name: "Complex Analysis",
@@ -518,8 +512,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── ODE ── */
   {
     id: "ode",
     name: "Ordinary Differential Equations",
@@ -574,8 +566,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── PDE (NET) ── */
   {
     id: "pde",
     name: "Partial Differential Equations",
@@ -638,8 +628,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── NUMERICAL ANALYSIS ── */
   {
     id: "numerical_analysis",
     name: "Numerical Analysis",
@@ -689,8 +677,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── LINEAR PROGRAMMING ── */
   {
     id: "linear_programming",
     name: "Linear Programming",
@@ -738,8 +724,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── STATISTICS & PROBABILITY ── */
   {
     id: "statistics",
     name: "Statistics & Probability",
@@ -807,8 +791,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── TOPOLOGY (NET — no netOnly tag) ── */
   {
     id: "topology",
     name: "Topology",
@@ -864,8 +846,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── FUNCTIONAL ANALYSIS (NET — no netOnly tag) ── */
   {
     id: "functional_analysis",
     name: "Functional Analysis",
@@ -899,8 +879,6 @@ const SYLLABUS: Subject[] = [
       },
     ],
   },
-
-  /* ── CALCULUS OF VARIATIONS (NET) ── */
   {
     id: "calculus_of_variations",
     name: "Calculus of Variations",
@@ -948,16 +926,30 @@ function getStorageKey(userId: string) {
   return `hs_syllabus_${userId}`;
 }
 
-function loadProgress(userId: string): Record<string, TopicStatus> {
+export function loadSyllabusProgress(userId: string): SyllabusProgress {
   try {
     const r = localStorage.getItem(getStorageKey(userId));
-    return r ? JSON.parse(r) : {};
+    if (!r) return {};
+    const raw = JSON.parse(r);
+    /* Migrate old format (plain string) to new format (object with status + doneAt) */
+    const migrated: SyllabusProgress = {};
+    Object.entries(raw).forEach(([key, val]) => {
+      if (typeof val === "string") {
+        migrated[key] = {
+          status: val as TopicStatus,
+          doneAt: val === "done" ? new Date().toISOString() : undefined,
+        };
+      } else {
+        migrated[key] = val as SubtopicEntry;
+      }
+    });
+    return migrated;
   } catch {
     return {};
   }
 }
 
-function saveProgress(userId: string, progress: Record<string, TopicStatus>) {
+function saveProgress(userId: string, progress: SyllabusProgress) {
   try {
     localStorage.setItem(getStorageKey(userId), JSON.stringify(progress));
   } catch {
@@ -981,14 +973,14 @@ function filterSyllabus(examType: string | null): Subject[] {
   }));
 }
 
-/* ─── Progress calculation ─────────────── */
-function calcProgress(subject: Subject, progress: Record<string, TopicStatus>) {
+/* ─── Progress calc ────────────────────── */
+function calcProgress(subject: Subject, progress: SyllabusProgress) {
   let total = 0;
   let done = 0;
   subject.topics.forEach((t) =>
     t.subtopics.forEach((st) => {
       total++;
-      if (progress[st.id] === "done") done++;
+      if (progress[st.id]?.status === "done") done++;
     }),
   );
   return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
@@ -1000,8 +992,8 @@ export default function Syllabus() {
   const userId = String(user?.id ?? "guest");
   const examType = (user as any)?.exam_type as string | null;
 
-  const [progress, setProgress] = useState<Record<string, TopicStatus>>(() =>
-    loadProgress(userId),
+  const [progress, setProgress] = useState<SyllabusProgress>(() =>
+    loadSyllabusProgress(userId),
   );
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [expandedT, setExpandedT] = useState<Record<string, boolean>>({});
@@ -1012,13 +1004,24 @@ export default function Syllabus() {
     (acc, s) => acc + s.topics.reduce((a, t) => a + t.subtopics.length, 0),
     0,
   );
-  const doneSubs = Object.values(progress).filter((v) => v === "done").length;
+  const doneSubs = Object.values(progress).filter(
+    (v) => v.status === "done",
+  ).length;
   const overallPct = totalSubtopics
     ? Math.round((doneSubs / totalSubtopics) * 100)
     : 0;
 
   function updateStatus(subtopicId: string, status: TopicStatus) {
-    const next = { ...progress, [subtopicId]: status };
+    const now = new Date().toISOString();
+    const prev = progress[subtopicId];
+    const next: SyllabusProgress = {
+      ...progress,
+      [subtopicId]: {
+        status,
+        /* Set doneAt when first marked done, clear it if un-marked */
+        doneAt: status === "done" ? (prev?.doneAt ?? now) : undefined,
+      },
+    };
     setProgress(next);
     saveProgress(userId, next);
   }
@@ -1105,7 +1108,6 @@ export default function Syllabus() {
               boxShadow: "0 2px 8px rgba(61,53,48,.05)",
             }}
           >
-            {/* Subject header */}
             <button
               onClick={() =>
                 setExpanded((p) => ({ ...p, [subject.id]: !p[subject.id] }))
@@ -1176,13 +1178,12 @@ export default function Syllabus() {
               )}
             </button>
 
-            {/* Topics */}
             {isOpen && (
               <div style={{ borderTop: `1px solid ${BORDER}` }}>
                 {subject.topics.map((topic, tIdx) => {
                   const isTopicOpen = expandedT[topic.id] ?? false;
                   const topicDone = topic.subtopics.filter(
-                    (st) => progress[st.id] === "done",
+                    (st) => progress[st.id]?.status === "done",
                   ).length;
 
                   return (
@@ -1204,7 +1205,7 @@ export default function Syllabus() {
                         }
                         className="w-full flex items-center gap-3 px-6 py-3 text-left transition-all hover:opacity-80"
                         style={{
-                          background: isTopicOpen ? `${GOLD}08` : CREAM,
+                          background: isTopicOpen ? `${GOLD}08` : "#FAF7F2",
                         }}
                       >
                         <div className="w-5 flex-shrink-0 flex items-center justify-center">
@@ -1259,7 +1260,10 @@ export default function Syllabus() {
                           style={{ background: "#FDFBF8" }}
                         >
                           {topic.subtopics.map((st) => {
-                            const status = progress[st.id] ?? "not_started";
+                            const entry = progress[st.id] ?? {
+                              status: "not_started" as TopicStatus,
+                            };
+                            const status = entry.status;
                             const cfg = STATUS_CONFIG[status];
                             const Icon = cfg.icon;
 
@@ -1287,19 +1291,34 @@ export default function Syllabus() {
                                   className="w-4 h-4 flex-shrink-0"
                                   style={{ color: cfg.color }}
                                 />
-                                <span
-                                  className="flex-1 text-sm"
-                                  style={{
-                                    color: status === "done" ? OLIVE : CHARCOAL,
-                                    textDecoration:
-                                      status === "done"
-                                        ? "line-through"
-                                        : "none",
-                                    textDecorationColor: MUTED,
-                                  }}
-                                >
-                                  {st.name}
-                                </span>
+                                <div className="flex-1">
+                                  <span
+                                    className="text-sm"
+                                    style={{
+                                      color:
+                                        status === "done" ? OLIVE : CHARCOAL,
+                                      textDecoration:
+                                        status === "done"
+                                          ? "line-through"
+                                          : "none",
+                                      textDecorationColor: MUTED,
+                                    }}
+                                  >
+                                    {st.name}
+                                  </span>
+                                  {status === "done" && entry.doneAt && (
+                                    <p
+                                      className="text-[10px] mt-0.5"
+                                      style={{ color: OLIVE }}
+                                    >
+                                      ✓ Done on{" "}
+                                      {format(
+                                        new Date(entry.doneAt),
+                                        "MMM d, yyyy",
+                                      )}
+                                    </p>
+                                  )}
+                                </div>
                                 <span
                                   className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
                                   style={{
