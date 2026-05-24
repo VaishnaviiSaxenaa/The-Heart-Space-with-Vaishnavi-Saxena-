@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Circle,
   PlayCircle,
-  CheckSquare,
 } from "lucide-react";
 
 /* ─── Brand tokens ─────────────────────── */
@@ -957,7 +956,7 @@ function saveProgress(userId: string, progress: SyllabusProgress) {
   }
 }
 
-/* ─── Helper — get topic status from subtopics ── */
+/* ─── Helpers ──────────────────────────── */
 function getTopicStatus(
   topic: { subtopics: { id: string }[] },
   progress: SyllabusProgress,
@@ -971,7 +970,6 @@ function getTopicStatus(
   return "not_started";
 }
 
-/* ─── Helper — mark all subtopics in topic ─── */
 export function markTopicStatus(
   topicSubtopics: { id: string }[],
   newStatus: TopicStatus,
@@ -989,7 +987,6 @@ export function markTopicStatus(
   return next;
 }
 
-/* ─── Filter syllabus ──────────────────── */
 function filterSyllabus(examType: string | null): Subject[] {
   const isJAM = examType === "JAM";
   return SYLLABUS.filter(
@@ -1017,44 +1014,32 @@ function calcProgress(subject: Subject, progress: SyllabusProgress) {
   return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
-/* ─── Topic tick button ────────────────── */
-function TopicTickButton({
-  topic,
-  progress,
-  onUpdate,
+/* ─── Tick Button (reused for subject + topic) ── */
+function TickButton({
+  allDone,
+  anyDone,
+  onClick,
+  size = "sm",
 }: {
-  topic: { id: string; subtopics: { id: string }[] };
-  progress: SyllabusProgress;
-  onUpdate: (next: SyllabusProgress) => void;
+  allDone: boolean;
+  anyDone: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  size?: "sm" | "lg";
 }) {
-  const topicStatus = getTopicStatus(topic, progress);
-  const allDone = topicStatus === "done";
-
-  function handleClick(e: React.MouseEvent) {
-    e.stopPropagation(); /* don't expand/collapse */
-    const newStatus: TopicStatus = allDone ? "not_started" : "done";
-    onUpdate(markTopicStatus(topic.subtopics, newStatus, progress));
-  }
-
+  const dim = size === "lg" ? "w-7 h-7" : "w-6 h-6";
   return (
     <button
       type="button"
-      onClick={handleClick}
-      title={
-        allDone ? "Mark topic as not started" : "Mark entire topic as done"
-      }
-      className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110"
+      onClick={onClick}
+      title={allDone ? "Unmark all" : "Mark all as done"}
+      className={`flex-shrink-0 ${dim} rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110`}
       style={{
-        borderColor: allDone
-          ? OLIVE
-          : topicStatus === "in_progress"
-            ? GOLD
-            : BORDER,
+        borderColor: allDone ? OLIVE : anyDone ? GOLD : BORDER,
         background: allDone ? OLIVE : "transparent",
         boxShadow: allDone ? `0 0 0 3px ${OLIVE}22` : "none",
       }}
     >
-      {allDone && (
+      {allDone ? (
         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
           <path
             d="M1 4L3.5 6.5L9 1"
@@ -1064,10 +1049,9 @@ function TopicTickButton({
             strokeLinejoin="round"
           />
         </svg>
-      )}
-      {topicStatus === "in_progress" && !allDone && (
+      ) : anyDone ? (
         <div className="w-2 h-2 rounded-full" style={{ background: GOLD }} />
-      )}
+      ) : null}
     </button>
   );
 }
@@ -1085,7 +1069,6 @@ export default function Syllabus() {
   const [expandedT, setExpandedT] = useState<Record<string, boolean>>({});
 
   const syllabus = filterSyllabus(examType);
-
   const totalSubtopics = syllabus.reduce(
     (acc, s) => acc + s.topics.reduce((a, t) => a + t.subtopics.length, 0),
     0,
@@ -1133,8 +1116,8 @@ export default function Syllabus() {
             Syllabus Tracker
           </h1>
           <p className="text-sm mt-1" style={{ color: MUTED }}>
-            {examLabel} Mathematics · {totalSubtopics} subtopics · Click ✓ on a
-            topic to mark all subtopics done
+            {examLabel} · {totalSubtopics} subtopics · Click ○ on subject or
+            topic to mark all done at once
           </p>
         </div>
         <div
@@ -1178,8 +1161,8 @@ export default function Syllabus() {
           </div>
         ))}
         <span className="text-xs" style={{ color: MUTED }}>
-          · Click circle on topic to mark all done · Click subtopic to cycle
-          status
+          · Click subject or topic circle to mark all done · Click subtopic to
+          cycle
         </span>
       </div>
 
@@ -1187,6 +1170,17 @@ export default function Syllabus() {
       {syllabus.map((subject) => {
         const { pct, done, total } = calcProgress(subject, progress);
         const isOpen = expanded[subject.id] ?? false;
+        const allSubtopicsInSubject = subject.topics.flatMap(
+          (t) => t.subtopics,
+        );
+        const subjectAllDone = allSubtopicsInSubject.every(
+          (st) => progress[st.id]?.status === "done",
+        );
+        const subjectAnyDone = allSubtopicsInSubject.some(
+          (st) =>
+            progress[st.id]?.status === "done" ||
+            progress[st.id]?.status === "in_progress",
+        );
 
         return (
           <div
@@ -1198,76 +1192,97 @@ export default function Syllabus() {
               boxShadow: "0 2px 8px rgba(61,53,48,.05)",
             }}
           >
-            {/* Subject header */}
-            <button
-              onClick={() =>
-                setExpanded((p) => ({ ...p, [subject.id]: !p[subject.id] }))
-              }
-              className="w-full flex items-center gap-4 px-6 py-4 text-left transition-all hover:opacity-80"
+            {/* Subject header row */}
+            <div
+              className="flex items-center gap-3 px-4"
               style={{ background: isOpen ? `${SIDEBAR}08` : "#FFF" }}
             >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <BookOpen
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: GOLD }}
-                  />
-                  <span
-                    className="font-serif text-base font-bold"
-                    style={{ color: CHARCOAL }}
-                  >
-                    {subject.name}
-                  </span>
-                  {subject.jamOnly && (
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: `${GOLD}22`, color: SIDEBAR }}
-                    >
-                      JAM only
-                    </span>
-                  )}
-                  {subject.netOnly && (
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
-                    >
-                      NET / GATE
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 pl-7">
-                  <div
-                    className="flex-1 h-1.5 rounded-full overflow-hidden"
-                    style={{ background: BORDER }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${pct}%`,
-                        background: pct === 100 ? OLIVE : GOLD,
-                      }}
+              {/* Subject-level tick */}
+              <TickButton
+                allDone={subjectAllDone}
+                anyDone={subjectAnyDone}
+                size="lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = markTopicStatus(
+                    allSubtopicsInSubject,
+                    subjectAllDone ? "not_started" : "done",
+                    progress,
+                  );
+                  updateProgress(next);
+                }}
+              />
+
+              {/* Expand button */}
+              <button
+                onClick={() =>
+                  setExpanded((p) => ({ ...p, [subject.id]: !p[subject.id] }))
+                }
+                className="flex-1 flex items-center gap-4 py-4 text-left transition-all hover:opacity-80"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <BookOpen
+                      className="w-4 h-4 flex-shrink-0"
+                      style={{ color: GOLD }}
                     />
+                    <span
+                      className="font-serif text-base font-bold"
+                      style={{ color: CHARCOAL }}
+                    >
+                      {subject.name}
+                    </span>
+                    {subject.jamOnly && (
+                      <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: `${GOLD}22`, color: SIDEBAR }}
+                      >
+                        JAM only
+                      </span>
+                    )}
+                    {subject.netOnly && (
+                      <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
+                      >
+                        NET / GATE
+                      </span>
+                    )}
                   </div>
-                  <span
-                    className="text-xs font-semibold flex-shrink-0"
-                    style={{ color: pct === 100 ? OLIVE : MUTED }}
-                  >
-                    {pct}% · {done}/{total}
-                  </span>
+                  <div className="flex items-center gap-3 pl-7">
+                    <div
+                      className="flex-1 h-1.5 rounded-full overflow-hidden"
+                      style={{ background: BORDER }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${pct}%`,
+                          background: pct === 100 ? OLIVE : GOLD,
+                        }}
+                      />
+                    </div>
+                    <span
+                      className="text-xs font-semibold flex-shrink-0"
+                      style={{ color: pct === 100 ? OLIVE : MUTED }}
+                    >
+                      {pct}% · {done}/{total}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              {isOpen ? (
-                <ChevronDown
-                  className="w-4 h-4 flex-shrink-0"
-                  style={{ color: MUTED }}
-                />
-              ) : (
-                <ChevronRight
-                  className="w-4 h-4 flex-shrink-0"
-                  style={{ color: MUTED }}
-                />
-              )}
-            </button>
+                {isOpen ? (
+                  <ChevronDown
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: MUTED }}
+                  />
+                ) : (
+                  <ChevronRight
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: MUTED }}
+                  />
+                )}
+              </button>
+            </div>
 
             {/* Topics */}
             {isOpen && (
@@ -1278,6 +1293,8 @@ export default function Syllabus() {
                     (st) => progress[st.id]?.status === "done",
                   ).length;
                   const topicStatus = getTopicStatus(topic, progress);
+                  const topicAllDone = topicStatus === "done";
+                  const topicAnyDone = topicStatus !== "not_started";
 
                   return (
                     <div
@@ -1296,14 +1313,21 @@ export default function Syllabus() {
                           background: isTopicOpen ? `${GOLD}08` : CREAM,
                         }}
                       >
-                        {/* Topic tick button */}
-                        <TopicTickButton
-                          topic={topic}
-                          progress={progress}
-                          onUpdate={updateProgress}
+                        <TickButton
+                          allDone={topicAllDone}
+                          anyDone={topicAnyDone}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateProgress(
+                              markTopicStatus(
+                                topic.subtopics,
+                                topicAllDone ? "not_started" : "done",
+                                progress,
+                              ),
+                            );
+                          }}
                         />
 
-                        {/* Topic expand button */}
                         <button
                           onClick={() =>
                             setExpandedT((p) => ({
@@ -1329,11 +1353,10 @@ export default function Syllabus() {
                           <span
                             className="flex-1 text-sm font-semibold"
                             style={{
-                              color: topicStatus === "done" ? OLIVE : CHARCOAL,
-                              textDecoration:
-                                topicStatus === "done"
-                                  ? "line-through"
-                                  : "none",
+                              color: topicAllDone ? OLIVE : CHARCOAL,
+                              textDecoration: topicAllDone
+                                ? "line-through"
+                                : "none",
                               textDecorationColor: MUTED,
                             }}
                           >
@@ -1363,9 +1386,7 @@ export default function Syllabus() {
                           )}
                           <span
                             className="text-xs flex-shrink-0 mr-1"
-                            style={{
-                              color: topicStatus === "done" ? OLIVE : MUTED,
-                            }}
+                            style={{ color: topicAllDone ? OLIVE : MUTED }}
                           >
                             {topicDone}/{topic.subtopics.length}
                           </span>
@@ -1385,7 +1406,6 @@ export default function Syllabus() {
                             const status = entry.status;
                             const cfg = STATUS_CONFIG[status];
                             const Icon = cfg.icon;
-
                             function cycleStatus() {
                               const next: TopicStatus =
                                 status === "not_started"
@@ -1395,7 +1415,6 @@ export default function Syllabus() {
                                     : "not_started";
                               updateSubtopicStatus(st.id, next);
                             }
-
                             return (
                               <button
                                 key={st.id}

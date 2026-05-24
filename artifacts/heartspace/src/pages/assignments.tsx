@@ -5,13 +5,13 @@ import {
   ChevronDown,
   ChevronRight,
   BookOpen,
-  CheckCircle2,
   TrendingUp,
   Zap,
   Brain,
   Plus,
   Trash2,
   BarChart2,
+  History,
 } from "lucide-react";
 import { SYLLABUS } from "./syllabus";
 
@@ -33,18 +33,15 @@ type SpeedLevel = "slow" | "moderate" | "fast";
 
 interface PracticeAttempt {
   id: string;
-  date: string /* ISO string */;
-  accuracy: number /* 0-100 */;
+  date: string;
+  accuracy: number;
   concept: ConceptLevel;
   speed: SpeedLevel;
   note?: string;
 }
-
 interface PracticeEntry {
   attempts: PracticeAttempt[];
 }
-
-/* key = subtopicId or topicId */
 type PracticeProgress = Record<string, PracticeEntry>;
 
 /* ─── Level configs ────────────────────── */
@@ -61,7 +58,6 @@ const CONCEPT_CFG: Record<
   },
   strong: { label: "Strong", color: OLIVE, bg: `${OLIVE}15`, emoji: "🟢" },
 };
-
 const SPEED_CFG: Record<
   SpeedLevel,
   { label: string; color: string; bg: string; emoji: string }
@@ -75,7 +71,6 @@ const SPEED_CFG: Record<
 function lsKey(userId: string) {
   return `hs_practice_${userId}`;
 }
-
 function loadProgress(userId: string): PracticeProgress {
   try {
     const r = localStorage.getItem(lsKey(userId));
@@ -84,7 +79,6 @@ function loadProgress(userId: string): PracticeProgress {
     return {};
   }
 }
-
 function saveProgress(userId: string, progress: PracticeProgress) {
   try {
     localStorage.setItem(lsKey(userId), JSON.stringify(progress));
@@ -98,27 +92,21 @@ function getLatest(entry?: PracticeEntry): PracticeAttempt | null {
   if (!entry || entry.attempts.length === 0) return null;
   return entry.attempts[entry.attempts.length - 1];
 }
-
 function getAccuracyColor(acc: number) {
   if (acc >= 80) return OLIVE;
   if (acc >= 50) return "#B8860B";
   return "#C0392B";
 }
 
-function avgAccuracy(attempts: PracticeAttempt[]) {
-  if (!attempts.length) return 0;
-  return Math.round(
-    attempts.reduce((s, a) => s + a.accuracy, 0) / attempts.length,
-  );
-}
-
 /* ─── Attempt Form ─────────────────────── */
 function AttemptForm({
   onSave,
   onCancel,
+  label,
 }: {
   onSave: (attempt: Omit<PracticeAttempt, "id" | "date">) => void;
   onCancel: () => void;
+  label?: string;
 }) {
   const [accuracy, setAccuracy] = useState(50);
   const [concept, setConcept] = useState<ConceptLevel>("developing");
@@ -130,9 +118,11 @@ function AttemptForm({
       className="rounded-2xl p-5 space-y-4 mt-2"
       style={{ background: `${GOLD}08`, border: `1.5px solid ${GOLD}44` }}
     >
-      <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>
-        Log a Practice Attempt
-      </p>
+      {label && (
+        <p className="text-xs font-semibold" style={{ color: MUTED }}>
+          {label}
+        </p>
+      )}
 
       {/* Accuracy */}
       <div>
@@ -191,14 +181,14 @@ function AttemptForm({
         </div>
       </div>
 
-      {/* Concept Understanding */}
+      {/* Concept */}
       <div>
         <label
           className="text-xs font-semibold mb-2 flex items-center gap-2"
           style={{ color: CHARCOAL }}
         >
-          <Brain className="w-3.5 h-3.5" style={{ color: GOLD }} />
-          Concept Understanding
+          <Brain className="w-3.5 h-3.5" style={{ color: GOLD }} /> Concept
+          Understanding
         </label>
         <div className="flex gap-2">
           {(
@@ -238,8 +228,7 @@ function AttemptForm({
           className="text-xs font-semibold mb-2 flex items-center gap-2"
           style={{ color: CHARCOAL }}
         >
-          <Zap className="w-3.5 h-3.5" style={{ color: GOLD }} />
-          Speed
+          <Zap className="w-3.5 h-3.5" style={{ color: GOLD }} /> Speed
         </label>
         <div className="flex gap-2">
           {(
@@ -284,7 +273,7 @@ function AttemptForm({
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="e.g. Struggled with Cayley-Hamilton, need more practice..."
+          placeholder="e.g. Struggled with Cayley-Hamilton..."
           className="w-full h-9 px-3 rounded-xl text-xs border-2 outline-none"
           style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }}
         />
@@ -317,128 +306,233 @@ function AttemptForm({
   );
 }
 
-/* ─── Attempt History ──────────────────── */
-function AttemptHistory({
-  attempts,
+/* ─── Attempt Card ─────────────────────── */
+function AttemptCard({
+  attempt,
+  isLatest,
   onDelete,
 }: {
-  attempts: PracticeAttempt[];
-  onDelete: (id: string) => void;
+  attempt: PracticeAttempt;
+  isLatest: boolean;
+  onDelete: () => void;
 }) {
-  if (attempts.length === 0) return null;
-
+  const conceptCfg = CONCEPT_CFG[attempt.concept];
+  const speedCfg = SPEED_CFG[attempt.speed];
   return (
-    <div className="space-y-2 mt-2">
-      <p
-        className="text-[10px] font-semibold uppercase tracking-wide"
-        style={{ color: MUTED }}
-      >
-        Attempt History ({attempts.length})
-      </p>
-      {[...attempts].reverse().map((attempt, idx) => {
-        const conceptCfg = CONCEPT_CFG[attempt.concept];
-        const speedCfg = SPEED_CFG[attempt.speed];
-        const isLatest = idx === 0;
-
-        return (
-          <div
-            key={attempt.id}
-            className="rounded-xl px-4 py-3"
-            style={{
-              background: isLatest ? `${OLIVE}08` : CREAM,
-              border: `1px solid ${isLatest ? OLIVE : BORDER}33`,
-            }}
+    <div
+      className="rounded-xl px-4 py-3"
+      style={{
+        background: isLatest ? `${OLIVE}08` : CREAM,
+        border: `1px solid ${isLatest ? OLIVE : BORDER}33`,
+      }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        {isLatest && (
+          <span
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+            style={{ background: `${OLIVE}22`, color: OLIVE }}
           >
-            <div className="flex items-center gap-2 mb-2">
-              {isLatest && (
-                <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: `${OLIVE}22`, color: OLIVE }}
-                >
-                  Latest
-                </span>
-              )}
-              <span className="text-[10px]" style={{ color: MUTED }}>
-                {format(new Date(attempt.date), "MMM d, yyyy · h:mm a")}
-              </span>
-              <button
-                type="button"
-                onClick={() => onDelete(attempt.id)}
-                className="ml-auto p-1 rounded-lg opacity-40 hover:opacity-100 transition-opacity"
-                style={{ color: "#C0392B" }}
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Accuracy */}
-              <div className="flex items-center gap-1.5">
-                <TrendingUp
-                  className="w-3 h-3"
-                  style={{ color: getAccuracyColor(attempt.accuracy) }}
-                />
-                <span
-                  className="text-sm font-bold font-serif"
-                  style={{ color: getAccuracyColor(attempt.accuracy) }}
-                >
-                  {attempt.accuracy}%
-                </span>
-              </div>
-              {/* Concept */}
-              <span
-                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: conceptCfg.bg, color: conceptCfg.color }}
-              >
-                {conceptCfg.emoji} {conceptCfg.label}
-              </span>
-              {/* Speed */}
-              <span
-                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: speedCfg.bg, color: speedCfg.color }}
-              >
-                {speedCfg.emoji} {speedCfg.label}
-              </span>
-            </div>
-            {attempt.note && (
-              <p className="text-[10px] mt-2 italic" style={{ color: MUTED }}>
-                "{attempt.note}"
-              </p>
-            )}
-          </div>
-        );
-      })}
-
-      {/* Improvement summary if 2+ attempts */}
-      {attempts.length >= 2 &&
-        (() => {
-          const first = attempts[0];
-          const latest = attempts[attempts.length - 1];
-          const diff = latest.accuracy - first.accuracy;
-          return (
-            <div
-              className="rounded-xl px-4 py-2.5"
-              style={{
-                background: diff >= 0 ? `${OLIVE}10` : "#FDE8E8",
-                border: `1px solid ${diff >= 0 ? OLIVE : "#C0392B"}22`,
-              }}
-            >
-              <p
-                className="text-xs font-semibold"
-                style={{ color: diff >= 0 ? OLIVE : "#C0392B" }}
-              >
-                {diff >= 0 ? "📈" : "📉"} {Math.abs(diff)}%{" "}
-                {diff >= 0 ? "improvement" : "drop"} from first to latest
-                attempt
-                {diff >= 10 && " — great progress! 🎉"}
-              </p>
-            </div>
-          );
-        })()}
+            Latest
+          </span>
+        )}
+        <span className="text-[10px]" style={{ color: MUTED }}>
+          {format(new Date(attempt.date), "MMM d, yyyy · h:mm a")}
+        </span>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="ml-auto p-1 rounded-lg opacity-40 hover:opacity-100 transition-opacity"
+          style={{ color: "#C0392B" }}
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <TrendingUp
+            className="w-3 h-3"
+            style={{ color: getAccuracyColor(attempt.accuracy) }}
+          />
+          <span
+            className="text-sm font-bold font-serif"
+            style={{ color: getAccuracyColor(attempt.accuracy) }}
+          >
+            {attempt.accuracy}%
+          </span>
+        </div>
+        <span
+          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+          style={{ background: conceptCfg.bg, color: conceptCfg.color }}
+        >
+          {conceptCfg.emoji} {conceptCfg.label}
+        </span>
+        <span
+          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+          style={{ background: speedCfg.bg, color: speedCfg.color }}
+        >
+          {speedCfg.emoji} {speedCfg.label}
+        </span>
+      </div>
+      {attempt.note && (
+        <p className="text-[10px] mt-2 italic" style={{ color: MUTED }}>
+          "{attempt.note}"
+        </p>
+      )}
     </div>
   );
 }
 
-/* ─── Subtopic Practice Row ────────────── */
+/* ─── Subject History View ─────────────── */
+function SubjectHistory({
+  subject,
+  progress,
+  onDelete,
+}: {
+  subject: {
+    topics: {
+      id: string;
+      name: string;
+      subtopics: { id: string; name: string }[];
+    }[];
+  };
+  progress: PracticeProgress;
+  onDelete: (stId: string, attemptId: string) => void;
+}) {
+  /* Collect all attempts across all subtopics with subtopic name */
+  const allAttempts: {
+    subtopicName: string;
+    stId: string;
+    attempt: PracticeAttempt;
+  }[] = [];
+  subject.topics.forEach((topic) => {
+    topic.subtopics.forEach((st) => {
+      const entry = progress[st.id];
+      if (entry) {
+        entry.attempts.forEach((attempt) => {
+          allAttempts.push({ subtopicName: st.name, stId: st.id, attempt });
+        });
+      }
+    });
+  });
+
+  /* Sort by date descending */
+  allAttempts.sort((a, b) => b.attempt.date.localeCompare(a.attempt.date));
+
+  if (allAttempts.length === 0) {
+    return (
+      <div
+        className="text-center py-10 rounded-2xl"
+        style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
+      >
+        <History
+          className="w-8 h-8 mx-auto mb-2 opacity-30"
+          style={{ color: GOLD }}
+        />
+        <p className="text-sm" style={{ color: MUTED }}>
+          No attempts logged yet for this subject.
+        </p>
+      </div>
+    );
+  }
+
+  /* Group by date (day) */
+  const byDay: Record<string, typeof allAttempts> = {};
+  allAttempts.forEach((item) => {
+    const day = format(new Date(item.attempt.date), "MMMM d, yyyy");
+    if (!byDay[day]) byDay[day] = [];
+    byDay[day].push(item);
+  });
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs" style={{ color: MUTED }}>
+        {allAttempts.length} total attempt(s) across all subtopics — newest
+        first.
+      </p>
+      {Object.entries(byDay).map(([day, items]) => (
+        <div key={day}>
+          <p
+            className="text-[10px] font-bold uppercase tracking-wide mb-2"
+            style={{ color: MUTED }}
+          >
+            {day}
+          </p>
+          <div className="space-y-2">
+            {items.map(({ subtopicName, stId, attempt }) => {
+              const conceptCfg = CONCEPT_CFG[attempt.concept];
+              const speedCfg = SPEED_CFG[attempt.speed];
+              return (
+                <div
+                  key={attempt.id}
+                  className="rounded-xl px-4 py-3"
+                  style={{ background: CARD, border: `1px solid ${BORDER}` }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <p
+                        className="text-xs font-semibold mb-1.5"
+                        style={{ color: CHARCOAL }}
+                      >
+                        {subtopicName}
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className="text-sm font-bold font-serif"
+                          style={{ color: getAccuracyColor(attempt.accuracy) }}
+                        >
+                          {attempt.accuracy}%
+                        </span>
+                        <span
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: conceptCfg.bg,
+                            color: conceptCfg.color,
+                          }}
+                        >
+                          {conceptCfg.emoji} {conceptCfg.label}
+                        </span>
+                        <span
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: speedCfg.bg,
+                            color: speedCfg.color,
+                          }}
+                        >
+                          {speedCfg.emoji} {speedCfg.label}
+                        </span>
+                        <span className="text-[10px]" style={{ color: MUTED }}>
+                          {format(new Date(attempt.date), "h:mm a")}
+                        </span>
+                      </div>
+                      {attempt.note && (
+                        <p
+                          className="text-[10px] mt-1 italic"
+                          style={{ color: MUTED }}
+                        >
+                          "{attempt.note}"
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(stId, attempt.id)}
+                      className="p-1 rounded-lg opacity-40 hover:opacity-100 transition-opacity flex-shrink-0"
+                      style={{ color: "#C0392B" }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Subtopic Row ─────────────────────── */
 function SubtopicRow({
   stId,
   stName,
@@ -453,8 +547,6 @@ function SubtopicRow({
   onDelete: (attemptId: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-
   const latest = getLatest(entry);
   const attemptCount = entry?.attempts.length ?? 0;
   const conceptCfg = latest ? CONCEPT_CFG[latest.concept] : null;
@@ -468,7 +560,6 @@ function SubtopicRow({
         border: `1px solid ${latest ? OLIVE : BORDER}33`,
       }}
     >
-      {/* Row header */}
       <div className="flex items-center gap-3 px-4 py-2.5">
         <div
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -477,8 +568,6 @@ function SubtopicRow({
         <span className="flex-1 text-sm" style={{ color: CHARCOAL }}>
           {stName}
         </span>
-
-        {/* Latest stats */}
         {latest && (
           <div className="flex items-center gap-2 flex-shrink-0">
             <span
@@ -499,25 +588,19 @@ function SubtopicRow({
             >
               {speedCfg!.emoji}
             </span>
-            {attemptCount > 1 && (
-              <button
-                type="button"
-                onClick={() => setShowHistory(!showHistory)}
+            {attemptCount > 0 && (
+              <span
                 className="text-[10px] px-1.5 py-0.5 rounded-full"
                 style={{ background: `${GOLD}22`, color: DARK }}
               >
-                {attemptCount} attempts
-              </button>
+                {attemptCount} attempt{attemptCount > 1 ? "s" : ""}
+              </span>
             )}
           </div>
         )}
-
         <button
           type="button"
-          onClick={() => {
-            setShowForm(!showForm);
-            setShowHistory(false);
-          }}
+          onClick={() => setShowForm(!showForm)}
           className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all hover:scale-110"
           style={{
             background: showForm ? GOLD : `${GOLD}22`,
@@ -527,35 +610,25 @@ function SubtopicRow({
           <Plus className="w-3 h-3" />
         </button>
       </div>
-
       {showForm && (
         <div className="px-4 pb-3">
           <AttemptForm
             onSave={(attempt) => {
               onAdd(attempt);
               setShowForm(false);
-              setShowHistory(true);
             }}
             onCancel={() => setShowForm(false)}
           />
-        </div>
-      )}
-
-      {showHistory && entry && entry.attempts.length > 0 && (
-        <div className="px-4 pb-3">
-          <AttemptHistory attempts={entry.attempts} onDelete={onDelete} />
         </div>
       )}
     </div>
   );
 }
 
-/* ─── Topic Practice Block ─────────────── */
+/* ─── Topic Block ──────────────────────── */
 function TopicBlock({
   topic,
-  subjectId,
   progress,
-  userId,
   onUpdate,
 }: {
   topic: {
@@ -563,15 +636,12 @@ function TopicBlock({
     name: string;
     subtopics: { id: string; name: string }[];
   };
-  subjectId: string;
   progress: PracticeProgress;
-  userId: string;
   onUpdate: (next: PracticeProgress) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showTopicForm, setShowTopicForm] = useState(false);
 
-  /* Stats across all subtopics */
   const subtopicEntries = topic.subtopics.map((st) => progress[st.id]);
   const attempted = subtopicEntries.filter(
     (e) => e && e.attempts.length > 0,
@@ -582,8 +652,6 @@ function TopicBlock({
   const avgAcc = latestAccs.length
     ? Math.round(latestAccs.reduce((s, v) => s + v, 0) / latestAccs.length)
     : null;
-
-  /* Worst concept/speed across subtopics */
   const conceptOrder: ConceptLevel[] = ["weak", "developing", "strong"];
   const speedOrder: SpeedLevel[] = ["slow", "moderate", "fast"];
   const latestConcepts = subtopicEntries
@@ -608,12 +676,12 @@ function TopicBlock({
     const next = { ...progress };
     topic.subtopics.forEach((st) => {
       const prev = next[st.id] ?? { attempts: [] };
-      const newAttempt: PracticeAttempt = {
-        id: `${Date.now()}_${st.id}`,
-        date: now,
-        ...attempt,
+      next[st.id] = {
+        attempts: [
+          ...prev.attempts,
+          { id: `${Date.now()}_${st.id}`, date: now, ...attempt },
+        ],
       };
-      next[st.id] = { attempts: [...prev.attempts, newAttempt] };
     });
     onUpdate(next);
   }
@@ -624,14 +692,14 @@ function TopicBlock({
   ) {
     const now = new Date().toISOString();
     const prev = progress[stId] ?? { attempts: [] };
-    const newAttempt: PracticeAttempt = {
-      id: `${Date.now()}_${stId}`,
-      date: now,
-      ...attempt,
-    };
     onUpdate({
       ...progress,
-      [stId]: { attempts: [...prev.attempts, newAttempt] },
+      [stId]: {
+        attempts: [
+          ...prev.attempts,
+          { id: `${Date.now()}_${stId}`, date: now, ...attempt },
+        ],
+      },
     });
   }
 
@@ -648,12 +716,10 @@ function TopicBlock({
       className="rounded-2xl overflow-hidden"
       style={{ background: CARD, border: `1px solid ${BORDER}` }}
     >
-      {/* Topic header */}
       <div
         className="flex items-center gap-2 px-4 py-3"
         style={{ background: expanded ? `${GOLD}06` : CREAM }}
       >
-        {/* Expand */}
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
@@ -677,8 +743,6 @@ function TopicBlock({
             {attempted}/{topic.subtopics.length} practiced
           </span>
         </button>
-
-        {/* Summary badges */}
         {avgAcc !== null && (
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span
@@ -711,8 +775,6 @@ function TopicBlock({
             )}
           </div>
         )}
-
-        {/* Add for whole topic */}
         <button
           type="button"
           onClick={() => {
@@ -730,17 +792,10 @@ function TopicBlock({
         </button>
       </div>
 
-      {/* Topic-level form */}
       {showTopicForm && (
         <div className="px-4 pb-3" style={{ background: CREAM }}>
-          <p
-            className="text-[10px] text-muted pt-2 pb-1"
-            style={{ color: MUTED }}
-          >
-            This will log the same attempt for all {topic.subtopics.length}{" "}
-            subtopics.
-          </p>
           <AttemptForm
+            label={`Logging for all ${topic.subtopics.length} subtopics in "${topic.name}"`}
             onSave={(attempt) => {
               addTopicAttempt(attempt);
               setShowTopicForm(false);
@@ -750,7 +805,6 @@ function TopicBlock({
         </div>
       )}
 
-      {/* Subtopics */}
       {expanded && (
         <div
           className="px-4 pb-4 space-y-2"
@@ -778,6 +832,290 @@ function TopicBlock({
   );
 }
 
+/* ─── Subject Block ────────────────────── */
+function SubjectBlock({
+  subject,
+  progress,
+  onUpdate,
+  totalSubs,
+}: {
+  subject: {
+    id: string;
+    name: string;
+    jamOnly?: boolean;
+    netOnly?: boolean;
+    topics: {
+      id: string;
+      name: string;
+      subtopics: { id: string; name: string }[];
+    }[];
+  };
+  progress: PracticeProgress;
+  onUpdate: (next: PracticeProgress) => void;
+  totalSubs: number;
+}) {
+  const [activeTab, setActiveTab] = useState<"overview" | "history">(
+    "overview",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const [showSubjectForm, setShowSubjectForm] = useState(false);
+
+  const allSubtopicsInSubj = subject.topics.flatMap((t) => t.subtopics);
+  const practicedInSubj = allSubtopicsInSubj.filter(
+    (st) => (progress[st.id]?.attempts.length ?? 0) > 0,
+  ).length;
+  const latestAccsInSubj = allSubtopicsInSubj
+    .map((st) => getLatest(progress[st.id])?.accuracy ?? null)
+    .filter((v) => v !== null) as number[];
+  const avgAccInSubj = latestAccsInSubj.length
+    ? Math.round(
+        latestAccsInSubj.reduce((s, v) => s + v, 0) / latestAccsInSubj.length,
+      )
+    : null;
+
+  /* Mark entire subject as 100% Strong Fast */
+  function markSubjectBest() {
+    const now = new Date().toISOString();
+    const next = { ...progress };
+    allSubtopicsInSubj.forEach((st) => {
+      const prev = next[st.id] ?? { attempts: [] };
+      next[st.id] = {
+        attempts: [
+          ...prev.attempts,
+          {
+            id: `${Date.now()}_${st.id}`,
+            date: now,
+            accuracy: 100,
+            concept: "strong" as ConceptLevel,
+            speed: "fast" as SpeedLevel,
+            note: "Marked complete from subject level",
+          },
+        ],
+      };
+    });
+    onUpdate(next);
+  }
+
+  function deleteAttempt(stId: string, attemptId: string) {
+    const prev = progress[stId] ?? { attempts: [] };
+    onUpdate({
+      ...progress,
+      [stId]: { attempts: prev.attempts.filter((a) => a.id !== attemptId) },
+    });
+  }
+
+  function addSubjectAttempt(attempt: Omit<PracticeAttempt, "id" | "date">) {
+    const now = new Date().toISOString();
+    const next = { ...progress };
+    allSubtopicsInSubj.forEach((st) => {
+      const prev = next[st.id] ?? { attempts: [] };
+      next[st.id] = {
+        attempts: [
+          ...prev.attempts,
+          { id: `${Date.now()}_${st.id}`, date: now, ...attempt },
+        ],
+      };
+    });
+    onUpdate(next);
+    setShowSubjectForm(false);
+  }
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: CARD,
+        border: `1px solid ${BORDER}`,
+        boxShadow: "0 2px 8px rgba(61,53,48,.05)",
+      }}
+    >
+      {/* Subject header */}
+      <div
+        className="flex items-center gap-3 px-6 py-4"
+        style={{ background: isOpen ? `${SIDEBAR}08` : CARD }}
+      >
+        {/* Expand toggle */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex flex-1 items-center gap-3 text-left"
+        >
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
+              <BookOpen
+                className="w-4 h-4 flex-shrink-0"
+                style={{ color: GOLD }}
+              />
+              <span
+                className="font-serif text-base font-bold"
+                style={{ color: CHARCOAL }}
+              >
+                {subject.name}
+              </span>
+              {subject.jamOnly && (
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: `${GOLD}22`, color: SIDEBAR }}
+                >
+                  JAM only
+                </span>
+              )}
+              {subject.netOnly && (
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
+                >
+                  NET / GATE
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 pl-7">
+              <div
+                className="flex-1 h-1.5 rounded-full overflow-hidden"
+                style={{ background: BORDER }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${allSubtopicsInSubj.length ? Math.round((practicedInSubj / allSubtopicsInSubj.length) * 100) : 0}%`,
+                    background: GOLD,
+                  }}
+                />
+              </div>
+              <span
+                className="text-xs font-semibold flex-shrink-0"
+                style={{ color: MUTED }}
+              >
+                {practicedInSubj}/{allSubtopicsInSubj.length} practiced
+                {avgAccInSubj !== null && (
+                  <span
+                    className="ml-2"
+                    style={{ color: getAccuracyColor(avgAccInSubj) }}
+                  >
+                    · {avgAccInSubj}% avg
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+          {isOpen ? (
+            <ChevronDown
+              className="w-4 h-4 flex-shrink-0"
+              style={{ color: MUTED }}
+            />
+          ) : (
+            <ChevronRight
+              className="w-4 h-4 flex-shrink-0"
+              style={{ color: MUTED }}
+            />
+          )}
+        </button>
+
+        {/* Subject-level quick mark button */}
+        <button
+          type="button"
+          onClick={() => {
+            markSubjectBest();
+            setIsOpen(true);
+            setActiveTab("history");
+          }}
+          title="Mark entire subject as 100% Strong Fast"
+          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-semibold transition-all hover:scale-105"
+          style={{
+            background: `${OLIVE}22`,
+            color: OLIVE,
+            border: `1px solid ${OLIVE}44`,
+          }}
+        >
+          🟢⚡ 100%
+        </button>
+
+        {/* Log custom attempt for whole subject */}
+        <button
+          type="button"
+          onClick={() => {
+            setShowSubjectForm(!showSubjectForm);
+            setIsOpen(true);
+          }}
+          title="Log custom attempt for entire subject"
+          className="flex-shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-semibold transition-all"
+          style={{
+            background: showSubjectForm ? GOLD : `${GOLD}22`,
+            color: showSubjectForm ? "#fff" : DARK,
+          }}
+        >
+          <Plus className="w-3 h-3" /> Subject
+        </button>
+      </div>
+
+      {/* Subject-level custom form */}
+      {showSubjectForm && (
+        <div
+          className="px-6 pb-4"
+          style={{ background: CREAM, borderTop: `1px solid ${BORDER}` }}
+        >
+          <AttemptForm
+            label={`Logging for all ${allSubtopicsInSubj.length} subtopics in "${subject.name}"`}
+            onSave={addSubjectAttempt}
+            onCancel={() => setShowSubjectForm(false)}
+          />
+        </div>
+      )}
+
+      {/* Tabs + content */}
+      {isOpen && (
+        <div style={{ borderTop: `1px solid ${BORDER}` }}>
+          {/* Tab pills */}
+          <div className="flex gap-2 px-5 pt-4">
+            {(["overview", "history"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="px-4 py-1.5 rounded-full text-xs font-semibold transition-all"
+                style={
+                  activeTab === tab
+                    ? { background: DARK, color: CREAM }
+                    : { background: `${BORDER}88`, color: MUTED }
+                }
+              >
+                {tab === "overview" ? "📋 Overview" : "📅 History"}
+              </button>
+            ))}
+          </div>
+
+          {/* Overview tab */}
+          {activeTab === "overview" && (
+            <div className="px-5 pb-5 pt-3 space-y-3">
+              <p className="text-xs" style={{ color: MUTED }}>
+                Click "+ Topic" on any topic to log for all its subtopics, or
+                expand to log individually.
+              </p>
+              {subject.topics.map((topic) => (
+                <TopicBlock
+                  key={topic.id}
+                  topic={topic}
+                  progress={progress}
+                  onUpdate={onUpdate}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* History tab */}
+          {activeTab === "history" && (
+            <div className="px-5 pb-5 pt-3">
+              <SubjectHistory
+                subject={subject}
+                progress={progress}
+                onDelete={deleteAttempt}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main Component ───────────────────── */
 export default function QuestionPractice() {
   const { user } = useAuth();
@@ -788,7 +1126,6 @@ export default function QuestionPractice() {
   const [progress, setProgress] = useState<PracticeProgress>(() =>
     loadProgress(userId),
   );
-  const [expandedSubj, setExpandedSubj] = useState<Record<string, boolean>>({});
   const [filterSubject, setFilterSubject] = useState<string>("all");
 
   const filteredSyllabus = SYLLABUS.filter(
@@ -808,7 +1145,6 @@ export default function QuestionPractice() {
     saveProgress(userId, next);
   }
 
-  /* Overall stats */
   const allSubtopics = filteredSyllabus.flatMap((s) =>
     s.topics.flatMap((t) => t.subtopics),
   );
@@ -829,7 +1165,6 @@ export default function QuestionPractice() {
       )
     : null;
 
-  /* Weak areas */
   const weakAreas = allSubtopics
     .map((st) => ({ ...st, latest: getLatest(progress[st.id]) }))
     .filter(
@@ -909,49 +1244,21 @@ export default function QuestionPractice() {
         className="flex flex-wrap gap-4 px-4 py-3 rounded-2xl"
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
       >
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-3.5 h-3.5" style={{ color: GOLD }} />
-          <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>
-            Accuracy %
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {(
-            Object.entries(CONCEPT_CFG) as [
-              ConceptLevel,
-              (typeof CONCEPT_CFG)[ConceptLevel],
-            ][]
-          ).map(([, cfg]) => (
-            <span
-              key={cfg.label}
-              className="text-xs"
-              style={{ color: cfg.color }}
-            >
-              {cfg.emoji} {cfg.label}
-            </span>
-          ))}
-          <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>
-            Concept
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {(
-            Object.entries(SPEED_CFG) as [
-              SpeedLevel,
-              (typeof SPEED_CFG)[SpeedLevel],
-            ][]
-          ).map(([, cfg]) => (
-            <span
-              key={cfg.label}
-              className="text-xs"
-              style={{ color: cfg.color }}
-            >
-              {cfg.emoji} {cfg.label}
-            </span>
-          ))}
-          <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>
-            Speed
-          </span>
+        <div>
+          <p
+            className="text-[10px] font-bold uppercase tracking-wide mb-1"
+            style={{ color: MUTED }}
+          >
+            How to use
+          </p>
+          <p className="text-xs" style={{ color: CHARCOAL }}>
+            Click <strong>🟢⚡ 100%</strong> on a subject to mark everything
+            Strong/Fast/100% instantly. Click <strong>+ Subject</strong> to log
+            a custom attempt for the whole subject. Click{" "}
+            <strong>+ Topic</strong> inside for topic-level, or expand to log
+            per subtopic. Click <strong>📅 History</strong> tab to see all
+            attempts for that subject.
+          </p>
         </div>
       </div>
 
@@ -1027,137 +1334,16 @@ export default function QuestionPractice() {
         ))}
       </div>
 
-      {/* Subjects */}
-      {displaySyllabus.map((subject) => {
-        const allSubtopicsInSubj = subject.topics.flatMap((t) => t.subtopics);
-        const practicedInSubj = allSubtopicsInSubj.filter(
-          (st) => (progress[st.id]?.attempts.length ?? 0) > 0,
-        ).length;
-        const latestAccsInSubj = allSubtopicsInSubj
-          .map((st) => getLatest(progress[st.id])?.accuracy ?? null)
-          .filter((v) => v !== null) as number[];
-        const avgAccInSubj = latestAccsInSubj.length
-          ? Math.round(
-              latestAccsInSubj.reduce((s, v) => s + v, 0) /
-                latestAccsInSubj.length,
-            )
-          : null;
-        const isOpen = expandedSubj[subject.id] ?? false;
-
-        return (
-          <div
-            key={subject.id}
-            className="rounded-2xl overflow-hidden"
-            style={{
-              background: CARD,
-              border: `1px solid ${BORDER}`,
-              boxShadow: "0 2px 8px rgba(61,53,48,.05)",
-            }}
-          >
-            {/* Subject header */}
-            <button
-              onClick={() =>
-                setExpandedSubj((p) => ({ ...p, [subject.id]: !p[subject.id] }))
-              }
-              className="w-full flex items-center gap-4 px-6 py-4 text-left"
-              style={{ background: isOpen ? `${SIDEBAR}08` : CARD }}
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <BookOpen
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: GOLD }}
-                  />
-                  <span
-                    className="font-serif text-base font-bold"
-                    style={{ color: CHARCOAL }}
-                  >
-                    {subject.name}
-                  </span>
-                  {subject.jamOnly && (
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: `${GOLD}22`, color: SIDEBAR }}
-                    >
-                      JAM only
-                    </span>
-                  )}
-                  {subject.netOnly && (
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
-                    >
-                      NET / GATE
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 pl-7">
-                  <div
-                    className="flex-1 h-1.5 rounded-full overflow-hidden"
-                    style={{ background: BORDER }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${totalSubs ? Math.round((practicedInSubj / allSubtopicsInSubj.length) * 100) : 0}%`,
-                        background: GOLD,
-                      }}
-                    />
-                  </div>
-                  <span
-                    className="text-xs font-semibold flex-shrink-0"
-                    style={{ color: MUTED }}
-                  >
-                    {practicedInSubj}/{allSubtopicsInSubj.length} practiced
-                    {avgAccInSubj !== null && (
-                      <span
-                        className="ml-2"
-                        style={{ color: getAccuracyColor(avgAccInSubj) }}
-                      >
-                        · {avgAccInSubj}% avg
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </div>
-              {isOpen ? (
-                <ChevronDown
-                  className="w-4 h-4 flex-shrink-0"
-                  style={{ color: MUTED }}
-                />
-              ) : (
-                <ChevronRight
-                  className="w-4 h-4 flex-shrink-0"
-                  style={{ color: MUTED }}
-                />
-              )}
-            </button>
-
-            {/* Topics */}
-            {isOpen && (
-              <div
-                className="px-4 pb-4 space-y-3"
-                style={{ borderTop: `1px solid ${BORDER}` }}
-              >
-                <p className="text-xs pt-3" style={{ color: MUTED }}>
-                  Click "+ Topic" to log practice for all subtopics at once, or
-                  expand a topic to log individually.
-                </p>
-                {subject.topics.map((topic) => (
-                  <TopicBlock
-                    key={topic.id}
-                    topic={topic}
-                    subjectId={subject.id}
-                    progress={progress}
-                    userId={userId}
-                    onUpdate={updateProgress}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {/* Subject blocks */}
+      {displaySyllabus.map((subject) => (
+        <SubjectBlock
+          key={subject.id}
+          subject={subject}
+          progress={progress}
+          onUpdate={updateProgress}
+          totalSubs={totalSubs}
+        />
+      ))}
 
       {practiced === 0 && (
         <div
@@ -1172,8 +1358,8 @@ export default function QuestionPractice() {
             No practice logged yet
           </p>
           <p className="text-xs mt-1" style={{ color: MUTED }}>
-            Expand any subject → topic → click + to log your first practice
-            attempt.
+            Click 🟢⚡ 100% on any subject to mark it done instantly, or use +
+            Subject / + Topic to log custom attempts.
           </p>
         </div>
       )}
@@ -1181,7 +1367,6 @@ export default function QuestionPractice() {
   );
 }
 
-/* ─── Inline alert icon ─────────────────── */
 function AlertIcon() {
   return (
     <svg
