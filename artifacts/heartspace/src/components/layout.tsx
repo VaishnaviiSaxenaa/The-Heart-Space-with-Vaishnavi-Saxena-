@@ -21,6 +21,7 @@ import {
   Users,
   GraduationCap,
   Map,
+  PenLine,
 } from "lucide-react";
 
 const CREAM = "#FAF7F2";
@@ -81,8 +82,8 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         href: "/syllabus",
       },
       {
-        icon: FileText,
-        label: "Assignments",
+        icon: PenLine,
+        label: "Question Practice",
         key: "assignments",
         href: "/assignments",
       },

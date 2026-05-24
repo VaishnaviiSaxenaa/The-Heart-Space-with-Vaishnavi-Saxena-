@@ -15,7 +15,7 @@ import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import Sessions from "./pages/sessions";
 import Syllabus from "./pages/syllabus";
-import Assignments from "./pages/assignments";
+import QuestionPractice from "./pages/assignments";
 import DailyTracker from "./pages/daily-tracker";
 import StudentDetail from "./pages/student-detail";
 import Roadmap from "./pages/roadmap";
@@ -81,8 +81,6 @@ function ProtectedRoute({
   return <Component />;
 }
 
-/* Redirects student to exam-select if they haven't chosen yet.
-   HeartSpace skips exam selection — counselling only. */
 function StudentRoute({
   component: Component,
 }: {
@@ -147,7 +145,7 @@ function Router() {
           <StudentRoute component={Syllabus} />
         </Route>
         <Route path="/assignments">
-          <StudentRoute component={Assignments} />
+          <StudentRoute component={QuestionPractice} />
         </Route>
         <Route path="/roadmap">
           <StudentRoute component={Roadmap} />
