@@ -825,6 +825,48 @@ function runAIEngine(roadmap: Roadmap): AICalc {
   };
 }
 
+/* ─── Tick Button ──────────────────────── */
+function TickButton({
+  allDone,
+  anyDone,
+  onClick,
+  size = "sm",
+}: {
+  allDone: boolean;
+  anyDone: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  size?: "sm" | "lg";
+}) {
+  const dim = size === "lg" ? "w-7 h-7" : "w-6 h-6";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={allDone ? "Unmark all" : "Mark all as done"}
+      className={`flex-shrink-0 ${dim} rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110`}
+      style={{
+        borderColor: allDone ? OLIVE : anyDone ? GOLD : BORDER,
+        background: allDone ? OLIVE : "transparent",
+        boxShadow: allDone ? `0 0 0 3px ${OLIVE}22` : "none",
+      }}
+    >
+      {allDone ? (
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+          <path
+            d="M1 4L3.5 6.5L9 1"
+            stroke="white"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : anyDone ? (
+        <div className="w-2 h-2 rounded-full" style={{ background: GOLD }} />
+      ) : null}
+    </button>
+  );
+}
+
 /* ─── My Progress Tab ──────────────────── */
 function MyProgressTab({
   userId,
@@ -899,7 +941,7 @@ function MyProgressTab({
   }
 
   /* Toggle all subtopics in a topic */
-  function toggleTopic(subtopics: { id: string }[]) {
+  function toggleSubtopics(subtopics: { id: string }[]) {
     const allDone = subtopics.every((st) => progress[st.id]?.status === "done");
     const now = new Date().toISOString();
     const updated = { ...progress };
@@ -1076,64 +1118,86 @@ function MyProgressTab({
                 style={{ background: CARD, border: `1px solid ${BORDER}` }}
               >
                 {/* Subject header */}
-                <button
-                  onClick={() =>
-                    setExpandedSubj((p) => ({
-                      ...p,
-                      [subject.id]: !p[subject.id],
-                    }))
-                  }
-                  className="w-full flex items-center gap-4 px-5 py-4 text-left"
+                <div
+                  className="flex items-center gap-3 px-4"
                   style={{ background: isOpen ? `${GOLD}08` : CARD }}
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span
-                        className="font-semibold text-sm"
-                        style={{ color: CHARCOAL }}
-                      >
-                        {subject.name}
-                      </span>
-                      {pct === 100 && (
+                  <TickButton
+                    allDone={allSubtopics.every(
+                      (st) => progress[st.id]?.status === "done",
+                    )}
+                    anyDone={allSubtopics.some(
+                      (st) =>
+                        progress[st.id]?.status === "done" ||
+                        progress[st.id]?.status === "in_progress",
+                    )}
+                    size="lg"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSubtopics(allSubtopics);
+                    }}
+                  />
+                  <button
+                    onClick={() =>
+                      setExpandedSubj((p) => ({
+                        ...p,
+                        [subject.id]: !p[subject.id],
+                      }))
+                    }
+                    className="flex-1 flex items-center gap-4 py-4 text-left"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1.5">
                         <span
-                          className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                          style={{ background: `${OLIVE}22`, color: OLIVE }}
+                          className="font-semibold text-sm"
+                          style={{ color: CHARCOAL }}
                         >
-                          ✓ Complete
+                          {subject.name}
                         </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="flex-1 h-1.5 rounded-full overflow-hidden"
-                        style={{ background: BORDER }}
-                      >
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${pct}%`,
-                            background: pct === 100 ? OLIVE : GOLD,
-                          }}
-                        />
+                        {pct === 100 && (
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                            style={{ background: `${OLIVE}22`, color: OLIVE }}
+                          >
+                            ✓ Complete
+                          </span>
+                        )}
                       </div>
-                      <span
-                        className="text-xs flex-shrink-0"
-                        style={{ color: pct === 100 ? OLIVE : MUTED }}
-                      >
-                        {pct}% · {done}/{total}
-                        {inProg > 0 && ` · ${inProg} in progress`}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex-1 h-1.5 rounded-full overflow-hidden"
+                          style={{ background: BORDER }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${pct}%`,
+                              background: pct === 100 ? OLIVE : GOLD,
+                            }}
+                          />
+                        </div>
+                        <span
+                          className="text-xs flex-shrink-0"
+                          style={{ color: pct === 100 ? OLIVE : MUTED }}
+                        >
+                          {pct}% · {done}/{total}
+                          {inProg > 0 && ` · ${inProg} in progress`}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  {isOpen ? (
-                    <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
-                  ) : (
-                    <ChevronRight
-                      className="w-4 h-4"
-                      style={{ color: MUTED }}
-                    />
-                  )}
-                </button>
+                    {isOpen ? (
+                      <ChevronDown
+                        className="w-4 h-4"
+                        style={{ color: MUTED }}
+                      />
+                    ) : (
+                      <ChevronRight
+                        className="w-4 h-4"
+                        style={{ color: MUTED }}
+                      />
+                    )}
+                  </button>
+                </div>
 
                 {/* Topics */}
                 {isOpen && (
@@ -1168,51 +1232,14 @@ function MyProgressTab({
                             }}
                           >
                             {/* Topic tick button */}
-                            <button
-                              type="button"
-                              onClick={() => toggleTopic(topic.subtopics)}
-                              title={
-                                topicAllDone
-                                  ? "Unmark all subtopics"
-                                  : "Mark all subtopics as done"
-                              }
-                              className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110"
-                              style={{
-                                borderColor: topicAllDone
-                                  ? OLIVE
-                                  : topicInProg
-                                    ? GOLD
-                                    : BORDER,
-                                background: topicAllDone
-                                  ? OLIVE
-                                  : "transparent",
-                                boxShadow: topicAllDone
-                                  ? `0 0 0 3px ${OLIVE}22`
-                                  : "none",
+                            <TickButton
+                              allDone={topicAllDone}
+                              anyDone={topicInProg}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSubtopics(topic.subtopics);
                               }}
-                            >
-                              {topicAllDone ? (
-                                <svg
-                                  width="10"
-                                  height="8"
-                                  viewBox="0 0 10 8"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M1 4L3.5 6.5L9 1"
-                                    stroke="white"
-                                    strokeWidth="1.6"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              ) : topicInProg ? (
-                                <div
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ background: GOLD }}
-                                />
-                              ) : null}
-                            </button>
+                            />
 
                             {/* Topic expand button */}
                             <button

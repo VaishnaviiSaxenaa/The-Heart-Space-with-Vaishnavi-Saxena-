@@ -743,7 +743,7 @@ function TopicBlock({
             {attempted}/{topic.subtopics.length} practiced
           </span>
         </button>
-        {avgAcc !== null && (
+        {attempted > 0 && avgAcc !== null && (
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span
               className="text-xs font-bold font-serif"
