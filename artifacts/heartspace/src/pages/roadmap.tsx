@@ -344,29 +344,25 @@ const NET_WEEK_BREAKDOWN: Record<string, string[]> = {
   cov: ["Euler-Lagrange, Brachistochrone, Geodesics + Assignment"],
 };
 
-/* ─── Get syllabus % per subject ────────── */
+/* ─── Syllabus % per subject ─────────────── */
 function getSyllabusPercents(
   syllabusProgress: SyllabusProgress,
   examType: string,
 ): Record<string, number> {
   const isJAM = examType === "JAM";
   const result: Record<string, number> = {};
-
   SYLLABUS.forEach((subject) => {
     if (subject.netOnly && isJAM) return;
     if (subject.jamOnly && !isJAM) return;
-
     const subtopics = subject.topics
       .filter((t) => !(t.netOnly && isJAM))
       .flatMap((t) => t.subtopics.filter((st: any) => !(st.netOnly && isJAM)));
-
     const total = subtopics.length;
     const done = subtopics.filter(
       (st) => syllabusProgress[st.id]?.status === "done",
     ).length;
     result[subject.id] = total ? Math.round((done / total) * 100) : 0;
   });
-
   return result;
 }
 
@@ -544,7 +540,6 @@ function generateSmartSchedule(
   const targetWeeks = targetMonths * 4;
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
 
-  /* Calculate adjusted weeks per subject based on syllabus % */
   const subjectsWithAdjusted = allSubjects.map((s) => {
     const pct = syllabusPercs[s.syllabusId] ?? 0;
     const remaining = Math.max(0, 1 - pct / 100);
@@ -552,11 +547,10 @@ function generateSmartSchedule(
     const adjAssign = pct >= 100 ? 0 : s.assignmentWeeks;
     const adjRevision =
       adjStudy > 0 ? Math.ceil(adjStudy * (revisionPercent / 100)) : 0;
-    const totalAdj = adjStudy + adjAssign + adjRevision;
     return {
       ...s,
       syllabusPercent: pct,
-      adjustedWeeks: totalAdj,
+      adjustedWeeks: adjStudy + adjAssign + adjRevision,
       adjStudy,
       adjAssign,
       adjRevision,
@@ -571,7 +565,6 @@ function generateSmartSchedule(
   const isAchievable = targetWeeks >= totalWeeksRequired;
   const minimumMonthsNeeded = Math.ceil(totalWeeksRequired / 4);
 
-  /* Subject forecasts */
   let weeksUsed = 0;
   const subjectForecasts: SubjectForecast[] = subjectsWithAdjusted.map((s) => {
     const weeksNeeded = s.adjustedWeeks;
@@ -596,25 +589,19 @@ function generateSmartSchedule(
     };
   });
 
-  /* Week-by-week schedule — skip fully done subjects */
   const weeks: ScheduleWeek[] = [];
   let weekNumber = 1;
   const start = parseISO(startDate);
 
   subjectsWithAdjusted.forEach((subject) => {
-    if (subject.adjustedWeeks === 0) return; /* fully done in syllabus */
+    if (subject.adjustedWeeks === 0) return;
     const breakdown = weekBreakdown[subject.id] ?? [];
-    const studyCount = subject.adjStudy;
-    const hasAssign = subject.adjAssign > 0;
-    const revCount = subject.adjRevision;
-
-    /* Label if partially done */
     const partialLabel =
       subject.syllabusPercent > 0 && subject.syllabusPercent < 100
         ? ` (continuing from ${subject.syllabusPercent}% done)`
         : "";
 
-    for (let w = 0; w < studyCount; w++) {
+    for (let w = 0; w < subject.adjStudy; w++) {
       weeks.push({
         weekNumber,
         subject: subject.name,
@@ -628,8 +615,7 @@ function generateSmartSchedule(
       });
       weekNumber++;
     }
-
-    if (hasAssign) {
+    if (subject.adjAssign > 0) {
       weeks.push({
         weekNumber,
         subject: subject.name,
@@ -641,8 +627,7 @@ function generateSmartSchedule(
       });
       weekNumber++;
     }
-
-    for (let r = 0; r < revCount; r++) {
+    for (let r = 0; r < subject.adjRevision; r++) {
       weeks.push({
         weekNumber,
         subject: subject.name,
@@ -675,10 +660,6 @@ function generateSmartSchedule(
     weekNumber++;
   }
 
-  const skipped = subjectsWithAdjusted.filter(
-    (s) => s.adjustedWeeks === 0,
-  ).length;
-
   return {
     hoursPerDay,
     daysPerWeek,
@@ -694,7 +675,9 @@ function generateSmartSchedule(
     subjectsFullyCompletable: subjectForecasts.filter((s) => s.canComplete)
       .length,
     totalSubjects: allSubjects.length,
-    completedSubjectsSkipped: skipped,
+    completedSubjectsSkipped: subjectsWithAdjusted.filter(
+      (s) => s.adjustedWeeks === 0,
+    ).length,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -850,8 +833,10 @@ function MyProgressTab({
   userId: string;
   examType: string;
 }) {
-  const syllabusProgress = loadSyllabusProgress(userId);
   const isJAM = examType === "JAM";
+  const [progress, setProgress] = useState<SyllabusProgress>(() =>
+    loadSyllabusProgress(userId),
+  );
   const [expandedSubj, setExpandedSubj] = useState<Record<string, boolean>>({});
   const [expandedTopic, setExpandedTopic] = useState<Record<string, boolean>>(
     {},
@@ -873,23 +858,69 @@ function MyProgressTab({
     (a, s) => a + s.topics.reduce((b, t) => b + t.subtopics.length, 0),
     0,
   );
-  const doneSubs = Object.values(syllabusProgress).filter(
+  const doneSubs = Object.values(progress).filter(
     (v) => v.status === "done",
   ).length;
-  const inProgSubs = Object.values(syllabusProgress).filter(
+  const inProgSubs = Object.values(progress).filter(
     (v) => v.status === "in_progress",
   ).length;
   const overallPct = totalSubs ? Math.round((doneSubs / totalSubs) * 100) : 0;
 
+  /* Save to localStorage and update state */
+  function persistProgress(next: SyllabusProgress) {
+    setProgress(next);
+    try {
+      localStorage.setItem(`hs_syllabus_${userId}`, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /* Cycle a single subtopic */
+  function cycleSubtopic(stId: string) {
+    const prev = progress[stId] ?? { status: "not_started" as const };
+    const now = new Date().toISOString();
+    const nextStatus: Record<string, "not_started" | "in_progress" | "done"> = {
+      not_started: "in_progress",
+      in_progress: "done",
+      done: "not_started",
+    };
+    const newStatus = nextStatus[prev.status] as
+      | "not_started"
+      | "in_progress"
+      | "done";
+    persistProgress({
+      ...progress,
+      [stId]: {
+        status: newStatus,
+        doneAt: newStatus === "done" ? (prev.doneAt ?? now) : undefined,
+      },
+    });
+  }
+
+  /* Toggle all subtopics in a topic */
+  function toggleTopic(subtopics: { id: string }[]) {
+    const allDone = subtopics.every((st) => progress[st.id]?.status === "done");
+    const now = new Date().toISOString();
+    const updated = { ...progress };
+    subtopics.forEach((st) => {
+      const prev = updated[st.id];
+      updated[st.id] = allDone
+        ? { status: "not_started", doneAt: undefined }
+        : { status: "done", doneAt: prev?.doneAt ?? now };
+    });
+    persistProgress(updated);
+  }
+
   /* Recent completions */
-  const recentDone = Object.entries(syllabusProgress)
+  const recentDone = Object.entries(progress)
     .filter(([, v]) => v.status === "done" && v.doneAt)
     .sort(([, a], [, b]) => (b.doneAt ?? "").localeCompare(a.doneAt ?? ""))
     .slice(0, 5);
 
   return (
     <div className="space-y-6">
-      {/* Overall summary */}
+      {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
@@ -933,7 +964,7 @@ function MyProgressTab({
         ))}
       </div>
 
-      {/* Overall progress bar */}
+      {/* Progress bar */}
       <div
         className="rounded-2xl p-5"
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
@@ -959,7 +990,8 @@ function MyProgressTab({
           />
         </div>
         <p className="text-xs mt-2" style={{ color: MUTED }}>
-          {doneSubs} of {totalSubs} subtopics completed
+          {doneSubs} of {totalSubs} subtopics completed · Click ○ on a topic to
+          mark all done · Click any subtopic to cycle status
         </p>
       </div>
 
@@ -977,7 +1009,6 @@ function MyProgressTab({
           </h3>
           <div className="space-y-2">
             {recentDone.map(([id, entry]) => {
-              /* Find subtopic name */
               let subtopicName = id;
               SYLLABUS.forEach((subj) =>
                 subj.topics.forEach((t) =>
@@ -1017,7 +1048,7 @@ function MyProgressTab({
         </div>
       )}
 
-      {/* Subject-wise breakdown */}
+      {/* Subject breakdown */}
       <div>
         <h3
           className="font-serif text-lg font-semibold mb-3"
@@ -1027,13 +1058,13 @@ function MyProgressTab({
         </h3>
         <div className="space-y-3">
           {filteredSyllabus.map((subject) => {
-            const subtopics = subject.topics.flatMap((t) => t.subtopics);
-            const total = subtopics.length;
-            const done = subtopics.filter(
-              (st) => syllabusProgress[st.id]?.status === "done",
+            const allSubtopics = subject.topics.flatMap((t) => t.subtopics);
+            const total = allSubtopics.length;
+            const done = allSubtopics.filter(
+              (st) => progress[st.id]?.status === "done",
             ).length;
-            const inProg = subtopics.filter(
-              (st) => syllabusProgress[st.id]?.status === "in_progress",
+            const inProg = allSubtopics.filter(
+              (st) => progress[st.id]?.status === "in_progress",
             ).length;
             const pct = total ? Math.round((done / total) * 100) : 0;
             const isOpen = expandedSubj[subject.id] ?? false;
@@ -1044,6 +1075,7 @@ function MyProgressTab({
                 className="rounded-2xl overflow-hidden"
                 style={{ background: CARD, border: `1px solid ${BORDER}` }}
               >
+                {/* Subject header */}
                 <button
                   onClick={() =>
                     setExpandedSubj((p) => ({
@@ -1103,12 +1135,19 @@ function MyProgressTab({
                   )}
                 </button>
 
+                {/* Topics */}
                 {isOpen && (
                   <div style={{ borderTop: `1px solid ${BORDER}` }}>
                     {subject.topics.map((topic, tIdx) => {
                       const topicDone = topic.subtopics.filter(
-                        (st) => syllabusProgress[st.id]?.status === "done",
+                        (st) => progress[st.id]?.status === "done",
                       ).length;
+                      const topicAllDone = topicDone === topic.subtopics.length;
+                      const topicInProg = topic.subtopics.some(
+                        (st) =>
+                          progress[st.id]?.status === "in_progress" ||
+                          progress[st.id]?.status === "done",
+                      );
                       const isTopicOpen = expandedTopic[topic.id] ?? false;
 
                       return (
@@ -1121,50 +1160,113 @@ function MyProgressTab({
                                 : "none",
                           }}
                         >
-                          <button
-                            onClick={() =>
-                              setExpandedTopic((p) => ({
-                                ...p,
-                                [topic.id]: !p[topic.id],
-                              }))
-                            }
-                            className="w-full flex items-center gap-3 px-5 py-3 text-left"
+                          {/* Topic row */}
+                          <div
+                            className="flex items-center gap-2 px-4"
                             style={{
                               background: isTopicOpen ? `${GOLD}06` : CREAM,
                             }}
                           >
-                            <div className="w-4 flex-shrink-0">
-                              {isTopicOpen ? (
-                                <ChevronDown
-                                  className="w-3.5 h-3.5"
-                                  style={{ color: MUTED }}
-                                />
-                              ) : (
-                                <ChevronRight
-                                  className="w-3.5 h-3.5"
-                                  style={{ color: MUTED }}
-                                />
-                              )}
-                            </div>
-                            <span
-                              className="flex-1 text-sm font-semibold"
-                              style={{ color: CHARCOAL }}
+                            {/* Topic tick button */}
+                            <button
+                              type="button"
+                              onClick={() => toggleTopic(topic.subtopics)}
+                              title={
+                                topicAllDone
+                                  ? "Unmark all subtopics"
+                                  : "Mark all subtopics as done"
+                              }
+                              className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110"
+                              style={{
+                                borderColor: topicAllDone
+                                  ? OLIVE
+                                  : topicInProg
+                                    ? GOLD
+                                    : BORDER,
+                                background: topicAllDone
+                                  ? OLIVE
+                                  : "transparent",
+                                boxShadow: topicAllDone
+                                  ? `0 0 0 3px ${OLIVE}22`
+                                  : "none",
+                              }}
                             >
-                              {topic.name}
-                            </span>
-                            <span className="text-xs" style={{ color: MUTED }}>
-                              {topicDone}/{topic.subtopics.length}
-                            </span>
-                          </button>
+                              {topicAllDone ? (
+                                <svg
+                                  width="10"
+                                  height="8"
+                                  viewBox="0 0 10 8"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M1 4L3.5 6.5L9 1"
+                                    stroke="white"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              ) : topicInProg ? (
+                                <div
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ background: GOLD }}
+                                />
+                              ) : null}
+                            </button>
 
+                            {/* Topic expand button */}
+                            <button
+                              onClick={() =>
+                                setExpandedTopic((p) => ({
+                                  ...p,
+                                  [topic.id]: !p[topic.id],
+                                }))
+                              }
+                              className="flex flex-1 items-center gap-2 py-3 text-left"
+                            >
+                              <div className="w-4 flex-shrink-0 flex items-center justify-center">
+                                {isTopicOpen ? (
+                                  <ChevronDown
+                                    className="w-3.5 h-3.5"
+                                    style={{ color: MUTED }}
+                                  />
+                                ) : (
+                                  <ChevronRight
+                                    className="w-3.5 h-3.5"
+                                    style={{ color: MUTED }}
+                                  />
+                                )}
+                              </div>
+                              <span
+                                className="flex-1 text-sm font-semibold"
+                                style={{
+                                  color: topicAllDone ? OLIVE : CHARCOAL,
+                                  textDecoration: topicAllDone
+                                    ? "line-through"
+                                    : "none",
+                                  textDecorationColor: MUTED,
+                                }}
+                              >
+                                {topic.name}
+                              </span>
+                              <span
+                                className="text-xs mr-1"
+                                style={{ color: topicAllDone ? OLIVE : MUTED }}
+                              >
+                                {topicDone}/{topic.subtopics.length}
+                              </span>
+                            </button>
+                          </div>
+
+                          {/* Subtopics — clickable */}
                           {isTopicOpen && (
                             <div
                               className="px-5 pb-3 space-y-1.5"
                               style={{ background: "#FDFBF8" }}
                             >
                               {topic.subtopics.map((st) => {
-                                const entry = syllabusProgress[st.id] ?? {
-                                  status: "not_started",
+                                const entry = progress[st.id] ?? {
+                                  status: "not_started" as const,
                                 };
                                 const status = entry.status;
                                 const Icon =
@@ -1187,9 +1289,11 @@ function MyProgressTab({
                                       : `${BORDER}55`;
 
                                 return (
-                                  <div
+                                  <button
                                     key={st.id}
-                                    className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
+                                    type="button"
+                                    onClick={() => cycleSubtopic(st.id)}
+                                    className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 hover:scale-[1.01]"
                                     style={{
                                       background: bg,
                                       border: `1px solid ${color}33`,
@@ -1237,7 +1341,20 @@ function MyProgressTab({
                                         </p>
                                       )}
                                     </div>
-                                  </div>
+                                    <span
+                                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                                      style={{
+                                        background: `${color}22`,
+                                        color,
+                                      }}
+                                    >
+                                      {status === "done"
+                                        ? "Done"
+                                        : status === "in_progress"
+                                          ? "In Progress"
+                                          : "Not Started"}
+                                    </span>
+                                  </button>
                                 );
                               })}
                             </div>
@@ -1266,8 +1383,8 @@ function MyProgressTab({
             No topics completed yet
           </p>
           <p className="text-xs mt-1" style={{ color: MUTED }}>
-            Go to Syllabus Tracker and mark topics as done to see your progress
-            here.
+            Click the circle next to any topic to mark it done, or click any
+            subtopic to cycle its status.
           </p>
         </div>
       )}
@@ -1445,15 +1562,7 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
                       : sf.percentCompletable > 0
                         ? "#FFF8DC"
                         : "#FDE8E8",
-                border: `1px solid ${
-                  sf.syllabusPercent === 100
-                    ? `${OLIVE}44`
-                    : sf.canComplete
-                      ? `${OLIVE}33`
-                      : sf.percentCompletable > 0
-                        ? "#B8860B33"
-                        : "#C0392B33"
-                }`,
+                border: `1px solid ${sf.syllabusPercent === 100 ? `${OLIVE}44` : sf.canComplete ? `${OLIVE}33` : sf.percentCompletable > 0 ? "#B8860B33" : "#C0392B33"}`,
               }}
             >
               <span className="text-base flex-shrink-0">
@@ -2133,10 +2242,8 @@ function RoadmapView({
   >("overview");
   const [showBuilder, setShowBuilder] = useState(!rm.smartSchedule);
 
-  /* Load syllabus progress fresh each render */
   const syllabusProgress = loadSyllabusProgress(userId);
   const examType = rm.examType;
-
   const calc = runAIEngine(rm);
   const statusCfg = STATUS_CFG[calc.status];
   const StatusIcon = statusCfg.icon;

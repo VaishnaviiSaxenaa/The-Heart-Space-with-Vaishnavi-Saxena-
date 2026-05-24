@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Circle,
   PlayCircle,
+  CheckSquare,
 } from "lucide-react";
 
 /* ─── Brand tokens ─────────────────────── */
@@ -25,7 +26,7 @@ type TopicStatus = "not_started" | "in_progress" | "done";
 
 export interface SubtopicEntry {
   status: TopicStatus;
-  doneAt?: string /* ISO date string — when marked done */;
+  doneAt?: string;
 }
 
 export type SyllabusProgress = Record<string, SubtopicEntry>;
@@ -921,7 +922,7 @@ const STATUS_CONFIG = {
   done: { label: "Done", color: OLIVE, bg: `${OLIVE}22`, icon: CheckCircle2 },
 };
 
-/* ─── localStorage helpers ─────────────── */
+/* ─── localStorage ─────────────────────── */
 function getStorageKey(userId: string) {
   return `hs_syllabus_${userId}`;
 }
@@ -931,7 +932,6 @@ export function loadSyllabusProgress(userId: string): SyllabusProgress {
     const r = localStorage.getItem(getStorageKey(userId));
     if (!r) return {};
     const raw = JSON.parse(r);
-    /* Migrate old format (plain string) to new format (object with status + doneAt) */
     const migrated: SyllabusProgress = {};
     Object.entries(raw).forEach(([key, val]) => {
       if (typeof val === "string") {
@@ -957,7 +957,39 @@ function saveProgress(userId: string, progress: SyllabusProgress) {
   }
 }
 
-/* ─── Filter syllabus by exam ──────────── */
+/* ─── Helper — get topic status from subtopics ── */
+function getTopicStatus(
+  topic: { subtopics: { id: string }[] },
+  progress: SyllabusProgress,
+): TopicStatus {
+  const statuses = topic.subtopics.map(
+    (st) => progress[st.id]?.status ?? "not_started",
+  );
+  if (statuses.every((s) => s === "done")) return "done";
+  if (statuses.some((s) => s === "done" || s === "in_progress"))
+    return "in_progress";
+  return "not_started";
+}
+
+/* ─── Helper — mark all subtopics in topic ─── */
+export function markTopicStatus(
+  topicSubtopics: { id: string }[],
+  newStatus: TopicStatus,
+  progress: SyllabusProgress,
+): SyllabusProgress {
+  const now = new Date().toISOString();
+  const next = { ...progress };
+  topicSubtopics.forEach((st) => {
+    const prev = next[st.id];
+    next[st.id] = {
+      status: newStatus,
+      doneAt: newStatus === "done" ? (prev?.doneAt ?? now) : undefined,
+    };
+  });
+  return next;
+}
+
+/* ─── Filter syllabus ──────────────────── */
 function filterSyllabus(examType: string | null): Subject[] {
   const isJAM = examType === "JAM";
   return SYLLABUS.filter(
@@ -973,7 +1005,6 @@ function filterSyllabus(examType: string | null): Subject[] {
   }));
 }
 
-/* ─── Progress calc ────────────────────── */
 function calcProgress(subject: Subject, progress: SyllabusProgress) {
   let total = 0;
   let done = 0;
@@ -984,6 +1015,61 @@ function calcProgress(subject: Subject, progress: SyllabusProgress) {
     }),
   );
   return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
+/* ─── Topic tick button ────────────────── */
+function TopicTickButton({
+  topic,
+  progress,
+  onUpdate,
+}: {
+  topic: { id: string; subtopics: { id: string }[] };
+  progress: SyllabusProgress;
+  onUpdate: (next: SyllabusProgress) => void;
+}) {
+  const topicStatus = getTopicStatus(topic, progress);
+  const allDone = topicStatus === "done";
+
+  function handleClick(e: React.MouseEvent) {
+    e.stopPropagation(); /* don't expand/collapse */
+    const newStatus: TopicStatus = allDone ? "not_started" : "done";
+    onUpdate(markTopicStatus(topic.subtopics, newStatus, progress));
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title={
+        allDone ? "Mark topic as not started" : "Mark entire topic as done"
+      }
+      className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110"
+      style={{
+        borderColor: allDone
+          ? OLIVE
+          : topicStatus === "in_progress"
+            ? GOLD
+            : BORDER,
+        background: allDone ? OLIVE : "transparent",
+        boxShadow: allDone ? `0 0 0 3px ${OLIVE}22` : "none",
+      }}
+    >
+      {allDone && (
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+          <path
+            d="M1 4L3.5 6.5L9 1"
+            stroke="white"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+      {topicStatus === "in_progress" && !allDone && (
+        <div className="w-2 h-2 rounded-full" style={{ background: GOLD }} />
+      )}
+    </button>
+  );
 }
 
 /* ─── Main Component ───────────────────── */
@@ -1011,19 +1097,21 @@ export default function Syllabus() {
     ? Math.round((doneSubs / totalSubtopics) * 100)
     : 0;
 
-  function updateStatus(subtopicId: string, status: TopicStatus) {
+  function updateProgress(next: SyllabusProgress) {
+    setProgress(next);
+    saveProgress(userId, next);
+  }
+
+  function updateSubtopicStatus(subtopicId: string, status: TopicStatus) {
     const now = new Date().toISOString();
     const prev = progress[subtopicId];
-    const next: SyllabusProgress = {
+    updateProgress({
       ...progress,
       [subtopicId]: {
         status,
-        /* Set doneAt when first marked done, clear it if un-marked */
         doneAt: status === "done" ? (prev?.doneAt ?? now) : undefined,
       },
-    };
-    setProgress(next);
-    saveProgress(userId, next);
+    });
   }
 
   const examLabel =
@@ -1045,7 +1133,8 @@ export default function Syllabus() {
             Syllabus Tracker
           </h1>
           <p className="text-sm mt-1" style={{ color: MUTED }}>
-            {examLabel} Mathematics · {totalSubtopics} subtopics total
+            {examLabel} Mathematics · {totalSubtopics} subtopics · Click ✓ on a
+            topic to mark all subtopics done
           </p>
         </div>
         <div
@@ -1089,7 +1178,8 @@ export default function Syllabus() {
           </div>
         ))}
         <span className="text-xs" style={{ color: MUTED }}>
-          · Click subtopic to cycle status
+          · Click circle on topic to mark all done · Click subtopic to cycle
+          status
         </span>
       </div>
 
@@ -1108,6 +1198,7 @@ export default function Syllabus() {
               boxShadow: "0 2px 8px rgba(61,53,48,.05)",
             }}
           >
+            {/* Subject header */}
             <button
               onClick={() =>
                 setExpanded((p) => ({ ...p, [subject.id]: !p[subject.id] }))
@@ -1178,6 +1269,7 @@ export default function Syllabus() {
               )}
             </button>
 
+            {/* Topics */}
             {isOpen && (
               <div style={{ borderTop: `1px solid ${BORDER}` }}>
                 {subject.topics.map((topic, tIdx) => {
@@ -1185,6 +1277,7 @@ export default function Syllabus() {
                   const topicDone = topic.subtopics.filter(
                     (st) => progress[st.id]?.status === "done",
                   ).length;
+                  const topicStatus = getTopicStatus(topic, progress);
 
                   return (
                     <div
@@ -1196,64 +1289,90 @@ export default function Syllabus() {
                             : "none",
                       }}
                     >
-                      <button
-                        onClick={() =>
-                          setExpandedT((p) => ({
-                            ...p,
-                            [topic.id]: !p[topic.id],
-                          }))
-                        }
-                        className="w-full flex items-center gap-3 px-6 py-3 text-left transition-all hover:opacity-80"
+                      {/* Topic row */}
+                      <div
+                        className="flex items-center gap-2 px-4"
                         style={{
-                          background: isTopicOpen ? `${GOLD}08` : "#FAF7F2",
+                          background: isTopicOpen ? `${GOLD}08` : CREAM,
                         }}
                       >
-                        <div className="w-5 flex-shrink-0 flex items-center justify-center">
-                          {isTopicOpen ? (
-                            <ChevronDown
-                              className="w-3.5 h-3.5"
-                              style={{ color: MUTED }}
-                            />
-                          ) : (
-                            <ChevronRight
-                              className="w-3.5 h-3.5"
-                              style={{ color: MUTED }}
-                            />
-                          )}
-                        </div>
-                        <span
-                          className="flex-1 text-sm font-semibold"
-                          style={{ color: CHARCOAL }}
+                        {/* Topic tick button */}
+                        <TopicTickButton
+                          topic={topic}
+                          progress={progress}
+                          onUpdate={updateProgress}
+                        />
+
+                        {/* Topic expand button */}
+                        <button
+                          onClick={() =>
+                            setExpandedT((p) => ({
+                              ...p,
+                              [topic.id]: !p[topic.id],
+                            }))
+                          }
+                          className="flex flex-1 items-center gap-2 py-3 text-left"
                         >
-                          {topic.name}
-                        </span>
-                        {topic.netOnly && (
+                          <div className="w-4 flex-shrink-0 flex items-center justify-center">
+                            {isTopicOpen ? (
+                              <ChevronDown
+                                className="w-3.5 h-3.5"
+                                style={{ color: MUTED }}
+                              />
+                            ) : (
+                              <ChevronRight
+                                className="w-3.5 h-3.5"
+                                style={{ color: MUTED }}
+                              />
+                            )}
+                          </div>
                           <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            className="flex-1 text-sm font-semibold"
                             style={{
-                              background: `${ROSE}33`,
-                              color: "#8B3A3A",
+                              color: topicStatus === "done" ? OLIVE : CHARCOAL,
+                              textDecoration:
+                                topicStatus === "done"
+                                  ? "line-through"
+                                  : "none",
+                              textDecorationColor: MUTED,
                             }}
                           >
-                            NET
+                            {topic.name}
                           </span>
-                        )}
-                        {topic.jamOnly && (
+                          {topic.netOnly && (
+                            <span
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                              style={{
+                                background: `${ROSE}33`,
+                                color: "#8B3A3A",
+                              }}
+                            >
+                              NET
+                            </span>
+                          )}
+                          {topic.jamOnly && (
+                            <span
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                              style={{
+                                background: `${GOLD}22`,
+                                color: SIDEBAR,
+                              }}
+                            >
+                              JAM
+                            </span>
+                          )}
                           <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ background: `${GOLD}22`, color: SIDEBAR }}
+                            className="text-xs flex-shrink-0 mr-1"
+                            style={{
+                              color: topicStatus === "done" ? OLIVE : MUTED,
+                            }}
                           >
-                            JAM
+                            {topicDone}/{topic.subtopics.length}
                           </span>
-                        )}
-                        <span
-                          className="text-xs flex-shrink-0"
-                          style={{ color: MUTED }}
-                        >
-                          {topicDone}/{topic.subtopics.length}
-                        </span>
-                      </button>
+                        </button>
+                      </div>
 
+                      {/* Subtopics */}
                       {isTopicOpen && (
                         <div
                           className="px-6 pb-3 space-y-1.5"
@@ -1274,7 +1393,7 @@ export default function Syllabus() {
                                   : status === "in_progress"
                                     ? "done"
                                     : "not_started";
-                              updateStatus(st.id, next);
+                              updateSubtopicStatus(st.id, next);
                             }
 
                             return (
