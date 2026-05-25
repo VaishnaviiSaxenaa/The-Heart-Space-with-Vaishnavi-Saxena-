@@ -75,12 +75,13 @@ interface UnavailablePeriod {
   id: string;
   label: string;
   startDate: string;
-  weeks: number;
+  endDate: string;
 }
 interface VariableWeek {
   id: string;
   label: string;
   startDate: string;
+  endDate: string;
   multiplier?: number;
   customHours?: number;
 }
@@ -100,16 +101,18 @@ function calcEffectiveWeeklyHours(
   const baseHours = baseHoursPerDay * daysPerWeek;
 
   for (const up of unavailablePeriods) {
+    if (!up.startDate || !up.endDate) continue;
     const upStart = new Date(up.startDate);
-    const upEnd = new Date(upStart);
-    upEnd.setDate(upEnd.getDate() + up.weeks * 7);
+    const upEnd = new Date(up.endDate);
     if (weekDate >= upStart && weekDate < upEnd)
       return { hours: 0, isUnavailable: true };
   }
 
   for (const vw of variableWeeks) {
-    const vwDate = new Date(vw.startDate);
-    if (weekDate.toDateString() === vwDate.toDateString()) {
+    if (!vw.startDate || !vw.endDate) continue;
+    const vwStart = new Date(vw.startDate);
+    const vwEnd = new Date(vw.endDate);
+    if (weekDate >= vwStart && weekDate < vwEnd) {
       const h =
         vw.customHours !== undefined
           ? vw.customHours * daysPerWeek
@@ -400,7 +403,7 @@ describe("Schedule Engine", () => {
       id: "1",
       label: "Exams",
       startDate: "2026-06-01",
-      weeks: 1,
+      endDate: "2026-06-08",
     };
     const result = calcEffectiveWeeklyHours(2, 5, [up], [], 0, "2026-06-01");
     expect(result.hours).toBe(0);
@@ -412,7 +415,7 @@ describe("Schedule Engine", () => {
       id: "1",
       label: "Exams",
       startDate: "2026-06-01",
-      weeks: 1,
+      endDate: "2026-06-08",
     };
     const result = calcEffectiveWeeklyHours(2, 5, [up], [], 1, "2026-06-01");
     expect(result.hours).toBe(10);
@@ -424,7 +427,7 @@ describe("Schedule Engine", () => {
       id: "1",
       label: "Trip",
       startDate: "2026-06-01",
-      weeks: 3,
+      endDate: "2026-06-22",
     };
     expect(
       calcEffectiveWeeklyHours(2, 5, [up], [], 0, "2026-06-01").isUnavailable,
@@ -445,6 +448,7 @@ describe("Schedule Engine", () => {
       id: "1",
       label: "Holiday",
       startDate: "2026-06-01",
+      endDate: "2026-06-08",
       multiplier: 2,
     };
     const result = calcEffectiveWeeklyHours(2, 5, [], [vw], 0, "2026-06-01");
@@ -457,6 +461,7 @@ describe("Schedule Engine", () => {
       id: "1",
       label: "Intensive",
       startDate: "2026-06-01",
+      endDate: "2026-06-08",
       customHours: 5,
     };
     const result = calcEffectiveWeeklyHours(2, 5, [], [vw], 0, "2026-06-01");
@@ -468,6 +473,7 @@ describe("Schedule Engine", () => {
       id: "1",
       label: "Busy week",
       startDate: "2026-06-01",
+      endDate: "2026-06-08",
       multiplier: 0.5,
     };
     const result = calcEffectiveWeeklyHours(2, 5, [], [vw], 0, "2026-06-01");
@@ -698,6 +704,7 @@ describe("Variable Weeks", () => {
       id: "1",
       label: "No study",
       startDate: "2026-06-01",
+      endDate: "2026-06-08",
       customHours: 0,
     };
     const result = calcEffectiveWeeklyHours(2, 5, [], [vw], 0, "2026-06-01");
@@ -710,6 +717,7 @@ describe("Variable Weeks", () => {
       id: "1",
       label: "Holiday",
       startDate: "2026-06-01",
+      endDate: "2026-06-08",
       multiplier: 2,
     };
     const week1 = calcEffectiveWeeklyHours(2, 5, [], [vw], 0, "2026-06-01");
@@ -729,6 +737,7 @@ describe("Variable Weeks", () => {
       id: "2",
       label: "Holiday",
       startDate: "2026-06-01",
+      endDate: "2026-06-08",
       multiplier: 3,
     };
     const result = calcEffectiveWeeklyHours(2, 5, [up], [vw], 0, "2026-06-01");

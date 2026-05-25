@@ -58,7 +58,7 @@ interface UnavailablePeriod {
   id: string;
   label: string;
   startDate: string;
-  weeks: number;
+  endDate: string;
 }
 
 interface RoadmapPhase {
@@ -113,7 +113,8 @@ interface SmartSchedule {
 interface VariableWeek {
   id: string;
   label: string /* e.g. "Holiday week" */;
-  startDate: string /* ISO date of Monday */;
+  startDate: string /* ISO date */;
+  endDate: string /* ISO date */;
   multiplier?: number /* e.g. 2.0 = double hours */;
   customHours?: number /* e.g. 5 = 5 hrs/day that week */;
 }
@@ -564,9 +565,9 @@ function generateSmartSchedule(
 
     /* Check unavailable periods first */
     for (const up of unavailablePeriods) {
-      if (!up.startDate) continue;
+      if (!up.startDate || !up.endDate) continue;
       const upStart = parseISO(up.startDate);
-      const upEnd = addWeeks(upStart, up.weeks);
+      const upEnd = parseISO(up.endDate);
       if (weekStart >= upStart && weekStart < upEnd) {
         return { hours: 0, isUnavailable: true, label: up.label };
       }
@@ -574,8 +575,10 @@ function generateSmartSchedule(
 
     /* Check variable weeks */
     for (const vw of variableWeeks) {
-      if (!vw.startDate) continue;
-      if (format(parseISO(vw.startDate), "yyyy-MM-dd") === weekStartStr) {
+      if (!vw.startDate || !vw.endDate) continue;
+      const vwStart = parseISO(vw.startDate);
+      const vwEnd = parseISO(vw.endDate);
+      if (weekStart >= vwStart && weekStart < vwEnd) {
         const effectiveHoursPerDay =
           vw.customHours !== undefined
             ? vw.customHours
@@ -868,10 +871,17 @@ const PHASE_STATUS = {
 
 function runAIEngine(roadmap: Roadmap): AICalc {
   const totalWeeks = roadmap.totalMonths * 4;
-  const unavailableWeeks = roadmap.unavailablePeriods.reduce(
-    (s, p) => s + p.weeks,
-    0,
-  );
+  const unavailableWeeks = roadmap.unavailablePeriods.reduce((s, p) => {
+    if (!p.startDate || !p.endDate) return s;
+    const diff = Math.max(
+      0,
+      Math.round(
+        (parseISO(p.endDate).getTime() - parseISO(p.startDate).getTime()) /
+          (7 * 24 * 60 * 60 * 1000),
+      ),
+    );
+    return s + diff;
+  }, 0);
   const effectiveWeeks = totalWeeks + unavailableWeeks;
   const startDate = parseISO(roadmap.startDate);
   const estimatedEnd = addWeeks(startDate, effectiveWeeks);
@@ -1900,6 +1910,510 @@ function VariableWeeksPanel({
   );
 }
 
+/* ─── Unavailable Periods Manager ───────── */
+function UnavailablePeriodsManager({
+  rm,
+  persist,
+}: {
+  rm: Roadmap;
+  persist: (next: Roadmap) => void;
+}) {
+  const [show, setShow] = useState(false);
+  const [label, setLabel] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  function add() {
+    if (!label || !startDate || !endDate) return;
+    if (new Date(endDate) <= new Date(startDate)) return;
+    persist({
+      ...rm,
+      unavailablePeriods: [
+        ...rm.unavailablePeriods,
+        { id: `${Date.now()}`, label, startDate, endDate },
+      ],
+    });
+    setLabel("");
+    setStartDate("");
+    setEndDate("");
+    setShow(false);
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-5 space-y-3"
+      style={{ background: CARD, border: `1px solid ${BORDER}` }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4" style={{ color: ROSE }} />
+          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
+            Unavailable Periods
+          </h3>
+        </div>
+        {!show && (
+          <button
+            onClick={() => setShow(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
+            style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
+          >
+            <Plus className="w-3 h-3" /> Add
+          </button>
+        )}
+      </div>
+      <p className="text-xs" style={{ color: MUTED }}>
+        Add periods when you cannot study. These appear in your schedule as
+        paused weeks and push your end date forward.
+      </p>
+
+      {show && (
+        <div
+          className="rounded-xl p-4 space-y-3"
+          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+        >
+          <div>
+            <label
+              className="text-xs font-semibold mb-1 block"
+              style={{ color: MUTED }}
+            >
+              Reason
+            </label>
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. College exams, Family trip…"
+              className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+              style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                className="text-xs font-semibold mb-1 block"
+                style={{ color: MUTED }}
+              >
+                Start date
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                style={{
+                  background: CARD,
+                  borderColor: BORDER,
+                  color: CHARCOAL,
+                }}
+              />
+            </div>
+            <div>
+              <label
+                className="text-xs font-semibold mb-1 block"
+                style={{ color: MUTED }}
+              >
+                End date
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                style={{
+                  background: CARD,
+                  borderColor: BORDER,
+                  color: CHARCOAL,
+                }}
+              />
+            </div>
+          </div>
+          {startDate && endDate && new Date(endDate) <= new Date(startDate) && (
+            <p className="text-xs" style={{ color: "#C0392B" }}>
+              End date must be after start date.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={add}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{
+                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                color: "#fff",
+              }}
+            >
+              <Save className="w-3 h-3" /> Add Period
+            </button>
+            <button
+              onClick={() => setShow(false)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: BORDER, color: MUTED }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {rm.unavailablePeriods.length === 0 && !show && (
+        <p className="text-xs" style={{ color: MUTED }}>
+          No unavailable periods added.
+        </p>
+      )}
+
+      <div className="space-y-2">
+        {rm.unavailablePeriods.map((p) => {
+          const days =
+            p.startDate && p.endDate
+              ? Math.max(
+                  0,
+                  Math.round(
+                    (new Date(p.endDate).getTime() -
+                      new Date(p.startDate).getTime()) /
+                      (24 * 60 * 60 * 1000),
+                  ),
+                )
+              : 0;
+          return (
+            <div
+              key={p.id}
+              className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+              style={{ background: `${ROSE}15`, border: `1px solid ${ROSE}44` }}
+            >
+              <div>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: CHARCOAL }}
+                >
+                  {p.label}
+                </span>
+                <span className="text-xs ml-2" style={{ color: MUTED }}>
+                  {p.startDate ? format(parseISO(p.startDate), "MMM d") : ""} →{" "}
+                  {p.endDate ? format(parseISO(p.endDate), "MMM d") : ""} ·{" "}
+                  {days} day{days !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <button
+                onClick={() =>
+                  persist({
+                    ...rm,
+                    unavailablePeriods: rm.unavailablePeriods.filter(
+                      (x) => x.id !== p.id,
+                    ),
+                  })
+                }
+                className="p-1 rounded-lg"
+                style={{ color: "#C0392B" }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Variable Intensity Weeks Manager ─── */
+function VariableWeeksManager({
+  rm,
+  persist,
+}: {
+  rm: Roadmap;
+  persist: (next: Roadmap) => void;
+}) {
+  const [show, setShow] = useState(false);
+  const [label, setLabel] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [useMultiplier, setUseMultiplier] = useState(true);
+  const [multiplier, setMultiplier] = useState(2);
+  const [customHours, setCustomHours] = useState(4);
+
+  function add() {
+    if (!label || !startDate || !endDate) return;
+    if (new Date(endDate) <= new Date(startDate)) return;
+    const newVW: VariableWeek = {
+      id: `${Date.now()}`,
+      label,
+      startDate,
+      endDate,
+      ...(useMultiplier ? { multiplier } : { customHours }),
+    };
+    persist({ ...rm, variableWeeks: [...(rm.variableWeeks ?? []), newVW] });
+    setLabel("");
+    setStartDate("");
+    setEndDate("");
+    setShow(false);
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-5 space-y-3"
+      style={{ background: CARD, border: `1px solid ${BORDER}` }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4" style={{ color: GOLD }} />
+          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
+            Variable Intensity Periods
+          </h3>
+        </div>
+        {!show && (
+          <button
+            onClick={() => setShow(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
+            style={{ background: `${GOLD}22`, color: DARK }}
+          >
+            <Plus className="w-3 h-3" /> Add
+          </button>
+        )}
+      </div>
+      <p className="text-xs" style={{ color: MUTED }}>
+        Add periods when you can study more or less than usual — e.g. a holiday
+        with double hours, or exam week with half hours.
+      </p>
+
+      {show && (
+        <div
+          className="rounded-xl p-4 space-y-3"
+          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+        >
+          <div>
+            <label
+              className="text-xs font-semibold mb-1 block"
+              style={{ color: MUTED }}
+            >
+              Label
+            </label>
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. Summer holiday, Exam prep week…"
+              className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+              style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                className="text-xs font-semibold mb-1 block"
+                style={{ color: MUTED }}
+              >
+                Start date
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                style={{
+                  background: CARD,
+                  borderColor: BORDER,
+                  color: CHARCOAL,
+                }}
+              />
+            </div>
+            <div>
+              <label
+                className="text-xs font-semibold mb-1 block"
+                style={{ color: MUTED }}
+              >
+                End date
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                style={{
+                  background: CARD,
+                  borderColor: BORDER,
+                  color: CHARCOAL,
+                }}
+              />
+            </div>
+          </div>
+          {startDate && endDate && new Date(endDate) <= new Date(startDate) && (
+            <p className="text-xs" style={{ color: "#C0392B" }}>
+              End date must be after start date.
+            </p>
+          )}
+
+          {/* Toggle multiplier vs custom hours */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setUseMultiplier(true)}
+              className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
+              style={
+                useMultiplier
+                  ? { background: DARK, color: CREAM }
+                  : { background: `${BORDER}88`, color: MUTED }
+              }
+            >
+              Multiplier (e.g. 2×)
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseMultiplier(false)}
+              className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
+              style={
+                !useMultiplier
+                  ? { background: DARK, color: CREAM }
+                  : { background: `${BORDER}88`, color: MUTED }
+              }
+            >
+              Custom hrs/day
+            </button>
+          </div>
+
+          {useMultiplier ? (
+            <div>
+              <label
+                className="text-xs font-semibold mb-2 block"
+                style={{ color: MUTED }}
+              >
+                Multiplier:{" "}
+                <span style={{ color: GOLD }}>{multiplier}× normal hours</span>
+                <span className="ml-2 text-[10px]" style={{ color: MUTED }}>
+                  (0.5× = half, 1× = same, 2× = double)
+                </span>
+              </label>
+              <input
+                type="range"
+                min={0.1}
+                max={4}
+                step={0.1}
+                value={multiplier}
+                onChange={(e) => setMultiplier(parseFloat(e.target.value))}
+                className="w-full accent-amber-600"
+              />
+              <div
+                className="flex justify-between text-[10px] mt-1"
+                style={{ color: MUTED }}
+              >
+                <span>0.1× (very little)</span>
+                <span>4× (intensive)</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label
+                className="text-xs font-semibold mb-2 block"
+                style={{ color: MUTED }}
+              >
+                Custom hours per day:{" "}
+                <span style={{ color: GOLD }}>{customHours} hrs/day</span>
+              </label>
+              <input
+                type="range"
+                min={0.5}
+                max={16}
+                step={0.5}
+                value={customHours}
+                onChange={(e) => setCustomHours(parseFloat(e.target.value))}
+                className="w-full accent-amber-600"
+              />
+              <div
+                className="flex justify-between text-[10px] mt-1"
+                style={{ color: MUTED }}
+              >
+                <span>0.5 hrs</span>
+                <span>16 hrs</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={add}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{
+                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                color: "#fff",
+              }}
+            >
+              <Save className="w-3 h-3" /> Add Period
+            </button>
+            <button
+              onClick={() => setShow(false)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: BORDER, color: MUTED }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(rm.variableWeeks ?? []).length === 0 && !show && (
+        <p className="text-xs" style={{ color: MUTED }}>
+          No variable intensity periods added.
+        </p>
+      )}
+
+      <div className="space-y-2">
+        {(rm.variableWeeks ?? []).map((vw) => {
+          const days =
+            vw.startDate && vw.endDate
+              ? Math.max(
+                  0,
+                  Math.round(
+                    (new Date(vw.endDate).getTime() -
+                      new Date(vw.startDate).getTime()) /
+                      (24 * 60 * 60 * 1000),
+                  ),
+                )
+              : 0;
+          const isMore =
+            (vw.multiplier !== undefined && vw.multiplier > 1) ||
+            vw.customHours !== undefined;
+          return (
+            <div
+              key={vw.id}
+              className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+              style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}33` }}
+            >
+              <div>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: CHARCOAL }}
+                >
+                  {isMore ? "⚡" : "🐌"} {vw.label}
+                </span>
+                <span className="text-xs ml-2" style={{ color: MUTED }}>
+                  {vw.startDate ? format(parseISO(vw.startDate), "MMM d") : ""}{" "}
+                  → {vw.endDate ? format(parseISO(vw.endDate), "MMM d") : ""} ·{" "}
+                  {days} day{days !== 1 ? "s" : ""} ·
+                  {vw.customHours !== undefined
+                    ? ` ${vw.customHours} hrs/day`
+                    : ` ${vw.multiplier}×`}
+                </span>
+              </div>
+              <button
+                onClick={() =>
+                  persist({
+                    ...rm,
+                    variableWeeks: (rm.variableWeeks ?? []).filter(
+                      (x) => x.id !== vw.id,
+                    ),
+                  })
+                }
+                className="p-1 rounded-lg"
+                style={{ color: "#C0392B" }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Live Schedule Tab ─────────────────── */
 function LiveScheduleTab({
   examType,
@@ -1909,6 +2423,8 @@ function LiveScheduleTab({
   onSave,
   unavailablePeriods,
   variableWeeks,
+  rm,
+  persist,
 }: {
   examType: string;
   startDate: string;
@@ -1917,6 +2433,8 @@ function LiveScheduleTab({
   onSave: (schedule: SmartSchedule) => void;
   unavailablePeriods: UnavailablePeriod[];
   variableWeeks: VariableWeek[];
+  rm: Roadmap;
+  persist: (next: Roadmap) => void;
 }) {
   const saved = loadScheduleInputs(userId);
   const [hoursPerDay, setHoursPerDay] = useState(saved.hoursPerDay);
@@ -1988,6 +2506,10 @@ function LiveScheduleTab({
 
   return (
     <div className="space-y-6">
+      {/* Unavailable + Variable periods — live in schedule tab */}
+      <UnavailablePeriodsManager rm={rm} persist={persist} />
+      <VariableWeeksManager rm={rm} persist={persist} />
+
       {/* Inputs */}
       <div
         className="rounded-2xl p-6 space-y-5"
@@ -2506,20 +3028,7 @@ function RoadmapView({
   const [rm, setRm] = useState(roadmap);
   const [editMonths, setEditMonths] = useState(false);
   const [newMonths, setNewMonths] = useState(rm.totalMonths);
-  const [showUnavail, setShowUnavail] = useState(false);
-  const [unavailForm, setUnavailForm] = useState({
-    label: "",
-    startDate: "",
-    weeks: 1,
-  });
-  const [showVarWeek, setShowVarWeek] = useState(false);
-  const [varWeekForm, setVarWeekForm] = useState({
-    label: "",
-    startDate: "",
-    useMultiplier: true,
-    multiplier: 2,
-    customHours: 4,
-  });
+
   const [expandPhase, setExpandPhase] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -2548,19 +3057,6 @@ function RoadmapView({
     }));
     persist({ ...rm, totalMonths: newMonths, phases: merged });
     setEditMonths(false);
-  }
-
-  function addUnavailPeriod() {
-    if (!unavailForm.label || !unavailForm.startDate) return;
-    persist({
-      ...rm,
-      unavailablePeriods: [
-        ...rm.unavailablePeriods,
-        { id: `${Date.now()}`, ...unavailForm },
-      ],
-    });
-    setUnavailForm({ label: "", startDate: "", weeks: 1 });
-    setShowUnavail(false);
   }
 
   function saveSchedule(schedule: SmartSchedule) {
@@ -2829,455 +3325,6 @@ function RoadmapView({
             )}
           </div>
 
-          {/* Unavailable periods */}
-          <div
-            className="rounded-2xl p-5"
-            style={{ background: CARD, border: `1px solid ${BORDER}` }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" style={{ color: ROSE }} />
-                <h3
-                  className="font-semibold text-sm"
-                  style={{ color: CHARCOAL }}
-                >
-                  Unavailable Periods
-                </h3>
-              </div>
-              {!showUnavail && (
-                <button
-                  onClick={() => setShowUnavail(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                  style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
-                >
-                  <Plus className="w-3 h-3" /> Add
-                </button>
-              )}
-            </div>
-            <p className="text-xs mb-3" style={{ color: MUTED }}>
-              Log periods when you can't study — end date extends and targets
-              adjust automatically.
-            </p>
-            {showUnavail && (
-              <div
-                className="rounded-xl p-4 mb-3 space-y-3"
-                style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label
-                      className="text-xs font-semibold mb-1 block"
-                      style={{ color: MUTED }}
-                    >
-                      Reason
-                    </label>
-                    <input
-                      value={unavailForm.label}
-                      onChange={(e) =>
-                        setUnavailForm((p) => ({ ...p, label: e.target.value }))
-                      }
-                      placeholder="e.g. College exams…"
-                      className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                      style={{
-                        background: CARD,
-                        borderColor: BORDER,
-                        color: CHARCOAL,
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="text-xs font-semibold mb-1 block"
-                      style={{ color: MUTED }}
-                    >
-                      Start date
-                    </label>
-                    <input
-                      type="date"
-                      value={unavailForm.startDate}
-                      onChange={(e) =>
-                        setUnavailForm((p) => ({
-                          ...p,
-                          startDate: e.target.value,
-                        }))
-                      }
-                      className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                      style={{
-                        background: CARD,
-                        borderColor: BORDER,
-                        color: CHARCOAL,
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="text-xs font-semibold mb-1 block"
-                      style={{ color: MUTED }}
-                    >
-                      Weeks
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={52}
-                      value={unavailForm.weeks}
-                      onChange={(e) =>
-                        setUnavailForm((p) => ({
-                          ...p,
-                          weeks: parseInt(e.target.value) || 1,
-                        }))
-                      }
-                      className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                      style={{
-                        background: CARD,
-                        borderColor: BORDER,
-                        color: CHARCOAL,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={addUnavailPeriod}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
-                    style={{
-                      background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
-                      color: "#fff",
-                    }}
-                  >
-                    <Save className="w-3 h-3" /> Add & Recalculate
-                  </button>
-                  <button
-                    onClick={() => setShowUnavail(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold"
-                    style={{ background: BORDER, color: MUTED }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-            {rm.unavailablePeriods.length === 0 && !showUnavail && (
-              <p className="text-xs" style={{ color: MUTED }}>
-                No unavailable periods logged.
-              </p>
-            )}
-            <div className="space-y-2">
-              {rm.unavailablePeriods.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                  style={{
-                    background: `${ROSE}15`,
-                    border: `1px solid ${ROSE}44`,
-                  }}
-                >
-                  <div>
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: CHARCOAL }}
-                    >
-                      {p.label}
-                    </span>
-                    <span className="text-xs ml-2" style={{ color: MUTED }}>
-                      {p.startDate
-                        ? format(parseISO(p.startDate), "MMM d")
-                        : ""}{" "}
-                      · {p.weeks} wk(s)
-                    </span>
-                  </div>
-                  <button
-                    onClick={() =>
-                      persist({
-                        ...rm,
-                        unavailablePeriods: rm.unavailablePeriods.filter(
-                          (x) => x.id !== p.id,
-                        ),
-                      })
-                    }
-                    className="p-1 rounded-lg"
-                    style={{ color: "#C0392B" }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Variable Weeks */}
-          <div
-            className="rounded-2xl p-5"
-            style={{ background: CARD, border: `1px solid ${BORDER}` }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4" style={{ color: GOLD }} />
-                <h3
-                  className="font-semibold text-sm"
-                  style={{ color: CHARCOAL }}
-                >
-                  Variable Intensity Weeks
-                </h3>
-              </div>
-              {!showVarWeek && (
-                <button
-                  onClick={() => setShowVarWeek(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                  style={{ background: `${GOLD}22`, color: DARK }}
-                >
-                  <Plus className="w-3 h-3" /> Add
-                </button>
-              )}
-            </div>
-            <p className="text-xs mb-3" style={{ color: MUTED }}>
-              Add weeks where you can study more or less than usual — schedule
-              adjusts automatically.
-            </p>
-            {showVarWeek && (
-              <div
-                className="rounded-xl p-4 mb-3 space-y-3"
-                style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label
-                      className="text-xs font-semibold mb-1 block"
-                      style={{ color: MUTED }}
-                    >
-                      Label
-                    </label>
-                    <input
-                      value={varWeekForm.label}
-                      onChange={(e) =>
-                        setVarWeekForm((p) => ({ ...p, label: e.target.value }))
-                      }
-                      placeholder="e.g. Holiday week, Exam week…"
-                      className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                      style={{
-                        background: CARD,
-                        borderColor: BORDER,
-                        color: CHARCOAL,
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="text-xs font-semibold mb-1 block"
-                      style={{ color: MUTED }}
-                    >
-                      Week starting
-                    </label>
-                    <input
-                      type="date"
-                      value={varWeekForm.startDate}
-                      onChange={(e) =>
-                        setVarWeekForm((p) => ({
-                          ...p,
-                          startDate: e.target.value,
-                        }))
-                      }
-                      className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                      style={{
-                        background: CARD,
-                        borderColor: BORDER,
-                        color: CHARCOAL,
-                      }}
-                    />
-                  </div>
-                </div>
-                {/* Toggle: multiplier vs custom hours */}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setVarWeekForm((p) => ({ ...p, useMultiplier: true }))
-                    }
-                    className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
-                    style={
-                      varWeekForm.useMultiplier
-                        ? { background: DARK, color: CREAM }
-                        : { background: `${BORDER}88`, color: MUTED }
-                    }
-                  >
-                    Multiplier (e.g. 2x)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setVarWeekForm((p) => ({ ...p, useMultiplier: false }))
-                    }
-                    className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
-                    style={
-                      !varWeekForm.useMultiplier
-                        ? { background: DARK, color: CREAM }
-                        : { background: `${BORDER}88`, color: MUTED }
-                    }
-                  >
-                    Custom hours/day
-                  </button>
-                </div>
-                {varWeekForm.useMultiplier ? (
-                  <div>
-                    <label
-                      className="text-xs font-semibold mb-2 block"
-                      style={{ color: MUTED }}
-                    >
-                      Multiplier:{" "}
-                      <span style={{ color: GOLD }}>
-                        {varWeekForm.multiplier}x normal hours
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min={0.1}
-                      max={4}
-                      step={0.1}
-                      value={varWeekForm.multiplier}
-                      onChange={(e) =>
-                        setVarWeekForm((p) => ({
-                          ...p,
-                          multiplier: parseFloat(e.target.value),
-                        }))
-                      }
-                      className="w-full accent-amber-600"
-                    />
-                    <div
-                      className="flex justify-between text-[10px] mt-1"
-                      style={{ color: MUTED }}
-                    >
-                      <span>0.1x (barely any)</span>
-                      <span>4x (intensive)</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label
-                      className="text-xs font-semibold mb-2 block"
-                      style={{ color: MUTED }}
-                    >
-                      Custom hours per day:{" "}
-                      <span style={{ color: GOLD }}>
-                        {varWeekForm.customHours} hrs
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min={0.5}
-                      max={16}
-                      step={0.5}
-                      value={varWeekForm.customHours}
-                      onChange={(e) =>
-                        setVarWeekForm((p) => ({
-                          ...p,
-                          customHours: parseFloat(e.target.value),
-                        }))
-                      }
-                      className="w-full accent-amber-600"
-                    />
-                    <div
-                      className="flex justify-between text-[10px] mt-1"
-                      style={{ color: MUTED }}
-                    >
-                      <span>0.5 hrs</span>
-                      <span>16 hrs</span>
-                    </div>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      if (!varWeekForm.label || !varWeekForm.startDate) return;
-                      const newVW: VariableWeek = {
-                        id: `${Date.now()}`,
-                        label: varWeekForm.label,
-                        startDate: varWeekForm.startDate,
-                        ...(varWeekForm.useMultiplier
-                          ? { multiplier: varWeekForm.multiplier }
-                          : { customHours: varWeekForm.customHours }),
-                      };
-                      persist({
-                        ...rm,
-                        variableWeeks: [...(rm.variableWeeks ?? []), newVW],
-                      });
-                      setVarWeekForm({
-                        label: "",
-                        startDate: "",
-                        useMultiplier: true,
-                        multiplier: 2,
-                        customHours: 4,
-                      });
-                      setShowVarWeek(false);
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
-                    style={{
-                      background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
-                      color: "#fff",
-                    }}
-                  >
-                    <Save className="w-3 h-3" /> Add Week
-                  </button>
-                  <button
-                    onClick={() => setShowVarWeek(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold"
-                    style={{ background: BORDER, color: MUTED }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-            {(rm.variableWeeks ?? []).length === 0 && !showVarWeek && (
-              <p className="text-xs" style={{ color: MUTED }}>
-                No variable weeks added yet.
-              </p>
-            )}
-            <div className="space-y-2">
-              {(rm.variableWeeks ?? []).map((vw) => (
-                <div
-                  key={vw.id}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                  style={{
-                    background: `${GOLD}10`,
-                    border: `1px solid ${GOLD}33`,
-                  }}
-                >
-                  <div>
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: CHARCOAL }}
-                    >
-                      {vw.label}
-                    </span>
-                    <span className="text-xs ml-2" style={{ color: MUTED }}>
-                      {vw.startDate
-                        ? format(parseISO(vw.startDate), "MMM d")
-                        : ""}{" "}
-                      ·
-                      {vw.customHours !== undefined
-                        ? ` ${vw.customHours} hrs/day`
-                        : ` ${vw.multiplier}x hours`}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() =>
-                      persist({
-                        ...rm,
-                        variableWeeks: (rm.variableWeeks ?? []).filter(
-                          (x) => x.id !== vw.id,
-                        ),
-                      })
-                    }
-                    className="p-1 rounded-lg"
-                    style={{ color: "#C0392B" }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Phases */}
           <div>
             <h2
@@ -3448,6 +3495,8 @@ function RoadmapView({
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
+          rm={rm}
+          persist={persist}
         />
       )}
 
