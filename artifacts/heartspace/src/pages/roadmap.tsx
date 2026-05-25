@@ -2945,23 +2945,15 @@ function RoadmapView({
         <MyProgressTab userId={userId} examType={examType} />
       )}
 
-      {/* SCHEDULE TAB */}
+      {/* SCHEDULE TAB — live, auto-updates */}
       {activeTab === "schedule" && (
-        <div className="space-y-6">
-          {showBuilder || !rm.smartSchedule ? (
-            <SchedulePlanner
-              examType={rm.examType}
-              startDate={rm.startDate}
-              syllabusProgress={syllabusProgress}
-              onGenerate={saveSchedule}
-            />
-          ) : (
-            <ScheduleView
-              schedule={rm.smartSchedule}
-              onEdit={() => setShowBuilder(true)}
-            />
-          )}
-        </div>
+        <LiveScheduleTab
+          examType={rm.examType}
+          startDate={rm.startDate}
+          syllabusProgress={syllabusProgress}
+          userId={userId}
+          onSave={saveSchedule}
+        />
       )}
 
       {saved && (
