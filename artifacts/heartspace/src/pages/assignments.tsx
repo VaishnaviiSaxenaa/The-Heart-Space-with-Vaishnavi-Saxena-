@@ -743,38 +743,48 @@ function TopicBlock({
             {attempted}/{topic.subtopics.length} practiced
           </span>
         </button>
-        {attempted > 0 && avgAcc !== null && (
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {attempted > 0 && avgAcc !== null ? (
+            <>
+              <span
+                className="text-xs font-bold font-serif"
+                style={{ color: getAccuracyColor(avgAcc) }}
+              >
+                {avgAcc}%
+              </span>
+              {worstConcept && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: CONCEPT_CFG[worstConcept].bg,
+                    color: CONCEPT_CFG[worstConcept].color,
+                  }}
+                >
+                  {CONCEPT_CFG[worstConcept].emoji}{" "}
+                  {CONCEPT_CFG[worstConcept].label}
+                </span>
+              )}
+              {worstSpeed && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: SPEED_CFG[worstSpeed].bg,
+                    color: SPEED_CFG[worstSpeed].color,
+                  }}
+                >
+                  {SPEED_CFG[worstSpeed].emoji} {SPEED_CFG[worstSpeed].label}
+                </span>
+              )}
+            </>
+          ) : (
             <span
-              className="text-xs font-bold font-serif"
-              style={{ color: getAccuracyColor(avgAcc) }}
+              className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{ background: `${BORDER}88`, color: MUTED }}
             >
-              {avgAcc}%
+              Not started
             </span>
-            {worstConcept && (
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{
-                  background: CONCEPT_CFG[worstConcept].bg,
-                  color: CONCEPT_CFG[worstConcept].color,
-                }}
-              >
-                {CONCEPT_CFG[worstConcept].emoji}
-              </span>
-            )}
-            {worstSpeed && (
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{
-                  background: SPEED_CFG[worstSpeed].bg,
-                  color: SPEED_CFG[worstSpeed].color,
-                }}
-              >
-                {SPEED_CFG[worstSpeed].emoji}
-              </span>
-            )}
-          </div>
-        )}
+          )}
+        </div>
         <button
           type="button"
           onClick={() => {

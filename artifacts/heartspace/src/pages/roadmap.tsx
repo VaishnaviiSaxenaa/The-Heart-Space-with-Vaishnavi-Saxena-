@@ -1664,260 +1664,118 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
   );
 }
 
-/* ─── Schedule Planner ─────────────────── */
-function SchedulePlanner({
+/* ─── Schedule inputs localStorage ─────── */
+function loadScheduleInputs(userId: string) {
+  try {
+    const r = localStorage.getItem(`hs_schedule_inputs_${userId}`);
+    return r
+      ? JSON.parse(r)
+      : {
+          hoursPerDay: 2,
+          daysPerWeek: 5,
+          targetMonths: 6,
+          revisionPercent: 30,
+        };
+  } catch {
+    return {
+      hoursPerDay: 2,
+      daysPerWeek: 5,
+      targetMonths: 6,
+      revisionPercent: 30,
+    };
+  }
+}
+function saveScheduleInputs(
+  userId: string,
+  inputs: {
+    hoursPerDay: number;
+    daysPerWeek: number;
+    targetMonths: number;
+    revisionPercent: number;
+  },
+) {
+  try {
+    localStorage.setItem(
+      `hs_schedule_inputs_${userId}`,
+      JSON.stringify(inputs),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+/* ─── Live Schedule Tab ─────────────────── */
+function LiveScheduleTab({
   examType,
   startDate,
   syllabusProgress,
-  onGenerate,
+  userId,
+  onSave,
 }: {
   examType: string;
   startDate: string;
   syllabusProgress: SyllabusProgress;
-  onGenerate: (schedule: SmartSchedule) => void;
+  userId: string;
+  onSave: (schedule: SmartSchedule) => void;
 }) {
-  const [hoursPerDay, setHoursPerDay] = useState(2);
-  const [daysPerWeek, setDaysPerWeek] = useState(5);
-  const [targetMonths, setTargetMonths] = useState(6);
-  const [revisionPercent, setRevisionPercent] = useState(30);
-  const [preview, setPreview] = useState<SmartSchedule | null>(null);
+  const saved = loadScheduleInputs(userId);
+  const [hoursPerDay, setHoursPerDay] = useState(saved.hoursPerDay);
+  const [daysPerWeek, setDaysPerWeek] = useState(saved.daysPerWeek);
+  const [targetMonths, setTargetMonths] = useState(saved.targetMonths);
+  const [revisionPercent, setRevisionPercent] = useState(saved.revisionPercent);
+  const [filter, setFilter] = useState<WeekType | "all">("all");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const hoursPerWeek = hoursPerDay * daysPerWeek;
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
   const skipped = Object.values(syllabusPercs).filter((p) => p === 100).length;
 
-  function calculate() {
-    setPreview(
+  /* Live schedule — always recalculated */
+  const schedule = generateSmartSchedule(
+    examType,
+    hoursPerDay,
+    daysPerWeek,
+    targetMonths,
+    revisionPercent,
+    startDate,
+    syllabusProgress,
+  );
+
+  /* Save inputs + notify parent whenever anything changes */
+  function update(
+    patch: Partial<{
+      hoursPerDay: number;
+      daysPerWeek: number;
+      targetMonths: number;
+      revisionPercent: number;
+    }>,
+  ) {
+    const next = {
+      hoursPerDay,
+      daysPerWeek,
+      targetMonths,
+      revisionPercent,
+      ...patch,
+    };
+    if (patch.hoursPerDay !== undefined) setHoursPerDay(patch.hoursPerDay);
+    if (patch.daysPerWeek !== undefined) setDaysPerWeek(patch.daysPerWeek);
+    if (patch.targetMonths !== undefined) setTargetMonths(patch.targetMonths);
+    if (patch.revisionPercent !== undefined)
+      setRevisionPercent(patch.revisionPercent);
+    saveScheduleInputs(userId, next);
+    onSave(
       generateSmartSchedule(
         examType,
-        hoursPerDay,
-        daysPerWeek,
-        targetMonths,
-        revisionPercent,
+        next.hoursPerDay,
+        next.daysPerWeek,
+        next.targetMonths,
+        next.revisionPercent,
         startDate,
         syllabusProgress,
       ),
     );
   }
 
-  return (
-    <div
-      className="rounded-2xl p-6 space-y-6"
-      style={{ background: CARD, border: `1px solid ${BORDER}` }}
-    >
-      <div className="flex items-center gap-2">
-        <Calendar className="w-5 h-5" style={{ color: GOLD }} />
-        <h3
-          className="font-serif text-lg font-semibold"
-          style={{ color: CHARCOAL }}
-        >
-          Study Schedule Planner
-        </h3>
-      </div>
-      <p className="text-xs" style={{ color: MUTED }}>
-        Your schedule is automatically adjusted based on your Syllabus Tracker
-        progress. Subjects you've fully completed are skipped. Partially done
-        subjects get fewer weeks.
-      </p>
-
-      {skipped > 0 && (
-        <div
-          className="rounded-xl px-4 py-3"
-          style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}
-        >
-          <p className="text-xs font-semibold" style={{ color: OLIVE }}>
-            ✅ {skipped} subject(s) are 100% complete in your Syllabus Tracker —
-            they'll be skipped.
-          </p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div>
-          <label
-            className="text-xs font-semibold mb-2 block"
-            style={{ color: CHARCOAL }}
-          >
-            Study hours per day:{" "}
-            <span style={{ color: GOLD }}>{hoursPerDay} hrs</span>
-          </label>
-          <input
-            type="range"
-            min={0.5}
-            max={12}
-            step={0.5}
-            value={hoursPerDay}
-            onChange={(e) => setHoursPerDay(parseFloat(e.target.value))}
-            className="w-full accent-amber-600"
-          />
-          <div
-            className="flex justify-between text-[10px] mt-1"
-            style={{ color: MUTED }}
-          >
-            <span>0.5 hrs</span>
-            <span>12 hrs</span>
-          </div>
-        </div>
-        <div>
-          <label
-            className="text-xs font-semibold mb-2 block"
-            style={{ color: CHARCOAL }}
-          >
-            Study days per week:{" "}
-            <span style={{ color: GOLD }}>{daysPerWeek} days</span>
-          </label>
-          <input
-            type="range"
-            min={1}
-            max={7}
-            step={1}
-            value={daysPerWeek}
-            onChange={(e) => setDaysPerWeek(parseInt(e.target.value))}
-            className="w-full accent-amber-600"
-          />
-          <div
-            className="flex justify-between text-[10px] mt-1"
-            style={{ color: MUTED }}
-          >
-            <span>1 day</span>
-            <span>7 days</span>
-          </div>
-        </div>
-        <div>
-          <label
-            className="text-xs font-semibold mb-2 block"
-            style={{ color: CHARCOAL }}
-          >
-            Target completion:{" "}
-            <span style={{ color: GOLD }}>{targetMonths} months</span>
-          </label>
-          <input
-            type="range"
-            min={1}
-            max={36}
-            step={1}
-            value={targetMonths}
-            onChange={(e) => setTargetMonths(parseInt(e.target.value))}
-            className="w-full accent-amber-600"
-          />
-          <div
-            className="flex justify-between text-[10px] mt-1"
-            style={{ color: MUTED }}
-          >
-            <span>1 month</span>
-            <span>36 months</span>
-          </div>
-        </div>
-        <div>
-          <label
-            className="text-xs font-semibold mb-2 block"
-            style={{ color: CHARCOAL }}
-          >
-            Revision intensity:{" "}
-            <span style={{ color: GOLD }}>
-              {revisionPercent}% of study time
-            </span>
-          </label>
-          <input
-            type="range"
-            min={25}
-            max={100}
-            step={5}
-            value={revisionPercent}
-            onChange={(e) => setRevisionPercent(parseInt(e.target.value))}
-            className="w-full accent-amber-600"
-          />
-          <div
-            className="flex justify-between text-[10px] mt-1"
-            style={{ color: MUTED }}
-          >
-            <span>25% (min)</span>
-            <span>100% (intensive)</span>
-          </div>
-        </div>
-      </div>
-
-      <div
-        className="rounded-xl p-4"
-        style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-      >
-        <p className="text-xs font-semibold mb-2" style={{ color: CHARCOAL }}>
-          Your availability:
-        </p>
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Per Week", value: `${hoursPerWeek} hrs` },
-            { label: "Per Month", value: `${hoursPerWeek * 4} hrs` },
-            {
-              label: "In Target",
-              value: `${hoursPerWeek * targetMonths * 4} hrs total`,
-            },
-          ].map(({ label, value }) => (
-            <div key={label} className="text-center">
-              <div
-                className="text-sm font-bold font-serif"
-                style={{ color: DARK }}
-              >
-                {value}
-              </div>
-              <div className="text-[10px]" style={{ color: MUTED }}>
-                {label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <button
-        onClick={calculate}
-        className="w-full h-12 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
-        style={{
-          background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
-          color: "#fff",
-          boxShadow: "0 4px 16px rgba(201,169,110,.35)",
-        }}
-      >
-        Generate My Week-by-Week Schedule
-      </button>
-
-      {preview && (
-        <div className="space-y-4">
-          <CompletionForecast schedule={preview} />
-          <div className="flex gap-2">
-            <button
-              onClick={() => onGenerate(preview)}
-              className="flex-1 h-11 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
-              style={{
-                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
-                color: "#fff",
-              }}
-            >
-              Save This Schedule →
-            </button>
-            <button
-              onClick={() => setPreview(null)}
-              className="px-5 h-11 rounded-xl text-sm font-semibold"
-              style={{ background: BORDER, color: MUTED }}
-            >
-              Recalculate
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Schedule View ────────────────────── */
-function ScheduleView({
-  schedule,
-  onEdit,
-}: {
-  schedule: SmartSchedule;
-  onEdit: () => void;
-}) {
-  const [filter, setFilter] = useState<WeekType | "all">("all");
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const filtered =
     filter === "all"
       ? schedule.weeks
@@ -1925,31 +1783,193 @@ function ScheduleView({
   const subjects = [...new Set(schedule.weeks.map((w) => w.subject))];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+    <div className="space-y-6">
+      {/* Inputs */}
+      <div
+        className="rounded-2xl p-6 space-y-5"
+        style={{ background: CARD, border: `1px solid ${BORDER}` }}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <Calendar className="w-5 h-5" style={{ color: GOLD }} />
           <h3
             className="font-serif text-lg font-semibold"
             style={{ color: CHARCOAL }}
           >
-            Your Week-by-Week Schedule
+            Study Schedule Planner
           </h3>
-          <p className="text-xs mt-0.5" style={{ color: MUTED }}>
-            {schedule.hoursPerDay} hrs/day · {schedule.daysPerWeek} days/week ·
-            {schedule.revisionPercent}% revision · Synced with syllabus tracker
-          </p>
+          <span
+            className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: `${OLIVE}22`, color: OLIVE }}
+          >
+            ⚡ Auto-updates with syllabus
+          </span>
         </div>
-        <button
-          onClick={onEdit}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold"
-          style={{ background: `${GOLD}22`, color: DARK }}
+        <p className="text-xs" style={{ color: MUTED }}>
+          Set your availability once. Schedule auto-recalculates whenever your
+          syllabus progress changes or you adjust these inputs.
+        </p>
+
+        {skipped > 0 && (
+          <div
+            className="rounded-xl px-4 py-3"
+            style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}
+          >
+            <p className="text-xs font-semibold" style={{ color: OLIVE }}>
+              ✅ {skipped} subject(s) 100% complete in syllabus — automatically
+              skipped from schedule.
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label
+              className="text-xs font-semibold mb-2 block"
+              style={{ color: CHARCOAL }}
+            >
+              Study hours per day:{" "}
+              <span style={{ color: GOLD }}>{hoursPerDay} hrs</span>
+            </label>
+            <input
+              type="range"
+              min={0.5}
+              max={12}
+              step={0.5}
+              value={hoursPerDay}
+              onChange={(e) =>
+                update({ hoursPerDay: parseFloat(e.target.value) })
+              }
+              className="w-full accent-amber-600"
+            />
+            <div
+              className="flex justify-between text-[10px] mt-1"
+              style={{ color: MUTED }}
+            >
+              <span>0.5 hrs</span>
+              <span>12 hrs</span>
+            </div>
+          </div>
+          <div>
+            <label
+              className="text-xs font-semibold mb-2 block"
+              style={{ color: CHARCOAL }}
+            >
+              Study days per week:{" "}
+              <span style={{ color: GOLD }}>{daysPerWeek} days</span>
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={7}
+              step={1}
+              value={daysPerWeek}
+              onChange={(e) =>
+                update({ daysPerWeek: parseInt(e.target.value) })
+              }
+              className="w-full accent-amber-600"
+            />
+            <div
+              className="flex justify-between text-[10px] mt-1"
+              style={{ color: MUTED }}
+            >
+              <span>1 day</span>
+              <span>7 days</span>
+            </div>
+          </div>
+          <div>
+            <label
+              className="text-xs font-semibold mb-2 block"
+              style={{ color: CHARCOAL }}
+            >
+              Target completion:{" "}
+              <span style={{ color: GOLD }}>{targetMonths} months</span>
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={36}
+              step={1}
+              value={targetMonths}
+              onChange={(e) =>
+                update({ targetMonths: parseInt(e.target.value) })
+              }
+              className="w-full accent-amber-600"
+            />
+            <div
+              className="flex justify-between text-[10px] mt-1"
+              style={{ color: MUTED }}
+            >
+              <span>1 month</span>
+              <span>36 months</span>
+            </div>
+          </div>
+          <div>
+            <label
+              className="text-xs font-semibold mb-2 block"
+              style={{ color: CHARCOAL }}
+            >
+              Revision intensity:{" "}
+              <span style={{ color: GOLD }}>
+                {revisionPercent}% of study time
+              </span>
+            </label>
+            <input
+              type="range"
+              min={25}
+              max={100}
+              step={5}
+              value={revisionPercent}
+              onChange={(e) =>
+                update({ revisionPercent: parseInt(e.target.value) })
+              }
+              className="w-full accent-amber-600"
+            />
+            <div
+              className="flex justify-between text-[10px] mt-1"
+              style={{ color: MUTED }}
+            >
+              <span>25% (min)</span>
+              <span>100% (intensive)</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-4"
+          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
         >
-          <Edit3 className="w-3 h-3" /> Recalculate
-        </button>
+          <p className="text-xs font-semibold mb-2" style={{ color: CHARCOAL }}>
+            Your availability:
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Per Week", value: `${hoursPerWeek} hrs` },
+              { label: "Per Month", value: `${hoursPerWeek * 4} hrs` },
+              {
+                label: "In Target",
+                value: `${hoursPerWeek * targetMonths * 4} hrs total`,
+              },
+            ].map(({ label, value }) => (
+              <div key={label} className="text-center">
+                <div
+                  className="text-sm font-bold font-serif"
+                  style={{ color: DARK }}
+                >
+                  {value}
+                </div>
+                <div className="text-[10px]" style={{ color: MUTED }}>
+                  {label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
+      {/* Completion forecast — always live */}
       <CompletionForecast schedule={schedule} />
 
+      {/* Filter pills */}
       <div className="flex gap-2 flex-wrap">
         {(["all", "study", "assignment", "revision"] as const).map((f) => (
           <button
@@ -1967,6 +1987,7 @@ function ScheduleView({
         ))}
       </div>
 
+      {/* Legend */}
       <div className="flex gap-3 flex-wrap">
         {(
           Object.entries(WEEK_TYPE_CFG) as [
@@ -1986,12 +2007,12 @@ function ScheduleView({
         ))}
       </div>
 
+      {/* Week-by-week */}
       {subjects.map((subject) => {
         const subjectWeeks = filtered.filter((w) => w.subject === subject);
         if (subjectWeeks.length === 0) return null;
         const allWeeks = schedule.weeks.filter((w) => w.subject === subject);
         const isExpanded = expanded[subject] ?? false;
-
         return (
           <div
             key={subject}
@@ -2045,7 +2066,6 @@ function ScheduleView({
                 <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />
               )}
             </button>
-
             {isExpanded && (
               <div
                 className="divide-y"
@@ -2103,6 +2123,24 @@ function ScheduleView({
           </div>
         );
       })}
+
+      {schedule.weeks.length === 0 && (
+        <div
+          className="text-center py-12 rounded-2xl"
+          style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
+        >
+          <CheckCircle2
+            className="w-10 h-10 mx-auto mb-3"
+            style={{ color: OLIVE }}
+          />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
+            All subjects complete! 🎉
+          </p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>
+            Your syllabus tracker shows everything is done.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -2267,7 +2305,6 @@ function RoadmapView({
   const [activeTab, setActiveTab] = useState<
     "overview" | "progress" | "schedule"
   >("overview");
-  const [showBuilder, setShowBuilder] = useState(!rm.smartSchedule);
 
   const syllabusProgress = loadSyllabusProgress(userId);
   const examType = rm.examType;
@@ -2308,7 +2345,6 @@ function RoadmapView({
 
   function saveSchedule(schedule: SmartSchedule) {
     persist({ ...rm, smartSchedule: schedule });
-    setShowBuilder(false);
     setActiveTab("schedule");
   }
 
