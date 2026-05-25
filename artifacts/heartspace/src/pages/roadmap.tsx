@@ -646,7 +646,7 @@ function generateSmartSchedule(
 
   const weeks: ScheduleWeek[] = [];
   let weekNumber = 1;
-  const start = parseISO(startDate);
+  /* start is already declared above */
 
   subjectsWithAdjusted.forEach((subject) => {
     if (subject.adjustedWeeks === 0) return;
