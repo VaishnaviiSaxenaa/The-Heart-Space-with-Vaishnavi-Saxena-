@@ -110,6 +110,14 @@ interface SmartSchedule {
   generatedAt: string;
 }
 
+interface VariableWeek {
+  id: string;
+  label: string /* e.g. "Holiday week" */;
+  startDate: string /* ISO date of Monday */;
+  multiplier?: number /* e.g. 2.0 = double hours */;
+  customHours?: number /* e.g. 5 = 5 hrs/day that week */;
+}
+
 interface Roadmap {
   type: RoadmapType;
   examType: string;
@@ -117,6 +125,7 @@ interface Roadmap {
   startDate: string;
   phases: RoadmapPhase[];
   unavailablePeriods: UnavailablePeriod[];
+  variableWeeks?: VariableWeek[];
   smartSchedule?: SmartSchedule;
   createdAt: string;
   lastUpdated: string;
@@ -532,11 +541,57 @@ function generateSmartSchedule(
   revisionPercent: number,
   startDate: string,
   syllabusProgress: SyllabusProgress,
+  unavailablePeriods: UnavailablePeriod[] = [],
+  variableWeeks: VariableWeek[] = [],
 ): SmartSchedule {
   const allSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const weekBreakdown =
     examType === "JAM" ? JAM_WEEK_BREAKDOWN : NET_WEEK_BREAKDOWN;
-  const hoursPerWeek = hoursPerDay * daysPerWeek;
+  const baseHoursPerWeek = hoursPerDay * daysPerWeek;
+
+  /* Build a map of week-number → effective hours for that week */
+  /* Week 1 starts on startDate */
+  const start = parseISO(startDate);
+
+  /* For each calendar week offset, check if it's unavailable or variable */
+  function getEffectiveHoursForWeekOffset(weekOffset: number): {
+    hours: number;
+    isUnavailable: boolean;
+    label?: string;
+  } {
+    const weekStart = addWeeks(start, weekOffset);
+    const weekStartStr = format(weekStart, "yyyy-MM-dd");
+
+    /* Check unavailable periods first */
+    for (const up of unavailablePeriods) {
+      if (!up.startDate) continue;
+      const upStart = parseISO(up.startDate);
+      const upEnd = addWeeks(upStart, up.weeks);
+      if (weekStart >= upStart && weekStart < upEnd) {
+        return { hours: 0, isUnavailable: true, label: up.label };
+      }
+    }
+
+    /* Check variable weeks */
+    for (const vw of variableWeeks) {
+      if (!vw.startDate) continue;
+      if (format(parseISO(vw.startDate), "yyyy-MM-dd") === weekStartStr) {
+        const effectiveHoursPerDay =
+          vw.customHours !== undefined
+            ? vw.customHours
+            : (baseHoursPerWeek / daysPerWeek) * (vw.multiplier ?? 1);
+        return {
+          hours: effectiveHoursPerDay * daysPerWeek,
+          isUnavailable: false,
+          label: vw.label,
+        };
+      }
+    }
+
+    return { hours: baseHoursPerWeek, isUnavailable: false };
+  }
+
+  const hoursPerWeek = baseHoursPerWeek;
   const targetWeeks = targetMonths * 4;
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
 
@@ -644,20 +699,79 @@ function generateSmartSchedule(
     }
   });
 
+  /* Interleave unavailable + variable weeks into the schedule */
+  /* Re-sequence: insert unavailable weeks as "pause" entries, adjust dates */
+  const finalWeeks: ScheduleWeek[] = [];
+  let calendarOffset = 0; /* tracks real calendar weeks from start */
+
+  for (const week of weeks) {
+    /* Skip any unavailable calendar weeks before placing this study week */
+    let placed = false;
+    while (!placed) {
+      const eff = getEffectiveHoursForWeekOffset(calendarOffset);
+      if (eff.isUnavailable) {
+        /* Insert unavailable week into schedule as a pause entry */
+        finalWeeks.push({
+          weekNumber: finalWeeks.length + 1,
+          subject: "Unavailable",
+          focus: `⏸ ${eff.label ?? "Unavailable"} — No study this week`,
+          type: "buffer",
+          hoursRequired: 0,
+          hoursAvailable: 0,
+          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+        });
+        calendarOffset++;
+      } else {
+        /* Place the study week at this calendar position */
+        finalWeeks.push({
+          ...week,
+          weekNumber: finalWeeks.length + 1,
+          hoursAvailable: eff.hours,
+          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+          focus:
+            eff.label && eff.hours !== baseHoursPerWeek
+              ? `${week.focus} (${eff.label}: ${eff.hours} hrs this week)`
+              : week.focus,
+        });
+        calendarOffset++;
+        placed = true;
+      }
+    }
+  }
+
+  /* Buffer weeks — also respect unavailable/variable */
   for (let b = 0; b < bufferWeeks; b++) {
-    weeks.push({
-      weekNumber,
-      subject: "Full Syllabus",
-      focus:
-        b === 0
-          ? "Mock Tests — Full length, time management practice"
-          : "Final Revision — Formula sheets, exam strategy, weak spots",
-      type: "revision",
-      hoursRequired: hoursPerWeek,
-      hoursAvailable: hoursPerWeek,
-      startDate: format(addWeeks(start, weekNumber - 1), "MMM d"),
-    });
-    weekNumber++;
+    let placed = false;
+    while (!placed) {
+      const eff = getEffectiveHoursForWeekOffset(calendarOffset);
+      if (eff.isUnavailable) {
+        finalWeeks.push({
+          weekNumber: finalWeeks.length + 1,
+          subject: "Unavailable",
+          focus: `⏸ ${eff.label ?? "Unavailable"} — No study this week`,
+          type: "buffer",
+          hoursRequired: 0,
+          hoursAvailable: 0,
+          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+        });
+        calendarOffset++;
+      } else {
+        finalWeeks.push({
+          weekNumber: finalWeeks.length + 1,
+          subject: "Full Syllabus",
+          focus:
+            b === 0
+              ? "Mock Tests — Full length, time management practice"
+              : "Final Revision — Formula sheets, exam strategy, weak spots",
+          type: "revision",
+          hoursRequired: hoursPerWeek,
+          hoursAvailable: eff.hours,
+          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+        });
+        calendarOffset++;
+        placed = true;
+      }
+    }
   }
 
   return {
@@ -670,7 +784,7 @@ function generateSmartSchedule(
     totalWeeksRequired,
     isAchievable,
     minimumMonthsNeeded,
-    weeks,
+    weeks: finalWeeks,
     subjectForecasts,
     subjectsFullyCompletable: subjectForecasts.filter((s) => s.canComplete)
       .length,
@@ -1704,6 +1818,88 @@ function saveScheduleInputs(
   }
 }
 
+/* ─── Variable Weeks Panel ──────────────── */
+function VariableWeeksPanel({
+  variableWeeks,
+  unavailablePeriods,
+  baseHoursPerDay,
+  daysPerWeek,
+}: {
+  variableWeeks: VariableWeek[];
+  unavailablePeriods: UnavailablePeriod[];
+  baseHoursPerDay: number;
+  daysPerWeek: number;
+}) {
+  if (variableWeeks.length === 0 && unavailablePeriods.length === 0)
+    return null;
+
+  return (
+    <div
+      className="rounded-2xl p-4 space-y-2"
+      style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}33` }}
+    >
+      <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>
+        Special Weeks in Schedule
+      </p>
+      {unavailablePeriods.map((up) => (
+        <div
+          key={up.id}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl"
+          style={{ background: `${ROSE}15`, border: `1px solid ${ROSE}44` }}
+        >
+          <span className="text-sm">⏸</span>
+          <span
+            className="flex-1 text-xs font-medium"
+            style={{ color: CHARCOAL }}
+          >
+            {up.label}
+          </span>
+          <span className="text-[10px]" style={{ color: MUTED }}>
+            {up.startDate ? format(parseISO(up.startDate), "MMM d") : ""} ·{" "}
+            {up.weeks} week{up.weeks > 1 ? "s" : ""} · 0 hrs
+          </span>
+        </div>
+      ))}
+      {variableWeeks.map((vw) => {
+        const effectiveHrs =
+          vw.customHours !== undefined
+            ? vw.customHours * daysPerWeek
+            : baseHoursPerDay * daysPerWeek * (vw.multiplier ?? 1);
+        const baseHrs = baseHoursPerDay * daysPerWeek;
+        const isMore = effectiveHrs > baseHrs;
+        return (
+          <div
+            key={vw.id}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl"
+            style={{
+              background: isMore ? `${OLIVE}12` : "#FFF8DC",
+              border: `1px solid ${isMore ? OLIVE : "#B8860B"}33`,
+            }}
+          >
+            <span className="text-sm">{isMore ? "⚡" : "🐌"}</span>
+            <span
+              className="flex-1 text-xs font-medium"
+              style={{ color: CHARCOAL }}
+            >
+              {vw.label}
+            </span>
+            <span
+              className="text-[10px]"
+              style={{ color: isMore ? OLIVE : "#B8860B" }}
+            >
+              {vw.startDate ? format(parseISO(vw.startDate), "MMM d") : ""} ·
+              {vw.customHours !== undefined
+                ? ` ${vw.customHours} hrs/day`
+                : ` ${vw.multiplier}x`}{" "}
+              ·{effectiveHrs} hrs/week
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ─── Live Schedule Tab ─────────────────── */
 function LiveScheduleTab({
   examType,
@@ -1711,12 +1907,16 @@ function LiveScheduleTab({
   syllabusProgress,
   userId,
   onSave,
+  unavailablePeriods,
+  variableWeeks,
 }: {
   examType: string;
   startDate: string;
   syllabusProgress: SyllabusProgress;
   userId: string;
   onSave: (schedule: SmartSchedule) => void;
+  unavailablePeriods: UnavailablePeriod[];
+  variableWeeks: VariableWeek[];
 }) {
   const saved = loadScheduleInputs(userId);
   const [hoursPerDay, setHoursPerDay] = useState(saved.hoursPerDay);
@@ -1730,7 +1930,7 @@ function LiveScheduleTab({
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
   const skipped = Object.values(syllabusPercs).filter((p) => p === 100).length;
 
-  /* Live schedule — always recalculated */
+  /* Live schedule — always recalculated with unavailable + variable weeks */
   const schedule = generateSmartSchedule(
     examType,
     hoursPerDay,
@@ -1739,6 +1939,8 @@ function LiveScheduleTab({
     revisionPercent,
     startDate,
     syllabusProgress,
+    unavailablePeriods,
+    variableWeeks,
   );
 
   /* Save inputs + notify parent whenever anything changes */
@@ -1772,6 +1974,8 @@ function LiveScheduleTab({
         next.revisionPercent,
         startDate,
         syllabusProgress,
+        unavailablePeriods,
+        variableWeeks,
       ),
     );
   }
@@ -1968,6 +2172,14 @@ function LiveScheduleTab({
 
       {/* Completion forecast — always live */}
       <CompletionForecast schedule={schedule} />
+
+      {/* Variable Weeks panel */}
+      <VariableWeeksPanel
+        variableWeeks={variableWeeks}
+        unavailablePeriods={unavailablePeriods}
+        baseHoursPerDay={hoursPerDay}
+        daysPerWeek={daysPerWeek}
+      />
 
       {/* Filter pills */}
       <div className="flex gap-2 flex-wrap">
@@ -2299,6 +2511,14 @@ function RoadmapView({
     label: "",
     startDate: "",
     weeks: 1,
+  });
+  const [showVarWeek, setShowVarWeek] = useState(false);
+  const [varWeekForm, setVarWeekForm] = useState({
+    label: "",
+    startDate: "",
+    useMultiplier: true,
+    multiplier: 2,
+    customHours: 4,
   });
   const [expandPhase, setExpandPhase] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
@@ -2785,6 +3005,279 @@ function RoadmapView({
             </div>
           </div>
 
+          {/* Variable Weeks */}
+          <div
+            className="rounded-2xl p-5"
+            style={{ background: CARD, border: `1px solid ${BORDER}` }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4" style={{ color: GOLD }} />
+                <h3
+                  className="font-semibold text-sm"
+                  style={{ color: CHARCOAL }}
+                >
+                  Variable Intensity Weeks
+                </h3>
+              </div>
+              {!showVarWeek && (
+                <button
+                  onClick={() => setShowVarWeek(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
+                  style={{ background: `${GOLD}22`, color: DARK }}
+                >
+                  <Plus className="w-3 h-3" /> Add
+                </button>
+              )}
+            </div>
+            <p className="text-xs mb-3" style={{ color: MUTED }}>
+              Add weeks where you can study more or less than usual — schedule
+              adjusts automatically.
+            </p>
+            {showVarWeek && (
+              <div
+                className="rounded-xl p-4 mb-3 space-y-3"
+                style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      className="text-xs font-semibold mb-1 block"
+                      style={{ color: MUTED }}
+                    >
+                      Label
+                    </label>
+                    <input
+                      value={varWeekForm.label}
+                      onChange={(e) =>
+                        setVarWeekForm((p) => ({ ...p, label: e.target.value }))
+                      }
+                      placeholder="e.g. Holiday week, Exam week…"
+                      className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                      style={{
+                        background: CARD,
+                        borderColor: BORDER,
+                        color: CHARCOAL,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className="text-xs font-semibold mb-1 block"
+                      style={{ color: MUTED }}
+                    >
+                      Week starting
+                    </label>
+                    <input
+                      type="date"
+                      value={varWeekForm.startDate}
+                      onChange={(e) =>
+                        setVarWeekForm((p) => ({
+                          ...p,
+                          startDate: e.target.value,
+                        }))
+                      }
+                      className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                      style={{
+                        background: CARD,
+                        borderColor: BORDER,
+                        color: CHARCOAL,
+                      }}
+                    />
+                  </div>
+                </div>
+                {/* Toggle: multiplier vs custom hours */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVarWeekForm((p) => ({ ...p, useMultiplier: true }))
+                    }
+                    className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
+                    style={
+                      varWeekForm.useMultiplier
+                        ? { background: DARK, color: CREAM }
+                        : { background: `${BORDER}88`, color: MUTED }
+                    }
+                  >
+                    Multiplier (e.g. 2x)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVarWeekForm((p) => ({ ...p, useMultiplier: false }))
+                    }
+                    className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
+                    style={
+                      !varWeekForm.useMultiplier
+                        ? { background: DARK, color: CREAM }
+                        : { background: `${BORDER}88`, color: MUTED }
+                    }
+                  >
+                    Custom hours/day
+                  </button>
+                </div>
+                {varWeekForm.useMultiplier ? (
+                  <div>
+                    <label
+                      className="text-xs font-semibold mb-2 block"
+                      style={{ color: MUTED }}
+                    >
+                      Multiplier:{" "}
+                      <span style={{ color: GOLD }}>
+                        {varWeekForm.multiplier}x normal hours
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={4}
+                      step={0.1}
+                      value={varWeekForm.multiplier}
+                      onChange={(e) =>
+                        setVarWeekForm((p) => ({
+                          ...p,
+                          multiplier: parseFloat(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-amber-600"
+                    />
+                    <div
+                      className="flex justify-between text-[10px] mt-1"
+                      style={{ color: MUTED }}
+                    >
+                      <span>0.1x (barely any)</span>
+                      <span>4x (intensive)</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label
+                      className="text-xs font-semibold mb-2 block"
+                      style={{ color: MUTED }}
+                    >
+                      Custom hours per day:{" "}
+                      <span style={{ color: GOLD }}>
+                        {varWeekForm.customHours} hrs
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min={0.5}
+                      max={16}
+                      step={0.5}
+                      value={varWeekForm.customHours}
+                      onChange={(e) =>
+                        setVarWeekForm((p) => ({
+                          ...p,
+                          customHours: parseFloat(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-amber-600"
+                    />
+                    <div
+                      className="flex justify-between text-[10px] mt-1"
+                      style={{ color: MUTED }}
+                    >
+                      <span>0.5 hrs</span>
+                      <span>16 hrs</span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (!varWeekForm.label || !varWeekForm.startDate) return;
+                      const newVW: VariableWeek = {
+                        id: `${Date.now()}`,
+                        label: varWeekForm.label,
+                        startDate: varWeekForm.startDate,
+                        ...(varWeekForm.useMultiplier
+                          ? { multiplier: varWeekForm.multiplier }
+                          : { customHours: varWeekForm.customHours }),
+                      };
+                      persist({
+                        ...rm,
+                        variableWeeks: [...(rm.variableWeeks ?? []), newVW],
+                      });
+                      setVarWeekForm({
+                        label: "",
+                        startDate: "",
+                        useMultiplier: true,
+                        multiplier: 2,
+                        customHours: 4,
+                      });
+                      setShowVarWeek(false);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+                    style={{
+                      background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                      color: "#fff",
+                    }}
+                  >
+                    <Save className="w-3 h-3" /> Add Week
+                  </button>
+                  <button
+                    onClick={() => setShowVarWeek(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold"
+                    style={{ background: BORDER, color: MUTED }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            {(rm.variableWeeks ?? []).length === 0 && !showVarWeek && (
+              <p className="text-xs" style={{ color: MUTED }}>
+                No variable weeks added yet.
+              </p>
+            )}
+            <div className="space-y-2">
+              {(rm.variableWeeks ?? []).map((vw) => (
+                <div
+                  key={vw.id}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                  style={{
+                    background: `${GOLD}10`,
+                    border: `1px solid ${GOLD}33`,
+                  }}
+                >
+                  <div>
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: CHARCOAL }}
+                    >
+                      {vw.label}
+                    </span>
+                    <span className="text-xs ml-2" style={{ color: MUTED }}>
+                      {vw.startDate
+                        ? format(parseISO(vw.startDate), "MMM d")
+                        : ""}{" "}
+                      ·
+                      {vw.customHours !== undefined
+                        ? ` ${vw.customHours} hrs/day`
+                        : ` ${vw.multiplier}x hours`}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      persist({
+                        ...rm,
+                        variableWeeks: (rm.variableWeeks ?? []).filter(
+                          (x) => x.id !== vw.id,
+                        ),
+                      })
+                    }
+                    className="p-1 rounded-lg"
+                    style={{ color: "#C0392B" }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Phases */}
           <div>
             <h2
@@ -2953,6 +3446,8 @@ function RoadmapView({
           syllabusProgress={syllabusProgress}
           userId={userId}
           onSave={saveSchedule}
+          unavailablePeriods={rm.unavailablePeriods}
+          variableWeeks={rm.variableWeeks ?? []}
         />
       )}
 
