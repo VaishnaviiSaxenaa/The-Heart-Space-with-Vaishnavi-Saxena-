@@ -731,7 +731,7 @@ describe("Variable Weeks", () => {
       id: "1",
       label: "Exams",
       startDate: "2026-06-01",
-      weeks: 1,
+      endDate: "2026-06-08",
     };
     const vw: VariableWeek = {
       id: "2",
