@@ -3501,6 +3501,154 @@ function LiveScheduleTab({
         )}
       </div>
 
+
+      {/* Simultaneous Study Slots */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <button onClick={() => setShowSlotsPanel(!showSlotsPanel)}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left"
+          style={{ background: showSlotsPanel ? `${GOLD}08` : CARD }}>
+          <Zap className="w-4 h-4" style={{ color: GOLD }} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>Simultaneous Study Slots</p>
+            <p className="text-xs mt-0.5" style={{ color: MUTED }}>
+              Add date ranges where you study specific topics together — each with its own hours
+            </p>
+          </div>
+          {showSlotsPanel ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
+        </button>
+        {showSlotsPanel && (
+          <div className="px-5 pb-5 pt-3 space-y-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+            <p className="text-xs" style={{ color: MUTED }}>
+              During these slots, selected topics run simultaneously from the same start date. Outside slots, the default study mode applies.
+            </p>
+            <div className="rounded-xl p-4 space-y-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+              <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>Add Simultaneous Slot</p>
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Label</label>
+                <input value={slotForm.label} onChange={e => setSlotForm(p => ({ ...p, label: e.target.value }))}
+                  placeholder="e.g. Daily revision block, Exam sprint…"
+                  className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                  style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Start date</label>
+                  <input type="date" value={slotForm.startDate} onChange={e => setSlotForm(p => ({ ...p, startDate: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                    style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>End date</label>
+                  <input type="date" value={slotForm.endDate} min={slotForm.startDate} onChange={e => setSlotForm(p => ({ ...p, endDate: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                    style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>Select topics to study simultaneously (min 2):</label>
+                <div className="flex flex-wrap gap-2">
+                  {rawSubjectsList.map(s => {
+                    const selected = slotForm.subjectIds.includes(s.id);
+                    return (
+                      <button key={s.id} type="button"
+                        onClick={() => setSlotForm(p => ({
+                          ...p,
+                          subjectIds: selected ? p.subjectIds.filter(id => id !== s.id) : [...p.subjectIds, s.id],
+                        }))}
+                        className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                        style={selected ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
+                        {s.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {slotForm.subjectIds.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>Hours per day per topic:</label>
+                  <div className="space-y-2">
+                    {slotForm.subjectIds.map(id => {
+                      const s = rawSubjectsList.find(x => x.id === id);
+                      if (!s) return null;
+                      return (
+                        <div key={id} className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                          style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+                          <span className="flex-1 text-xs font-medium" style={{ color: CHARCOAL }}>{s.name}</span>
+                          <input type="number" min={0.5} max={12} step={0.5}
+                            value={slotForm.hoursPerSubject[id] ?? ""}
+                            placeholder="hrs/day"
+                            onChange={e => setSlotForm(p => ({
+                              ...p,
+                              hoursPerSubject: { ...p.hoursPerSubject, [id]: parseFloat(e.target.value) || 0 }
+                            }))}
+                            className="w-20 h-8 px-2 rounded-lg text-xs text-center border-2 outline-none"
+                            style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }} />
+                          <span className="text-xs" style={{ color: MUTED }}>hrs/day</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <button type="button"
+                onClick={() => {
+                  if (!slotForm.label || !slotForm.startDate || !slotForm.endDate || slotForm.subjectIds.length < 2) return;
+                  const newSlot: SimultaneousSlot = {
+                    id: `${Date.now()}`, label: slotForm.label,
+                    startDate: slotForm.startDate, endDate: slotForm.endDate,
+                    subjectIds: slotForm.subjectIds, hoursPerSubject: slotForm.hoursPerSubject,
+                  };
+                  updateSimSlots([...simSlots, newSlot]);
+                  setSlotForm({ label: "", startDate: "", endDate: "", subjectIds: [], hoursPerSubject: {} });
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+                style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
+                <Plus className="w-3 h-3" /> Add Slot
+              </button>
+            </div>
+            {simSlots.length === 0 && <p className="text-xs" style={{ color: MUTED }}>No simultaneous slots added yet.</p>}
+            <div className="space-y-2">
+              {simSlots.map(slot => {
+                const days = slot.startDate && slot.endDate
+                  ? Math.max(0, Math.round((new Date(slot.endDate).getTime() - new Date(slot.startDate).getTime()) / (24*60*60*1000)))
+                  : 0;
+                return (
+                  <div key={slot.id} className="rounded-xl px-4 py-3" style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}33` }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold" style={{ color: CHARCOAL }}>⚡ {slot.label}</p>
+                        <p className="text-xs mt-0.5" style={{ color: MUTED }}>
+                          {slot.startDate ? format(parseISO(slot.startDate), "MMM d") : ""} → {slot.endDate ? format(parseISO(slot.endDate), "MMM d") : ""} · {days} days
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: DARK }}>
+                          {slot.subjectIds.map(id => rawSubjectsList.find(s => s.id === id)?.name ?? id).join(" + ")}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {slot.subjectIds.map(id => {
+                            const hrs = slot.hoursPerSubject[id];
+                            if (!hrs) return null;
+                            return (
+                              <span key={id} className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{ background: `${GOLD}22`, color: DARK }}>
+                                {rawSubjectsList.find(s => s.id === id)?.name ?? id}: {hrs} hrs/day
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => updateSimSlots(simSlots.filter(s => s.id !== slot.id))}
+                        className="p-1 rounded-lg" style={{ color: "#C0392B" }}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* QP Integration indicator */}
       {Object.keys(practiceProgress).length > 0 && (
         <div
