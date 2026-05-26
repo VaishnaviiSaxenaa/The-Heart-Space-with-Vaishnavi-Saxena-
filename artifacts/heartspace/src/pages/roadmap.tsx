@@ -905,45 +905,100 @@ function generateSmartSchedule(
     }
   });
 
-  /* Walk calendar — one week can complete MULTIPLE tasks if hours allow (variable intensity truly compresses!) */
+  /* Walk calendar — parallel mode runs N subjects simultaneously from same start date */
   const weeks: ScheduleWeek[] = [];
   let calOffset2 = 0;
-  let tIdx = 0;
-  let tHoursLeft = tasks.length > 0 ? tasks[0].hoursNeeded : 0;
-  while (tIdx < tasks.length && calOffset2 < 300) {
-    const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
-    if (eff2.isUnavailable || eff2.hours <= 0.5) { calOffset2++; continue; }
-    let hoursLeftThisWeek = eff2.hours;
-    const focusParts: string[] = [];
-    const weekType: "study"|"assignment"|"revision" = tasks[tIdx]?.type ?? "study";
-    const weekSubject = tasks[tIdx]?.name ?? "";
-    while (tIdx < tasks.length && hoursLeftThisWeek > 0.5) {
-      const task = tasks[tIdx];
-      if (tHoursLeft <= hoursLeftThisWeek) {
-        hoursLeftThisWeek -= tHoursLeft;
-        focusParts.push(task.focus);
-        tIdx++;
-        tHoursLeft = tIdx < tasks.length ? tasks[tIdx].hoursNeeded : 0;
-      } else {
-        tHoursLeft -= hoursLeftThisWeek;
-        focusParts.push(task.focus + " (cont.)");
-        hoursLeftThisWeek = 0;
+
+  if (parallelConfig.mode === "sequential") {
+    let tIdx = 0;
+    let tHoursLeft = tasks.length > 0 ? tasks[0].hoursNeeded : 0;
+    while (tIdx < tasks.length && calOffset2 < 300) {
+      const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
+      if (eff2.isUnavailable || eff2.hours <= 0.5) { calOffset2++; continue; }
+      let hoursLeftThisWeek = eff2.hours;
+      const focusParts: string[] = [];
+      const weekType: "study"|"assignment"|"revision" = tasks[tIdx]?.type ?? "study";
+      const weekSubject = tasks[tIdx]?.name ?? "";
+      while (tIdx < tasks.length && hoursLeftThisWeek > 0.5) {
+        const task = tasks[tIdx];
+        if (tHoursLeft <= hoursLeftThisWeek) {
+          hoursLeftThisWeek -= tHoursLeft;
+          focusParts.push(task.focus);
+          tIdx++;
+          tHoursLeft = tIdx < tasks.length ? tasks[tIdx].hoursNeeded : 0;
+        } else {
+          tHoursLeft -= hoursLeftThisWeek;
+          focusParts.push(task.focus + " (cont.)");
+          hoursLeftThisWeek = 0;
+        }
+      }
+      const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
+        ? ` — ${eff2.label}: ${Math.round(eff2.hours * 10) / 10} hrs` : "";
+      weeks.push({
+        weekNumber: weeks.length + 1, subject: weekSubject,
+        focus: focusParts.join(" + ") + vSuffix, type: weekType,
+        hoursRequired: eff2.hours, hoursAvailable: eff2.hours,
+        startDate: format(addWeeks(start, calOffset2), "MMM d"),
+      });
+      calOffset2++;
+    }
+  } else {
+    /* Parallel: N subjects run simultaneously from same start date */
+    const n = parallelConfig.parallelCount;
+    const subjectIds = [...new Set(tasks.map(t => t.id))];
+    interface BQ { id: string; name: string; queue: SubjectTask[]; hrsPerWeek: number; hoursLeft: number; }
+    const allQueues: BQ[] = subjectIds.map(id => ({
+      id,
+      name: tasks.find(t => t.id === id)?.name ?? id,
+      queue: tasks.filter(t => t.id === id),
+      hrsPerWeek: parallelConfig.hoursPerSubject[id]
+        ? parallelConfig.hoursPerSubject[id] * daysPerWeek
+        : baseHoursPerWeek / n,
+      hoursLeft: 0,
+    }));
+    allQueues.forEach(bq => { bq.hoursLeft = bq.queue.length > 0 ? bq.queue[0].hoursNeeded : 0; });
+
+    /* Process in batches of n subjects at a time */
+    for (let bStart = 0; bStart < allQueues.length; bStart += n) {
+      const batch = allQueues.slice(bStart, bStart + n);
+      let batchDone = batch.every(bq => bq.queue.length === 0);
+      while (!batchDone && calOffset2 < 500) {
+        const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
+        if (eff2.isUnavailable || eff2.hours <= 0.5) { calOffset2++; continue; }
+        const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
+          ? ` — ${eff2.label}` : "";
+        batch.forEach(bq => {
+          if (bq.queue.length === 0) return;
+          let hrsAvail = Math.min(bq.hrsPerWeek, eff2.hours);
+          const focusParts: string[] = [];
+          while (bq.queue.length > 0 && hrsAvail > 0.5) {
+            if (bq.hoursLeft <= hrsAvail) {
+              hrsAvail -= bq.hoursLeft;
+              focusParts.push(bq.queue[0].focus);
+              bq.queue.shift();
+              bq.hoursLeft = bq.queue.length > 0 ? bq.queue[0].hoursNeeded : 0;
+            } else {
+              bq.hoursLeft -= hrsAvail;
+              focusParts.push(bq.queue[0].focus + " (cont.)");
+              hrsAvail = 0;
+            }
+          }
+          if (focusParts.length > 0) {
+            weeks.push({
+              weekNumber: weeks.length + 1, subject: bq.name,
+              focus: focusParts.join(" + ") + vSuffix,
+              type: bq.queue.length > 0 ? bq.queue[0].type : "study",
+              hoursRequired: bq.hrsPerWeek, hoursAvailable: Math.min(bq.hrsPerWeek, eff2.hours),
+              startDate: format(addWeeks(start, calOffset2), "MMM d"),
+            });
+          }
+        });
+        calOffset2++;
+        batchDone = batch.every(bq => bq.queue.length === 0);
       }
     }
-    const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
-      ? ` — ${eff2.label}: ${Math.round(eff2.hours * 10) / 10} hrs` : "";
-    weeks.push({
-      weekNumber: weeks.length + 1,
-      subject: weekSubject,
-      focus: focusParts.join(" + ") + vSuffix,
-      type: weekType,
-      hoursRequired: eff2.hours,
-      hoursAvailable: eff2.hours,
-      startDate: format(addWeeks(start, calOffset2), "MMM d"),
-    });
-    calOffset2++;
+    weeks.sort((a, b) => a.startDate.localeCompare(b.startDate));
   }
-
   /* Reset calendarOffset for finalWeeks phase (picks up from where task walk left off) */
   let calendarOffset = calOffset2;
 
