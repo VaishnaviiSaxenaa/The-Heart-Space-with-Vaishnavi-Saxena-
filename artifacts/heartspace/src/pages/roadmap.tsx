@@ -985,7 +985,8 @@ function generateSmartSchedule(
           }
           if (focusParts.length > 0) {
             weeks.push({
-              weekNumber: weeks.length + 1, subject: bq.name,
+              weekNumber: calOffset2, /* temp: use calOffset for sorting */
+              subject: bq.name,
               focus: focusParts.join(" + ") + vSuffix,
               type: bq.queue.length > 0 ? bq.queue[0].type : "study",
               hoursRequired: bq.hrsPerWeek, hoursAvailable: Math.min(bq.hrsPerWeek, eff2.hours),
@@ -997,7 +998,9 @@ function generateSmartSchedule(
         batchDone = batch.every(bq => bq.queue.length === 0);
       }
     }
-    weeks.sort((a, b) => a.startDate.localeCompare(b.startDate));
+    /* Sort by actual calendar offset (stored in weekNumber temporarily) then reassign */
+    weeks.sort((a, b) => a.weekNumber - b.weekNumber);
+    weeks.forEach((w, i) => { w.weekNumber = i + 1; });
   }
   /* Reset calendarOffset for finalWeeks phase (picks up from where task walk left off) */
   let calendarOffset = calOffset2;
