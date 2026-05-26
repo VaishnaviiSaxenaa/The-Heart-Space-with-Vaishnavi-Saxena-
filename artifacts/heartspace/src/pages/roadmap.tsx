@@ -196,6 +196,24 @@ interface ParallelConfig {
   hoursPerSubject: Record<string, number>;
 }
 
+interface SimultaneousSlot {
+  id: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+  subjectIds: string[];           /* which subjects run in parallel */
+  hoursPerSubject: Record<string, number>; /* hrs/day per subject */
+}
+
+function lsSlotsKey(uid: string) { return `hs_sim_slots_${uid}`; }
+function loadSimSlots(uid: string): SimultaneousSlot[] {
+  try { const r = localStorage.getItem(lsSlotsKey(uid)); return r ? JSON.parse(r) : []; }
+  catch { return []; }
+}
+function saveSimSlots(uid: string, slots: SimultaneousSlot[]) {
+  try { localStorage.setItem(lsSlotsKey(uid), JSON.stringify(slots)); } catch {}
+}
+
 function loadParallelConfig(uid: string): ParallelConfig {
   try {
     const r = localStorage.getItem(lsParallelKey(uid));
@@ -730,6 +748,7 @@ function generateSmartSchedule(
     parallelCount: 1,
     hoursPerSubject: {},
   },
+  simSlots: SimultaneousSlot[] = [],
 ): SmartSchedule {
   const rawSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   /* Apply custom subject order */
@@ -958,6 +977,18 @@ function generateSmartSchedule(
     }));
     allQueues.forEach(bq => { bq.hoursLeft = bq.queue.length > 0 ? bq.queue[0].hoursNeeded : 0; });
 
+    /* Check if a simSlot is active for a given calendar week */
+    function getActiveSlot(weekOffset: number): SimultaneousSlot | null {
+      const weekDate = addWeeks(start, weekOffset);
+      for (const slot of simSlots) {
+        if (!slot.startDate || !slot.endDate) continue;
+        const slotStart = parseISO(slot.startDate);
+        const slotEnd   = parseISO(slot.endDate);
+        if (weekDate >= slotStart && weekDate < slotEnd) return slot;
+      }
+      return null;
+    }
+
     /* Process in batches of n subjects at a time */
     for (let bStart = 0; bStart < allQueues.length; bStart += n) {
       const batch = allQueues.slice(bStart, bStart + n);
@@ -965,11 +996,19 @@ function generateSmartSchedule(
       while (!batchDone && calOffset2 < 500) {
         const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
         if (eff2.isUnavailable || eff2.hours <= 0.5) { calOffset2++; continue; }
+        /* Check if a simSlot overrides which subjects run this week */
+        const activeSlot = getActiveSlot(calOffset2);
         const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
           ? ` — ${eff2.label}` : "";
-        batch.forEach(bq => {
+        const activeBatch = activeSlot
+          ? allQueues.filter(bq => activeSlot.subjectIds.includes(bq.id))
+          : batch;
+        activeBatch.forEach(bq => {
           if (bq.queue.length === 0) return;
-          let hrsAvail = Math.min(bq.hrsPerWeek, eff2.hours);
+          const slotHrs = activeSlot?.hoursPerSubject[bq.id]
+            ? activeSlot.hoursPerSubject[bq.id] * daysPerWeek
+            : bq.hrsPerWeek;
+          let hrsAvail = Math.min(slotHrs, eff2.hours);
           const focusParts: string[] = [];
           while (bq.queue.length > 0 && hrsAvail > 0.5) {
             if (bq.hoursLeft <= hrsAvail) {
@@ -2736,6 +2775,9 @@ function LiveScheduleTab({
   const [showBasePanel, setShowBasePanel] = useState(false);
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showParallelPanel, setShowParallelPanel] = useState(false);
+  const [showSlotsPanel,   setShowSlotsPanel]    = useState(false);
+  const [simSlots,         setSimSlotsState]      = useState<SimultaneousSlot[]>(() => loadSimSlots(userId));
+  const [slotForm, setSlotForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string,number> });
 
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(userId);
