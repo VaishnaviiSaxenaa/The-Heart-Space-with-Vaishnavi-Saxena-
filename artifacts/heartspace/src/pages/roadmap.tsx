@@ -2820,6 +2820,15 @@ function LiveScheduleTab({
     );
   }
 
+  function updateSimSlots(slots: SimultaneousSlot[]) {
+    setSimSlotsState(slots);
+    saveSimSlots(userId, slots);
+    onSave(generateSmartSchedule(
+      examType, hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
+      startDate, syllabusProgress, rm.unavailablePeriods, rm.variableWeeks ?? [],
+      topicSpeed, baseWeeksOverride, practiceProgress, subjectOrder, parallelCfg, slots));
+  }
+
   function updateParallelCfg(cfg: ParallelConfig) {
     setParallelCfgState(cfg);
     saveParallelConfig(userId, cfg);
