@@ -910,7 +910,7 @@ describe("Topic Learning Speed", () => {
     expect(SPEED_MULTIPLIERS["second_fast"]).toBe(0.5);
   });
   it("first fast gives fewer weeks than first normal", () => {
-    const base = 4;
+    const base = 5; /* 5×0.8=4.0 → ceil=4 < 5×1.0=5 → ceil=5 */
     expect(Math.ceil(base * SPEED_MULTIPLIERS["first_fast"])).toBeLessThan(
       Math.ceil(base * SPEED_MULTIPLIERS["first_normal"]),
     );
