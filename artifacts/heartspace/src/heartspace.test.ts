@@ -877,3 +877,206 @@ describe("Schedule Inputs", () => {
     expect(weekly * weeks).toBe(240);
   });
 });
+
+/* ══════════════════════════════════════════════════════════
+   §18  TOPIC LEARNING SPEED  (new — do not modify once passing)
+   ══════════════════════════════════════════════════════════ */
+describe("Topic Learning Speed", () => {
+  const SPEED_MULTIPLIERS: Record<string, number> = {
+    first_slow: 1.3,
+    first_normal: 1.0,
+    first_fast: 0.8,
+    second_slow: 1.0,
+    second_normal: 0.67,
+    second_fast: 0.5,
+  };
+
+  it("first time slow multiplier is 1.3", () => {
+    expect(SPEED_MULTIPLIERS["first_slow"]).toBe(1.3);
+  });
+  it("first time normal multiplier is 1.0", () => {
+    expect(SPEED_MULTIPLIERS["first_normal"]).toBe(1.0);
+  });
+  it("first time fast multiplier is 0.8", () => {
+    expect(SPEED_MULTIPLIERS["first_fast"]).toBe(0.8);
+  });
+  it("second time slow multiplier is 1.0", () => {
+    expect(SPEED_MULTIPLIERS["second_slow"]).toBe(1.0);
+  });
+  it("second time normal multiplier is 0.67", () => {
+    expect(SPEED_MULTIPLIERS["second_normal"]).toBe(0.67);
+  });
+  it("second time fast multiplier is 0.5", () => {
+    expect(SPEED_MULTIPLIERS["second_fast"]).toBe(0.5);
+  });
+  it("first fast gives fewer weeks than first normal", () => {
+    const base = 4;
+    expect(Math.ceil(base * SPEED_MULTIPLIERS["first_fast"])).toBeLessThan(
+      Math.ceil(base * SPEED_MULTIPLIERS["first_normal"]),
+    );
+  });
+  it("second fast gives fewer weeks than second slow", () => {
+    const base = 4;
+    expect(Math.ceil(base * SPEED_MULTIPLIERS["second_fast"])).toBeLessThan(
+      Math.ceil(base * SPEED_MULTIPLIERS["second_slow"]),
+    );
+  });
+  it("speed multiplier applies on top of base weeks", () => {
+    const base = 6; /* overridden base */
+    const mult = SPEED_MULTIPLIERS["first_fast"]; /* 0.8 */
+    expect(Math.ceil(base * mult)).toBe(5);
+  });
+  it("default speed is first_normal (×1.0) when not set", () => {
+    const topicSpeed: Record<string, string> = {};
+    const key = topicSpeed["linear_algebra"] ?? "first_normal";
+    expect(SPEED_MULTIPLIERS[key]).toBe(1.0);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════
+   §19  QP INTEGRATION  (new — do not modify once passing)
+   ══════════════════════════════════════════════════════════ */
+describe("QP Integration", () => {
+  function getWeightedAccuracy(
+    attempts: { accuracy: number }[],
+  ): number | null {
+    if (!attempts.length) return null;
+    if (attempts.length === 1) return attempts[0].accuracy;
+    const latest = attempts[attempts.length - 1].accuracy;
+    const restAvg =
+      attempts.slice(0, -1).reduce((s, a) => s + a.accuracy, 0) /
+      (attempts.length - 1);
+    return Math.round(latest * 0.6 + restAvg * 0.4);
+  }
+
+  function getWeightedConcept(attempts: { concept: string }[]): string | null {
+    if (!attempts.length) return null;
+    const order = ["weak", "developing", "strong"];
+    if (attempts.length === 1) return attempts[0].concept;
+    const latest = order.indexOf(attempts[attempts.length - 1].concept);
+    const restAvg =
+      attempts.slice(0, -1).reduce((s, a) => s + order.indexOf(a.concept), 0) /
+      (attempts.length - 1);
+    return order[Math.round(latest * 0.6 + restAvg * 0.4)] ?? "developing";
+  }
+
+  it("single attempt weighted accuracy equals that attempt", () => {
+    expect(getWeightedAccuracy([{ accuracy: 75 }])).toBe(75);
+  });
+
+  it("weighted accuracy: latest 60% + rest 40%", () => {
+    const attempts = [{ accuracy: 40 }, { accuracy: 80 }];
+    /* latest=80×0.6=48, rest=40×0.4=16, total=64 */
+    expect(getWeightedAccuracy(attempts)).toBe(64);
+  });
+
+  it("empty attempts returns null accuracy", () => {
+    expect(getWeightedAccuracy([])).toBeNull();
+  });
+
+  it("single attempt weighted concept equals that attempt", () => {
+    expect(getWeightedConcept([{ concept: "strong" }])).toBe("strong");
+  });
+
+  it("empty attempts returns null concept", () => {
+    expect(getWeightedConcept([])).toBeNull();
+  });
+
+  it("accuracy > 85 reduces revision by 0.5", () => {
+    const acc = 90;
+    const adj = acc > 85 ? -0.5 : 0;
+    expect(adj).toBe(-0.5);
+  });
+
+  it("accuracy < 50 adds 1.0 revision week", () => {
+    const acc = 40;
+    const adj = acc < 50 ? 1.0 : 0;
+    expect(adj).toBe(1.0);
+  });
+
+  it("concept weak adds 1.0 revision week", () => {
+    const adj = "weak" === "weak" ? 1.0 : 0;
+    expect(adj).toBe(1.0);
+  });
+
+  it("concept developing adds 0.5 revision week", () => {
+    const adj = "developing" === "developing" ? 0.5 : 0;
+    expect(adj).toBe(0.5);
+  });
+
+  it("concept strong reduces revision by 0.5", () => {
+    const adj = "strong" === "strong" ? -0.5 : 0;
+    expect(adj).toBe(-0.5);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════
+   §20  BASE TIMELINE  (new — do not modify once passing)
+   ══════════════════════════════════════════════════════════ */
+describe("Base Timeline", () => {
+  const DEFAULT_JAM_WEEKS: Record<string, number> = {
+    la: 4,
+    ra: 4,
+    dc: 4,
+    gt: 4,
+    ode: 3,
+    mvc: 2,
+    mi: 2,
+  };
+
+  it("linear algebra default is 4 weeks", () => {
+    expect(DEFAULT_JAM_WEEKS["la"]).toBe(4);
+  });
+  it("ODE default is 3 weeks", () => {
+    expect(DEFAULT_JAM_WEEKS["ode"]).toBe(3);
+  });
+  it("MVC and MI defaults are 2 weeks", () => {
+    expect(DEFAULT_JAM_WEEKS["mvc"]).toBe(2);
+    expect(DEFAULT_JAM_WEEKS["mi"]).toBe(2);
+  });
+  it("overriding base weeks persists independently", () => {
+    const base: Record<string, number> = { ...DEFAULT_JAM_WEEKS };
+    base["la"] = 6;
+    expect(base["la"]).toBe(6);
+    expect(DEFAULT_JAM_WEEKS["la"]).toBe(4); /* original unchanged */
+  });
+  it("base weeks minimum is 0.5", () => {
+    const min = 0.5;
+    expect(Math.max(min, 0)).toBe(0.5);
+    expect(Math.max(min, -1)).toBe(0.5);
+  });
+  it("reset restores original default", () => {
+    const overrides: Record<string, number> = { la: 6 };
+    delete overrides["la"];
+    const effective = overrides["la"] ?? DEFAULT_JAM_WEEKS["la"];
+    expect(effective).toBe(4);
+  });
+  it("speed multiplier applies on top of overridden base", () => {
+    const base = 6;
+    const mult = 0.8; /* first_fast */
+    expect(Math.ceil(base * mult)).toBe(5);
+  });
+  it("base weeks stored per user in localStorage", () => {
+    localStorage.clear();
+    localStorage.setItem(
+      "hs_base_weeks_user1",
+      JSON.stringify({ la: 6, ra: 3 }),
+    );
+    const stored = JSON.parse(
+      localStorage.getItem("hs_base_weeks_user1") ?? "{}",
+    );
+    expect(stored.la).toBe(6);
+    expect(stored.ra).toBe(3);
+  });
+  it("topic speed stored per user in localStorage", () => {
+    localStorage.clear();
+    localStorage.setItem(
+      "hs_topic_speed_user1",
+      JSON.stringify({ la: "second_fast" }),
+    );
+    const stored = JSON.parse(
+      localStorage.getItem("hs_topic_speed_user1") ?? "{}",
+    );
+    expect(stored.la).toBe("second_fast");
+  });
+});

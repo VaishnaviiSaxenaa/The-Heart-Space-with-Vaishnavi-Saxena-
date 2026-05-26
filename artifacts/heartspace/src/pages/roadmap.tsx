@@ -1,553 +1,282 @@
 import { useState } from "react";
 import { useAuth } from "../lib/auth";
 import {
-  Calendar,
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Trash2,
-  Save,
-  Edit3,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-  RotateCcw,
-  Map,
-  Brain,
-  BookOpen,
-  Zap,
-  Target,
-  BarChart2,
-  Circle,
-  PlayCircle,
+  Calendar, ChevronDown, ChevronRight, Plus, Trash2,
+  Save, Edit3, AlertCircle, CheckCircle2, Clock, TrendingUp,
+  TrendingDown, RotateCcw, Map, Brain, BookOpen, Zap, Target,
+  BarChart2, Circle, PlayCircle,
 } from "lucide-react";
 import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
-import {
-  loadSyllabusProgress,
-  SYLLABUS,
-  type SyllabusProgress,
-} from "./syllabus";
+import { loadSyllabusProgress, SYLLABUS, type SyllabusProgress } from "./syllabus";
 
 /* ─── Brand tokens ─────────────────────── */
-const CREAM = "#FAF7F2";
+const CREAM    = "#FAF7F2";
 const CHARCOAL = "#2C1810";
-const GOLD = "#C9A96E";
-const DARK = "#3D2314";
-const CARD = "#FFFFFF";
-const MUTED = "#8C7B70";
-const BORDER = "#E8DDD0";
-const OLIVE = "#6E8B6B";
-const ROSE = "#D4A5A5";
+const GOLD     = "#C9A96E";
+const DARK     = "#3D2314";
+const CARD     = "#FFFFFF";
+const MUTED    = "#8C7B70";
+const BORDER   = "#E8DDD0";
+const OLIVE    = "#6E8B6B";
+const ROSE     = "#D4A5A5";
 
 /* ─── Types ────────────────────────────── */
 type RoadmapType =
-  | "bsc_1st"
-  | "bsc_2nd"
-  | "bsc_3rd"
-  | "dropper"
-  | "msc_1st"
-  | "msc_2nd"
+  | "bsc_1st" | "bsc_2nd" | "bsc_3rd"
+  | "dropper" | "msc_1st" | "msc_2nd"
   | "working_professional";
 
 type PhaseStatus = "not_started" | "in_progress" | "done";
-type WeekType = "study" | "assignment" | "revision" | "buffer";
+type WeekType    = "study" | "assignment" | "revision" | "buffer";
 
-interface UnavailablePeriod {
-  id: string;
-  label: string;
-  startDate: string;
-  endDate: string;
-}
+interface UnavailablePeriod { id: string; label: string; startDate: string; endDate: string; }
 
 interface RoadmapPhase {
-  id: string;
-  title: string;
-  description: string;
-  durationWeeks: number;
-  status: PhaseStatus;
-  topics: string[];
-  marks?: string;
+  id: string; title: string; description: string;
+  durationWeeks: number; status: PhaseStatus;
+  topics: string[]; marks?: string;
 }
 
 interface ScheduleWeek {
-  weekNumber: number;
-  subject: string;
-  focus: string;
-  type: WeekType;
-  hoursRequired: number;
-  hoursAvailable: number;
-  startDate: string;
+  weekNumber: number; subject: string; focus: string;
+  type: WeekType; hoursRequired: number; hoursAvailable: number; startDate: string;
 }
 
 interface SubjectForecast {
-  name: string;
-  syllabusId: string;
-  weeksNeeded: number;
-  weeksAvailable: number;
-  canComplete: boolean;
-  percentCompletable: number;
-  syllabusPercent: number;
-  adjustedWeeks: number;
+  name: string; syllabusId: string;
+  weeksNeeded: number; weeksAvailable: number;
+  canComplete: boolean; percentCompletable: number;
+  syllabusPercent: number; adjustedWeeks: number;
 }
 
 interface SmartSchedule {
-  hoursPerDay: number;
-  daysPerWeek: number;
-  targetMonths: number;
-  revisionPercent: number;
-  totalHoursAvailable: number;
-  totalHoursRequired: number;
-  totalWeeksRequired: number;
-  isAchievable: boolean;
-  minimumMonthsNeeded: number;
-  weeks: ScheduleWeek[];
+  hoursPerDay: number; daysPerWeek: number;
+  targetMonths: number; revisionPercent: number;
+  totalHoursAvailable: number; totalHoursRequired: number;
+  totalWeeksRequired: number; isAchievable: boolean;
+  minimumMonthsNeeded: number; weeks: ScheduleWeek[];
   subjectForecasts: SubjectForecast[];
-  subjectsFullyCompletable: number;
-  totalSubjects: number;
-  completedSubjectsSkipped: number;
-  generatedAt: string;
+  subjectsFullyCompletable: number; totalSubjects: number;
+  completedSubjectsSkipped: number; generatedAt: string;
 }
 
 interface VariableWeek {
   id: string;
-  label: string /* e.g. "Holiday week" */;
-  startDate: string /* ISO date */;
-  endDate: string /* ISO date */;
-  multiplier?: number /* e.g. 2.0 = double hours */;
-  customHours?: number /* e.g. 5 = 5 hrs/day that week */;
+  label: string;       /* e.g. "Holiday week" */
+  startDate: string;   /* ISO date */
+  endDate: string;     /* ISO date */
+  multiplier?: number; /* e.g. 2.0 = double hours */
+  customHours?: number;/* e.g. 5 = 5 hrs/day that week */
 }
 
+/* ─── Topic speed types ─────────────────── */
+type TopicSpeedKey = "first_slow"|"first_normal"|"first_fast"|"second_slow"|"second_normal"|"second_fast";
+type TopicSpeedMap = Record<string, TopicSpeedKey>;
+
+const SPEED_MULTIPLIERS: Record<TopicSpeedKey, number> = {
+  first_slow: 1.3, first_normal: 1.0, first_fast: 0.8,
+  second_slow: 1.0, second_normal: 0.67, second_fast: 0.5,
+};
+
+const SPEED_CFG: Record<TopicSpeedKey, { emoji: string; label: string; color: string }> = {
+  first_slow:    { emoji: "🐢", label: "Slow (1st)",   color: "#C0392B" },
+  first_normal:  { emoji: "🚶", label: "Normal (1st)", color: GOLD      },
+  first_fast:    { emoji: "⚡", label: "Fast (1st)",   color: OLIVE     },
+  second_slow:   { emoji: "🐢", label: "Slow (2nd)",   color: "#C0392B" },
+  second_normal: { emoji: "🚶", label: "Normal (2nd)", color: GOLD      },
+  second_fast:   { emoji: "⚡", label: "Fast (2nd)",   color: OLIVE     },
+};
+
+type BaseWeeksMap = Record<string, number>;
+
 interface Roadmap {
-  type: RoadmapType;
-  examType: string;
-  totalMonths: number;
-  startDate: string;
-  phases: RoadmapPhase[];
+  type: RoadmapType; examType: string; totalMonths: number;
+  startDate: string; phases: RoadmapPhase[];
   unavailablePeriods: UnavailablePeriod[];
   variableWeeks?: VariableWeek[];
   smartSchedule?: SmartSchedule;
-  createdAt: string;
-  lastUpdated: string;
+  createdAt: string; lastUpdated: string;
 }
+
+/* ─── Speed + base weeks localStorage ───── */
+function lsSpeedKey(uid: string)     { return `hs_topic_speed_${uid}`; }
+function lsBaseKey(uid: string)      { return `hs_base_weeks_${uid}`;  }
+
+function loadTopicSpeed(uid: string): TopicSpeedMap {
+  try { const r = localStorage.getItem(lsSpeedKey(uid)); return r ? JSON.parse(r) : {}; }
+  catch { return {}; }
+}
+function saveTopicSpeed(uid: string, m: TopicSpeedMap) {
+  try { localStorage.setItem(lsSpeedKey(uid), JSON.stringify(m)); } catch {}
+}
+function loadBaseWeeks(uid: string): BaseWeeksMap {
+  try { const r = localStorage.getItem(lsBaseKey(uid)); return r ? JSON.parse(r) : {}; }
+  catch { return {}; }
+}
+function saveBaseWeeks(uid: string, m: BaseWeeksMap) {
+  try { localStorage.setItem(lsBaseKey(uid), JSON.stringify(m)); } catch {}
+}
+
+/* ─── Practice integration helpers ──────── */
+function loadPracticeProgress(uid: string): Record<string, { attempts: { accuracy: number; concept: string; date: string }[] }> {
+  try { const r = localStorage.getItem(`hs_practice_${uid}`); return r ? JSON.parse(r) : {}; }
+  catch { return {}; }
+}
+
+function getWeightedAccuracy(attempts: { accuracy: number }[]): number | null {
+  if (!attempts.length) return null;
+  if (attempts.length === 1) return attempts[0].accuracy;
+  const latest  = attempts[attempts.length - 1].accuracy;
+  const restAvg = attempts.slice(0, -1).reduce((s, a) => s + a.accuracy, 0) / (attempts.length - 1);
+  return Math.round(latest * 0.6 + restAvg * 0.4);
+}
+
+function getWeightedConcept(attempts: { concept: string }[]): string | null {
+  if (!attempts.length) return null;
+  const order = ["weak", "developing", "strong"];
+  if (attempts.length === 1) return attempts[0].concept;
+  const latest  = order.indexOf(attempts[attempts.length - 1].concept);
+  const restAvg = attempts.slice(0, -1).reduce((s, a) => s + order.indexOf(a.concept), 0) / (attempts.length - 1);
+  return order[Math.round(latest * 0.6 + restAvg * 0.4)] ?? "developing";
+}
+
+function getQPRevisionAdjustment(syllabusId: string, pp: ReturnType<typeof loadPracticeProgress>): number {
+  const subject = SYLLABUS.find(s => s.id === syllabusId);
+  if (!subject) return 0;
+  const subtopics = subject.topics.flatMap(t => t.subtopics);
+  const entries   = subtopics.map(st => pp[st.id]).filter(Boolean);
+  if (!entries.length) return 0;
+  let adj = 0; let count = 0;
+  entries.forEach(entry => {
+    if (!entry?.attempts?.length) return;
+    const acc  = getWeightedAccuracy(entry.attempts);
+    const conc = getWeightedConcept(entry.attempts);
+    if (acc === null) return;
+    count++;
+    if (acc > 85)   adj -= 0.5;
+    else if (acc < 50) adj += 1.0;
+    if (conc === "weak")       adj += 1.0;
+    else if (conc === "developing") adj += 0.5;
+    else if (conc === "strong") adj -= 0.5;
+  });
+  return count > 0 ? adj / count : 0;
+}
+
 
 /* ─── Subject data ─────────────────────── */
 const JAM_SUBJECTS = [
-  {
-    id: "la",
-    syllabusId: "linear_algebra",
-    name: "Linear Algebra",
-    studyWeeks: 4,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "ra",
-    syllabusId: "real_analysis",
-    name: "Real Analysis",
-    studyWeeks: 4,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "dc",
-    syllabusId: "differential_calculus",
-    name: "Functions of One Variable",
-    studyWeeks: 4,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "gt",
-    syllabusId: "abstract_algebra",
-    name: "Group Theory",
-    studyWeeks: 4,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "ode",
-    syllabusId: "ode",
-    name: "ODE",
-    studyWeeks: 3,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "mvc",
-    syllabusId: "real_analysis",
-    name: "Functions of Two Variables",
-    studyWeeks: 2,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "mi",
-    syllabusId: "integration",
-    name: "Multiple Integration",
-    studyWeeks: 2,
-    assignmentWeeks: 0.5,
-  },
+  { id: "la",  syllabusId: "linear_algebra",        name: "Linear Algebra",             studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "ra",  syllabusId: "real_analysis",          name: "Real Analysis",              studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "dc",  syllabusId: "differential_calculus",  name: "Functions of One Variable",  studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "gt",  syllabusId: "abstract_algebra",       name: "Group Theory",               studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "ode", syllabusId: "ode",                    name: "ODE",                        studyWeeks: 3, assignmentWeeks: 0.5 },
+  { id: "mvc", syllabusId: "real_analysis",          name: "Functions of Two Variables", studyWeeks: 2, assignmentWeeks: 0.5 },
+  { id: "mi",  syllabusId: "integration",            name: "Multiple Integration",       studyWeeks: 2, assignmentWeeks: 0.5 },
 ];
 
 const NET_SUBJECTS = [
-  {
-    id: "ra",
-    syllabusId: "real_analysis",
-    name: "Real Analysis",
-    studyWeeks: 4,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "la",
-    syllabusId: "linear_algebra",
-    name: "Linear Algebra",
-    studyWeeks: 4,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "ca",
-    syllabusId: "complex_analysis",
-    name: "Complex Analysis",
-    studyWeeks: 3,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "ma",
-    syllabusId: "abstract_algebra",
-    name: "Modern Algebra (Group + Ring + Field)",
-    studyWeeks: 5,
-    assignmentWeeks: 1.0,
-  },
-  {
-    id: "top",
-    syllabusId: "topology",
-    name: "Topology",
-    studyWeeks: 3,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "fa",
-    syllabusId: "functional_analysis",
-    name: "Functional Analysis",
-    studyWeeks: 2,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "ode",
-    syllabusId: "ode",
-    name: "ODE",
-    studyWeeks: 3,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "pde",
-    syllabusId: "pde",
-    name: "PDE",
-    studyWeeks: 2,
-    assignmentWeeks: 0.5,
-  },
-  {
-    id: "na",
-    syllabusId: "numerical_analysis",
-    name: "Numerical Analysis",
-    studyWeeks: 1,
-    assignmentWeeks: 0.25,
-  },
-  {
-    id: "ie",
-    syllabusId: "calculus_of_variations",
-    name: "Integral Equations",
-    studyWeeks: 1,
-    assignmentWeeks: 0.25,
-  },
-  {
-    id: "cov",
-    syllabusId: "calculus_of_variations",
-    name: "Calculus of Variations",
-    studyWeeks: 1,
-    assignmentWeeks: 0.25,
-  },
+  { id: "ra",  syllabusId: "real_analysis",          name: "Real Analysis",                         studyWeeks: 4, assignmentWeeks: 0.5  },
+  { id: "la",  syllabusId: "linear_algebra",         name: "Linear Algebra",                        studyWeeks: 4, assignmentWeeks: 0.5  },
+  { id: "ca",  syllabusId: "complex_analysis",       name: "Complex Analysis",                      studyWeeks: 3, assignmentWeeks: 0.5  },
+  { id: "ma",  syllabusId: "abstract_algebra",       name: "Modern Algebra (Group + Ring + Field)", studyWeeks: 5, assignmentWeeks: 1.0  },
+  { id: "top", syllabusId: "topology",               name: "Topology",                              studyWeeks: 3, assignmentWeeks: 0.5  },
+  { id: "fa",  syllabusId: "functional_analysis",    name: "Functional Analysis",                   studyWeeks: 2, assignmentWeeks: 0.5  },
+  { id: "ode", syllabusId: "ode",                    name: "ODE",                                   studyWeeks: 3, assignmentWeeks: 0.5  },
+  { id: "pde", syllabusId: "pde",                    name: "PDE",                                   studyWeeks: 2, assignmentWeeks: 0.5  },
+  { id: "na",  syllabusId: "numerical_analysis",     name: "Numerical Analysis",                    studyWeeks: 1, assignmentWeeks: 0.25 },
+  { id: "ie",  syllabusId: "calculus_of_variations", name: "Integral Equations",                    studyWeeks: 1, assignmentWeeks: 0.25 },
+  { id: "cov", syllabusId: "calculus_of_variations", name: "Calculus of Variations",                studyWeeks: 1, assignmentWeeks: 0.25 },
 ];
 
 const JAM_WEEK_BREAKDOWN: Record<string, string[]> = {
-  la: [
-    "System of Linear Equations, Vector Spaces basics",
-    "Linear Transformations, Kernel & Image",
-    "Eigenvalues, Eigenvectors, Cayley-Hamilton",
-    "Matrices, Diagonalisation + Assignment",
-  ],
-  ra: [
-    "Set Theory, Real Numbers, Sequences",
-    "Series, Limits & Continuity",
-    "Differentiability, MVT, Taylor's Theorem",
-    "Riemann Integration, Functions of Several Variables + Assignment",
-  ],
-  dc: [
-    "Limits, Continuity, Uniform Continuity",
-    "Differentiability, Chain Rule, MVT",
-    "Taylor's Theorem, Maxima-Minima, Curve Sketching",
-    "Power Series, Sequences & Series + Assignment",
-  ],
-  gt: [
-    "Groups basics, Subgroups, Cyclic groups, Lagrange",
-    "Normal Subgroups, Quotient Groups, Homomorphisms",
-    "Isomorphism Theorems, Permutation Groups, Cayley",
-    "Consolidation + Assignment",
-  ],
-  ode: [
-    "First Order ODEs — Separable, Exact, Bernoulli",
-    "Higher Order ODEs — Undetermined Coefficients, Variation of Parameters",
-    "Cauchy-Euler + Assignment",
-  ],
-  mvc: [
-    "Limits in ℝⁿ, Partial Derivatives, Directional Derivatives",
-    "Chain Rule, MVT, Taylor, Lagrange Multipliers + Assignment",
-  ],
-  mi: [
-    "Double Integrals (Cartesian & Polar), Change of Order",
-    "Triple Integrals (Spherical & Cylindrical), Surface Area, Solids + Assignment",
-  ],
+  la:  ["System of Linear Equations, Vector Spaces basics", "Linear Transformations, Kernel & Image", "Eigenvalues, Eigenvectors, Cayley-Hamilton", "Matrices, Diagonalisation + Assignment"],
+  ra:  ["Set Theory, Real Numbers, Sequences", "Series, Limits & Continuity", "Differentiability, MVT, Taylor's Theorem", "Riemann Integration, Functions of Several Variables + Assignment"],
+  dc:  ["Limits, Continuity, Uniform Continuity", "Differentiability, Chain Rule, MVT", "Taylor's Theorem, Maxima-Minima, Curve Sketching", "Power Series, Sequences & Series + Assignment"],
+  gt:  ["Groups basics, Subgroups, Cyclic groups, Lagrange", "Normal Subgroups, Quotient Groups, Homomorphisms", "Isomorphism Theorems, Permutation Groups, Cayley", "Consolidation + Assignment"],
+  ode: ["First Order ODEs — Separable, Exact, Bernoulli", "Higher Order ODEs — Undetermined Coefficients, Variation of Parameters", "Cauchy-Euler + Assignment"],
+  mvc: ["Limits in ℝⁿ, Partial Derivatives, Directional Derivatives", "Chain Rule, MVT, Taylor, Lagrange Multipliers + Assignment"],
+  mi:  ["Double Integrals (Cartesian & Polar), Change of Order", "Triple Integrals (Spherical & Cylindrical), Surface Area, Solids + Assignment"],
 };
 
 const NET_WEEK_BREAKDOWN: Record<string, string[]> = {
-  ra: [
-    "Set Theory, Real Numbers, Sequences",
-    "Series, Limits & Continuity",
-    "Differentiability, Riemann Integration",
-    "Functions of Several Variables + Assignment",
-  ],
-  la: [
-    "Vector Spaces, Linear Transformations",
-    "Eigenvalues, Inner Product Spaces, Jordan CF",
-    "Dual Spaces, Diagonalisation + Assignment",
-  ],
-  ca: [
-    "Complex Numbers, Analytic Functions, C-R Equations",
-    "Complex Integration, Cauchy's Theorem, Residues",
-    "Laurent Series, Singularities, Möbius + Assignment",
-  ],
-  ma: [
-    "Group Theory basics + Intermediate",
-    "Sylow Theorems, Group Actions",
-    "Ring Theory (Basics + PID, UFD)",
-    "Field Theory, Galois Theory",
-    "Consolidation + Assignment",
-  ],
-  top: [
-    "Topological Spaces, Continuity, Separation Axioms",
-    "Compactness, Connectedness",
-    "Quotient Topology + Assignment",
-  ],
-  fa: [
-    "Normed Spaces, Banach Spaces, Hilbert Spaces",
-    "Bounded Operators, Hahn-Banach, Open Mapping + Assignment",
-  ],
-  ode: [
-    "First Order ODEs",
-    "Higher Order ODEs, Cauchy-Euler",
-    "Power Series, Frobenius + Assignment",
-  ],
-  pde: [
-    "First Order PDEs, Classification",
-    "Wave, Heat, Laplace Equations + Fourier + Assignment",
-  ],
-  na: [
-    "Root Finding, Interpolation, Numerical Integration, Numerical ODEs + Assignment",
-  ],
-  ie: ["Integral Equations — Fredholm & Volterra + Assignment"],
+  ra:  ["Set Theory, Real Numbers, Sequences", "Series, Limits & Continuity", "Differentiability, Riemann Integration", "Functions of Several Variables + Assignment"],
+  la:  ["Vector Spaces, Linear Transformations", "Eigenvalues, Inner Product Spaces, Jordan CF", "Dual Spaces, Diagonalisation + Assignment"],
+  ca:  ["Complex Numbers, Analytic Functions, C-R Equations", "Complex Integration, Cauchy's Theorem, Residues", "Laurent Series, Singularities, Möbius + Assignment"],
+  ma:  ["Group Theory basics + Intermediate", "Sylow Theorems, Group Actions", "Ring Theory (Basics + PID, UFD)", "Field Theory, Galois Theory", "Consolidation + Assignment"],
+  top: ["Topological Spaces, Continuity, Separation Axioms", "Compactness, Connectedness", "Quotient Topology + Assignment"],
+  fa:  ["Normed Spaces, Banach Spaces, Hilbert Spaces", "Bounded Operators, Hahn-Banach, Open Mapping + Assignment"],
+  ode: ["First Order ODEs", "Higher Order ODEs, Cauchy-Euler", "Power Series, Frobenius + Assignment"],
+  pde: ["First Order PDEs, Classification", "Wave, Heat, Laplace Equations + Fourier + Assignment"],
+  na:  ["Root Finding, Interpolation, Numerical Integration, Numerical ODEs + Assignment"],
+  ie:  ["Integral Equations — Fredholm & Volterra + Assignment"],
   cov: ["Euler-Lagrange, Brachistochrone, Geodesics + Assignment"],
 };
 
 /* ─── Syllabus % per subject ─────────────── */
-function getSyllabusPercents(
-  syllabusProgress: SyllabusProgress,
-  examType: string,
-): Record<string, number> {
+function getSyllabusPercents(syllabusProgress: SyllabusProgress, examType: string): Record<string, number> {
   const isJAM = examType === "JAM";
   const result: Record<string, number> = {};
-  SYLLABUS.forEach((subject) => {
+  SYLLABUS.forEach(subject => {
     if (subject.netOnly && isJAM) return;
     if (subject.jamOnly && !isJAM) return;
     const subtopics = subject.topics
-      .filter((t) => !(t.netOnly && isJAM))
-      .flatMap((t) => t.subtopics.filter((st: any) => !(st.netOnly && isJAM)));
+      .filter(t => !(t.netOnly && isJAM))
+      .flatMap(t => t.subtopics.filter((st: any) => !(st.netOnly && isJAM)));
     const total = subtopics.length;
-    const done = subtopics.filter(
-      (st) => syllabusProgress[st.id]?.status === "done",
-    ).length;
+    const done  = subtopics.filter(st => syllabusProgress[st.id]?.status === "done").length;
     result[subject.id] = total ? Math.round((done / total) * 100) : 0;
   });
   return result;
 }
 
 /* ─── Roadmap types ────────────────────── */
-const ROADMAP_TYPES: Record<
-  RoadmapType,
-  { label: string; emoji: string; defaultMonths: number; description: string }
-> = {
-  bsc_1st: {
-    label: "BSc 1st Year",
-    emoji: "🌱",
-    defaultMonths: 36,
-    description: "3-year preparation plan",
-  },
-  bsc_2nd: {
-    label: "BSc 2nd Year",
-    emoji: "📚",
-    defaultMonths: 24,
-    description: "2-year preparation plan",
-  },
-  bsc_3rd: {
-    label: "BSc 3rd Year",
-    emoji: "🎯",
-    defaultMonths: 8,
-    description: "6–8 month intensive plan",
-  },
-  dropper: {
-    label: "Dropper",
-    emoji: "💪",
-    defaultMonths: 12,
-    description: "12-month focused plan",
-  },
-  msc_1st: {
-    label: "MSc 1st Year",
-    emoji: "🔬",
-    defaultMonths: 18,
-    description: "18-month preparation plan",
-  },
-  msc_2nd: {
-    label: "MSc 2nd Year",
-    emoji: "🏆",
-    defaultMonths: 6,
-    description: "6-month final push",
-  },
-  working_professional: {
-    label: "Working Professional",
-    emoji: "💼",
-    defaultMonths: 15,
-    description: "12–18 month flexible plan",
-  },
+const ROADMAP_TYPES: Record<RoadmapType, { label: string; emoji: string; defaultMonths: number; description: string }> = {
+  bsc_1st:              { label: "BSc 1st Year",         emoji: "🌱", defaultMonths: 36, description: "3-year preparation plan"   },
+  bsc_2nd:              { label: "BSc 2nd Year",         emoji: "📚", defaultMonths: 24, description: "2-year preparation plan"   },
+  bsc_3rd:              { label: "BSc 3rd Year",         emoji: "🎯", defaultMonths: 8,  description: "6–8 month intensive plan"  },
+  dropper:              { label: "Dropper",              emoji: "💪", defaultMonths: 12, description: "12-month focused plan"     },
+  msc_1st:             { label: "MSc 1st Year",         emoji: "🔬", defaultMonths: 18, description: "18-month preparation plan" },
+  msc_2nd:             { label: "MSc 2nd Year",         emoji: "🏆", defaultMonths: 6,  description: "6-month final push"        },
+  working_professional: { label: "Working Professional", emoji: "💼", defaultMonths: 15, description: "12–18 month flexible plan" },
 };
 
 const JAM_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
-  {
-    id: "jam_p1",
-    title: "Phase 1 — Foundation",
-    description: "Linear Algebra and Real Analysis.",
-    marks: "28–31 marks",
-    topics: [
-      "Linear Algebra — System of Equations, Vector Spaces, Linear Transformations, Eigenvalues, Matrices",
-      "Real Analysis — Set Theory, Real Numbers, Sequences, Series, Limits, Differentiability, Riemann Integration, FSV",
-    ],
-  },
-  {
-    id: "jam_p2",
-    title: "Phase 2 — Calculus & Algebra",
-    description: "Differential Calculus and Group Theory.",
-    marks: "24–26 marks",
-    topics: [
-      "Differential Calculus — Limits, Continuity, Differentiability, MVT, Taylor, Maxima-Minima",
-      "Group Theory — Basics, Normal Subgroups, Quotient Groups, Isomorphism Theorems",
-    ],
-  },
-  {
-    id: "jam_p3",
-    title: "Phase 3 — ODEs, MVC & Integration",
-    description: "ODE, Multivariable Calculus, and Multiple Integration.",
-    marks: "~30 marks",
-    topics: [
-      "ODE — First Order, Higher Order, Cauchy-Euler",
-      "Functions of Two Variables — Partial Derivatives, Chain Rule, Lagrange Multipliers",
-      "Multiple Integration — Double & Triple Integrals, Surface Area, Solids",
-    ],
-  },
-  {
-    id: "jam_p4",
-    title: "Phase 4 — Full Revision & Mock Tests",
-    description: "Complete syllabus revision and mock tests.",
-    marks: "All topics",
-    topics: [
-      "Phase 1 full revision — LA + RA",
-      "Phase 2 full revision — DC + GT",
-      "Phase 3 full revision — ODE + MVC + MI",
-      "Full-length mock tests",
-      "Error analysis",
-      "Formula sheets + exam strategy",
-    ],
-  },
+  { id: "jam_p1", title: "Phase 1 — Foundation", description: "Linear Algebra and Real Analysis.", marks: "28–31 marks", topics: ["Linear Algebra — System of Equations, Vector Spaces, Linear Transformations, Eigenvalues, Matrices", "Real Analysis — Set Theory, Real Numbers, Sequences, Series, Limits, Differentiability, Riemann Integration, FSV"] },
+  { id: "jam_p2", title: "Phase 2 — Calculus & Algebra", description: "Differential Calculus and Group Theory.", marks: "24–26 marks", topics: ["Differential Calculus — Limits, Continuity, Differentiability, MVT, Taylor, Maxima-Minima", "Group Theory — Basics, Normal Subgroups, Quotient Groups, Isomorphism Theorems"] },
+  { id: "jam_p3", title: "Phase 3 — ODEs, MVC & Integration", description: "ODE, Multivariable Calculus, and Multiple Integration.", marks: "~30 marks", topics: ["ODE — First Order, Higher Order, Cauchy-Euler", "Functions of Two Variables — Partial Derivatives, Chain Rule, Lagrange Multipliers", "Multiple Integration — Double & Triple Integrals, Surface Area, Solids"] },
+  { id: "jam_p4", title: "Phase 4 — Full Revision & Mock Tests", description: "Complete syllabus revision and mock tests.", marks: "All topics", topics: ["Phase 1 full revision — LA + RA", "Phase 2 full revision — DC + GT", "Phase 3 full revision — ODE + MVC + MI", "Full-length mock tests", "Error analysis", "Formula sheets + exam strategy"] },
 ];
 
 const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
-  {
-    id: "net_p1",
-    title: "Phase 1 — Analysis & Algebra",
-    description: "Real Analysis and Linear Algebra.",
-    topics: [
-      "Real Analysis — complete",
-      "Linear Algebra — complete including Inner Product Spaces, Jordan CF, Dual Spaces",
-    ],
-  },
-  {
-    id: "net_p2",
-    title: "Phase 2 — Complex Analysis & Modern Algebra",
-    description:
-      "Complex Analysis, Modern Algebra, Topology, Functional Analysis.",
-    topics: [
-      "Complex Analysis",
-      "Modern Algebra — Group Theory (Sylow), Ring Theory, Field Theory",
-      "Topology",
-      "Functional Analysis",
-    ],
-  },
-  {
-    id: "net_p3",
-    title: "Phase 3 — Applied Topics",
-    description: "ODE, PDE, and optional topics.",
-    topics: [
-      "ODE",
-      "PDE",
-      "Numerical Analysis",
-      "Integral Equations",
-      "Calculus of Variations",
-    ],
-  },
-  {
-    id: "net_p4",
-    title: "Phase 4 — Full Revision & Mock Tests",
-    description: "Complete revision and full-length mocks.",
-    topics: [
-      "Phase 1 revision",
-      "Phase 2 revision",
-      "Phase 3 revision",
-      "Full-length mock tests",
-      "Weak area targeting",
-      "Formula sheets",
-    ],
-  },
+  { id: "net_p1", title: "Phase 1 — Analysis & Algebra", description: "Real Analysis and Linear Algebra.", topics: ["Real Analysis — complete", "Linear Algebra — complete including Inner Product Spaces, Jordan CF, Dual Spaces"] },
+  { id: "net_p2", title: "Phase 2 — Complex Analysis & Modern Algebra", description: "Complex Analysis, Modern Algebra, Topology, Functional Analysis.", topics: ["Complex Analysis", "Modern Algebra — Group Theory (Sylow), Ring Theory, Field Theory", "Topology", "Functional Analysis"] },
+  { id: "net_p3", title: "Phase 3 — Applied Topics", description: "ODE, PDE, and optional topics.", topics: ["ODE", "PDE", "Numerical Analysis", "Integral Equations", "Calculus of Variations"] },
+  { id: "net_p4", title: "Phase 4 — Full Revision & Mock Tests", description: "Complete revision and full-length mocks.", topics: ["Phase 1 revision", "Phase 2 revision", "Phase 3 revision", "Full-length mock tests", "Weak area targeting", "Formula sheets"] },
 ];
 
 function generatePhases(examType: string, totalMonths: number): RoadmapPhase[] {
   const totalWeeks = totalMonths * 4;
-  const template = examType === "JAM" ? JAM_PHASES : NET_PHASES;
-  const weights = [0.3, 0.28, 0.27, 0.15];
+  const template   = examType === "JAM" ? JAM_PHASES : NET_PHASES;
+  const weights    = [0.30, 0.28, 0.27, 0.15];
   return template.map((p, i) => ({
-    ...p,
-    durationWeeks: Math.max(1, Math.round(totalWeeks * weights[i])),
+    ...p, durationWeeks: Math.max(1, Math.round(totalWeeks * weights[i])),
     status: "not_started" as PhaseStatus,
   }));
 }
 
 /* ─── Smart Schedule Engine ─────────────── */
 function generateSmartSchedule(
-  examType: string,
-  hoursPerDay: number,
-  daysPerWeek: number,
-  targetMonths: number,
-  revisionPercent: number,
-  startDate: string,
+  examType: string, hoursPerDay: number, daysPerWeek: number,
+  targetMonths: number, revisionPercent: number, startDate: string,
   syllabusProgress: SyllabusProgress,
   unavailablePeriods: UnavailablePeriod[] = [],
   variableWeeks: VariableWeek[] = [],
+  topicSpeed: TopicSpeedMap = {},
+  baseWeeksOverride: BaseWeeksMap = {},
+  practiceProgress: ReturnType<typeof loadPracticeProgress> = {},
 ): SmartSchedule {
-  const allSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
-  const weekBreakdown =
-    examType === "JAM" ? JAM_WEEK_BREAKDOWN : NET_WEEK_BREAKDOWN;
+  const allSubjects   = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const weekBreakdown = examType === "JAM" ? JAM_WEEK_BREAKDOWN : NET_WEEK_BREAKDOWN;
   const baseHoursPerWeek = hoursPerDay * daysPerWeek;
 
   /* Build a map of week-number → effective hours for that week */
@@ -555,11 +284,7 @@ function generateSmartSchedule(
   const start = parseISO(startDate);
 
   /* For each calendar week offset, check if it's unavailable or variable */
-  function getEffectiveHoursForWeekOffset(weekOffset: number): {
-    hours: number;
-    isUnavailable: boolean;
-    label?: string;
-  } {
+  function getEffectiveHoursForWeekOffset(weekOffset: number): { hours: number; isUnavailable: boolean; label?: string } {
     const weekStart = addWeeks(start, weekOffset);
     const weekStartStr = format(weekStart, "yyyy-MM-dd");
 
@@ -567,7 +292,7 @@ function generateSmartSchedule(
     for (const up of unavailablePeriods) {
       if (!up.startDate || !up.endDate) continue;
       const upStart = parseISO(up.startDate);
-      const upEnd = parseISO(up.endDate);
+      const upEnd   = parseISO(up.endDate);
       if (weekStart >= upStart && weekStart < upEnd) {
         return { hours: 0, isUnavailable: true, label: up.label };
       }
@@ -577,127 +302,66 @@ function generateSmartSchedule(
     for (const vw of variableWeeks) {
       if (!vw.startDate || !vw.endDate) continue;
       const vwStart = parseISO(vw.startDate);
-      const vwEnd = parseISO(vw.endDate);
+      const vwEnd   = parseISO(vw.endDate);
       if (weekStart >= vwStart && weekStart < vwEnd) {
-        const effectiveHoursPerDay =
-          vw.customHours !== undefined
-            ? vw.customHours
-            : (baseHoursPerWeek / daysPerWeek) * (vw.multiplier ?? 1);
-        return {
-          hours: effectiveHoursPerDay * daysPerWeek,
-          isUnavailable: false,
-          label: vw.label,
-        };
+        const effectiveHoursPerDay = vw.customHours !== undefined
+          ? vw.customHours
+          : baseHoursPerWeek / daysPerWeek * (vw.multiplier ?? 1);
+        return { hours: effectiveHoursPerDay * daysPerWeek, isUnavailable: false, label: vw.label };
       }
     }
 
     return { hours: baseHoursPerWeek, isUnavailable: false };
   }
 
-  const hoursPerWeek = baseHoursPerWeek;
-  const targetWeeks = targetMonths * 4;
+  const hoursPerWeek  = baseHoursPerWeek;
+  const targetWeeks   = targetMonths * 4;
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
 
-  const subjectsWithAdjusted = allSubjects.map((s) => {
-    const pct = syllabusPercs[s.syllabusId] ?? 0;
+  const subjectsWithAdjusted = allSubjects.map(s => {
+    const pct       = syllabusPercs[s.syllabusId] ?? 0;
     const remaining = Math.max(0, 1 - pct / 100);
-    const adjStudy = Math.ceil(s.studyWeeks * remaining);
+    const adjStudy  = Math.ceil(s.studyWeeks * remaining);
     const adjAssign = pct >= 100 ? 0 : s.assignmentWeeks;
-    const adjRevision =
-      adjStudy > 0 ? Math.ceil(adjStudy * (revisionPercent / 100)) : 0;
-    return {
-      ...s,
-      syllabusPercent: pct,
-      adjustedWeeks: adjStudy + adjAssign + adjRevision,
-      adjStudy,
-      adjAssign,
-      adjRevision,
-    };
+    const adjRevision = adjStudy > 0 ? Math.ceil(adjStudy * (revisionPercent / 100)) : 0;
+    return { ...s, syllabusPercent: pct, adjustedWeeks: adjStudy + adjAssign + adjRevision, adjStudy, adjAssign, adjRevision };
   });
 
-  const bufferWeeks = examType === "JAM" ? 2 : 3;
-  const totalWeeksRequired = Math.ceil(
-    subjectsWithAdjusted.reduce((s, x) => s + x.adjustedWeeks, 0) + bufferWeeks,
-  );
+  const bufferWeeks        = examType === "JAM" ? 2 : 3;
+  const totalWeeksRequired = Math.ceil(subjectsWithAdjusted.reduce((s, x) => s + x.adjustedWeeks, 0) + bufferWeeks);
   const totalHoursRequired = totalWeeksRequired * hoursPerWeek;
-  const isAchievable = targetWeeks >= totalWeeksRequired;
+  const isAchievable       = targetWeeks >= totalWeeksRequired;
   const minimumMonthsNeeded = Math.ceil(totalWeeksRequired / 4);
 
   let weeksUsed = 0;
-  const subjectForecasts: SubjectForecast[] = subjectsWithAdjusted.map((s) => {
+  const subjectForecasts: SubjectForecast[] = subjectsWithAdjusted.map(s => {
     const weeksNeeded = s.adjustedWeeks;
-    const remaining = Math.max(0, targetWeeks - weeksUsed);
+    const remaining   = Math.max(0, targetWeeks - weeksUsed);
     const canComplete = remaining >= weeksNeeded;
-    const pct =
-      weeksNeeded === 0
-        ? 100
-        : canComplete
-          ? 100
-          : Math.round((remaining / weeksNeeded) * 100);
+    const pct         = weeksNeeded === 0 ? 100 : canComplete ? 100 : Math.round((remaining / weeksNeeded) * 100);
     weeksUsed += weeksNeeded;
-    return {
-      name: s.name,
-      syllabusId: s.syllabusId,
-      weeksNeeded,
-      weeksAvailable: Math.min(remaining, weeksNeeded),
-      canComplete,
-      percentCompletable: pct,
-      syllabusPercent: s.syllabusPercent,
-      adjustedWeeks: s.adjustedWeeks,
-    };
+    return { name: s.name, syllabusId: s.syllabusId, weeksNeeded, weeksAvailable: Math.min(remaining, weeksNeeded), canComplete, percentCompletable: pct, syllabusPercent: s.syllabusPercent, adjustedWeeks: s.adjustedWeeks };
   });
 
   const weeks: ScheduleWeek[] = [];
   let weekNumber = 1;
   /* start is already declared above */
 
-  subjectsWithAdjusted.forEach((subject) => {
+  subjectsWithAdjusted.forEach(subject => {
     if (subject.adjustedWeeks === 0) return;
-    const breakdown = weekBreakdown[subject.id] ?? [];
-    const partialLabel =
-      subject.syllabusPercent > 0 && subject.syllabusPercent < 100
-        ? ` (continuing from ${subject.syllabusPercent}% done)`
-        : "";
+    const breakdown    = weekBreakdown[subject.id] ?? [];
+    const partialLabel = subject.syllabusPercent > 0 && subject.syllabusPercent < 100 ? ` (continuing from ${subject.syllabusPercent}% done)` : "";
 
     for (let w = 0; w < subject.adjStudy; w++) {
-      weeks.push({
-        weekNumber,
-        subject: subject.name,
-        focus:
-          (breakdown[w] ?? `${subject.name} — Part ${w + 1}`) +
-          (w === 0 ? partialLabel : ""),
-        type: "study",
-        hoursRequired: hoursPerWeek,
-        hoursAvailable: hoursPerWeek,
-        startDate: format(addWeeks(start, weekNumber - 1), "MMM d"),
-      });
+      weeks.push({ weekNumber, subject: subject.name, focus: (breakdown[w] ?? `${subject.name} — Part ${w + 1}`) + (w === 0 ? partialLabel : ""), type: "study", hoursRequired: hoursPerWeek, hoursAvailable: hoursPerWeek, startDate: format(addWeeks(start, weekNumber - 1), "MMM d") });
       weekNumber++;
     }
     if (subject.adjAssign > 0) {
-      weeks.push({
-        weekNumber,
-        subject: subject.name,
-        focus: `${subject.name} — Assignments & Problem Practice`,
-        type: "assignment",
-        hoursRequired: hoursPerWeek,
-        hoursAvailable: hoursPerWeek,
-        startDate: format(addWeeks(start, weekNumber - 1), "MMM d"),
-      });
+      weeks.push({ weekNumber, subject: subject.name, focus: `${subject.name} — Assignments & Problem Practice`, type: "assignment", hoursRequired: hoursPerWeek, hoursAvailable: hoursPerWeek, startDate: format(addWeeks(start, weekNumber - 1), "MMM d") });
       weekNumber++;
     }
     for (let r = 0; r < subject.adjRevision; r++) {
-      weeks.push({
-        weekNumber,
-        subject: subject.name,
-        focus:
-          r === 0
-            ? `${subject.name} — Revision Pass 1 (key theorems, formulas)`
-            : `${subject.name} — Revision Pass ${r + 1} (weak areas, problem drill)`,
-        type: "revision",
-        hoursRequired: hoursPerWeek,
-        hoursAvailable: hoursPerWeek,
-        startDate: format(addWeeks(start, weekNumber - 1), "MMM d"),
-      });
+      weeks.push({ weekNumber, subject: subject.name, focus: r === 0 ? `${subject.name} — Revision Pass 1 (key theorems, formulas)` : `${subject.name} — Revision Pass ${r + 1} (weak areas, problem drill)`, type: "revision", hoursRequired: hoursPerWeek, hoursAvailable: hoursPerWeek, startDate: format(addWeeks(start, weekNumber - 1), "MMM d") });
       weekNumber++;
     }
   });
@@ -731,10 +395,9 @@ function generateSmartSchedule(
           weekNumber: finalWeeks.length + 1,
           hoursAvailable: eff.hours,
           startDate: format(addWeeks(start, calendarOffset), "MMM d"),
-          focus:
-            eff.label && eff.hours !== baseHoursPerWeek
-              ? `${week.focus} (${eff.label}: ${eff.hours} hrs this week)`
-              : week.focus,
+          focus: eff.label && eff.hours !== baseHoursPerWeek
+            ? `${week.focus} (${eff.label}: ${eff.hours} hrs this week)`
+            : week.focus,
         });
         calendarOffset++;
         placed = true;
@@ -762,10 +425,7 @@ function generateSmartSchedule(
         finalWeeks.push({
           weekNumber: finalWeeks.length + 1,
           subject: "Full Syllabus",
-          focus:
-            b === 0
-              ? "Mock Tests — Full length, time management practice"
-              : "Final Revision — Formula sheets, exam strategy, weak spots",
+          focus: b === 0 ? "Mock Tests — Full length, time management practice" : "Final Revision — Formula sheets, exam strategy, weak spots",
           type: "revision",
           hoursRequired: hoursPerWeek,
           hoursAvailable: eff.hours,
@@ -778,51 +438,30 @@ function generateSmartSchedule(
   }
 
   return {
-    hoursPerDay,
-    daysPerWeek,
-    targetMonths,
-    revisionPercent,
+    hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
     totalHoursAvailable: targetWeeks * hoursPerWeek,
-    totalHoursRequired,
-    totalWeeksRequired,
-    isAchievable,
-    minimumMonthsNeeded,
-    weeks: finalWeeks,
-    subjectForecasts,
-    subjectsFullyCompletable: subjectForecasts.filter((s) => s.canComplete)
-      .length,
+    totalHoursRequired, totalWeeksRequired, isAchievable, minimumMonthsNeeded,
+    weeks: finalWeeks, subjectForecasts,
+    subjectsFullyCompletable: subjectForecasts.filter(s => s.canComplete).length,
     totalSubjects: allSubjects.length,
-    completedSubjectsSkipped: subjectsWithAdjusted.filter(
-      (s) => s.adjustedWeeks === 0,
-    ).length,
+    completedSubjectsSkipped: subjectsWithAdjusted.filter(s => s.adjustedWeeks === 0).length,
     generatedAt: new Date().toISOString(),
   };
 }
 
 /* ─── Week type config ─────────────────── */
 const WEEK_TYPE_CFG = {
-  study: { label: "Study", color: DARK, bg: `${GOLD}15`, icon: BookOpen },
-  assignment: {
-    label: "Assignment",
-    color: "#7A5A10",
-    bg: "#FFF3D0",
-    icon: Zap,
-  },
-  revision: { label: "Revision", color: OLIVE, bg: `${OLIVE}15`, icon: Brain },
-  buffer: { label: "Buffer", color: MUTED, bg: `${BORDER}88`, icon: Calendar },
+  study:      { label: "Study",      color: DARK,     bg: `${GOLD}15`,   icon: BookOpen },
+  assignment: { label: "Assignment", color: "#7A5A10", bg: "#FFF3D0",    icon: Zap      },
+  revision:   { label: "Revision",   color: OLIVE,    bg: `${OLIVE}15`, icon: Brain    },
+  buffer:     { label: "Buffer",     color: MUTED,    bg: `${BORDER}88`, icon: Calendar },
 };
 
 /* ─── localStorage ─────────────────────── */
-function lsKey(userId: string) {
-  return `hs_roadmap_${userId}`;
-}
+function lsKey(userId: string) { return `hs_roadmap_${userId}`; }
 function loadRoadmap(userId: string): Roadmap | null {
-  try {
-    const r = localStorage.getItem(lsKey(userId));
-    return r ? JSON.parse(r) : null;
-  } catch {
-    return null;
-  }
+  try { const r = localStorage.getItem(lsKey(userId)); return r ? JSON.parse(r) : null; }
+  catch { return null; }
 }
 function saveRoadmap(userId: string, rm: Roadmap) {
   localStorage.setItem(lsKey(userId), JSON.stringify(rm));
@@ -830,159 +469,86 @@ function saveRoadmap(userId: string, rm: Roadmap) {
 
 /* ─── Progress engine ──────────────────── */
 interface AICalc {
-  effectiveWeeks: number;
-  unavailableWeeks: number;
-  estimatedEndDate: string;
-  weeklyTargetPercent: number;
-  completedPercent: number;
+  effectiveWeeks: number; unavailableWeeks: number; estimatedEndDate: string;
+  weeklyTargetPercent: number; completedPercent: number;
   status: "on_track" | "ahead" | "behind" | "critical";
-  statusMessage: string;
-  recommendation: string;
-  adjustedPhases: RoadmapPhase[];
+  statusMessage: string; recommendation: string; adjustedPhases: RoadmapPhase[];
 }
 
 const STATUS_CFG = {
-  on_track: {
-    label: "On Track",
-    color: OLIVE,
-    bg: `${OLIVE}22`,
-    icon: CheckCircle2,
-  },
-  ahead: { label: "Ahead", color: "#2D7A2D", bg: "#DFF0DA", icon: TrendingUp },
-  behind: {
-    label: "Behind",
-    color: "#B8860B",
-    bg: "#FFF8DC",
-    icon: TrendingDown,
-  },
-  critical: {
-    label: "Critical",
-    color: "#C0392B",
-    bg: "#FDE8E8",
-    icon: AlertCircle,
-  },
+  on_track: { label: "On Track",  color: OLIVE,    bg: `${OLIVE}22`, icon: CheckCircle2 },
+  ahead:    { label: "Ahead",     color: "#2D7A2D", bg: "#DFF0DA",   icon: TrendingUp   },
+  behind:   { label: "Behind",    color: "#B8860B", bg: "#FFF8DC",   icon: TrendingDown },
+  critical: { label: "Critical",  color: "#C0392B", bg: "#FDE8E8",   icon: AlertCircle  },
 };
 
 const PHASE_STATUS = {
-  not_started: { label: "—", color: MUTED },
-  in_progress: { label: "▶", color: GOLD },
-  done: { label: "✓", color: OLIVE },
+  not_started: { label: "—",  color: MUTED },
+  in_progress: { label: "▶", color: GOLD  },
+  done:        { label: "✓",  color: OLIVE },
 };
 
 function runAIEngine(roadmap: Roadmap): AICalc {
-  const totalWeeks = roadmap.totalMonths * 4;
+  const totalWeeks       = roadmap.totalMonths * 4;
   const unavailableWeeks = roadmap.unavailablePeriods.reduce((s, p) => {
     if (!p.startDate || !p.endDate) return s;
-    const diff = Math.max(
-      0,
-      Math.round(
-        (parseISO(p.endDate).getTime() - parseISO(p.startDate).getTime()) /
-          (7 * 24 * 60 * 60 * 1000),
-      ),
-    );
+    const diff = Math.max(0, Math.round((parseISO(p.endDate).getTime() - parseISO(p.startDate).getTime()) / (7 * 24 * 60 * 60 * 1000)));
     return s + diff;
   }, 0);
-  const effectiveWeeks = totalWeeks + unavailableWeeks;
-  const startDate = parseISO(roadmap.startDate);
-  const estimatedEnd = addWeeks(startDate, effectiveWeeks);
-  const now = new Date();
-  const weeksElapsed = Math.max(0, differenceInWeeks(now, startDate));
-  const weeksLeft = Math.max(0, effectiveWeeks - weeksElapsed);
-  const donePhasesWeeks = roadmap.phases
-    .filter((p) => p.status === "done")
-    .reduce((s, p) => s + p.durationWeeks, 0);
-  const completedPercent =
-    totalWeeks > 0
-      ? Math.min(100, Math.round((donePhasesWeeks / totalWeeks) * 100))
-      : 0;
-  const expectedPercent =
-    effectiveWeeks > 0
-      ? Math.min(100, Math.round((weeksElapsed / effectiveWeeks) * 100))
-      : 0;
-  const diff = completedPercent - expectedPercent;
+  const effectiveWeeks   = totalWeeks + unavailableWeeks;
+  const startDate        = parseISO(roadmap.startDate);
+  const estimatedEnd     = addWeeks(startDate, effectiveWeeks);
+  const now              = new Date();
+  const weeksElapsed     = Math.max(0, differenceInWeeks(now, startDate));
+  const weeksLeft        = Math.max(0, effectiveWeeks - weeksElapsed);
+  const donePhasesWeeks  = roadmap.phases.filter(p => p.status === "done").reduce((s, p) => s + p.durationWeeks, 0);
+  const completedPercent = totalWeeks > 0 ? Math.min(100, Math.round((donePhasesWeeks / totalWeeks) * 100)) : 0;
+  const expectedPercent  = effectiveWeeks > 0 ? Math.min(100, Math.round((weeksElapsed / effectiveWeeks) * 100)) : 0;
+  const diff             = completedPercent - expectedPercent;
 
   let status: AICalc["status"], statusMessage: string, recommendation: string;
-  if (weeksElapsed === 0) {
-    status = "on_track";
-    statusMessage = "Roadmap created — ready to begin! 🌱";
-    recommendation = "Start Phase 1 with consistent daily study.";
-  } else if (diff >= 10) {
-    status = "ahead";
-    statusMessage = "Excellent! Ahead of schedule. 🎉";
-    recommendation = "Use extra time for deeper practice and mock tests.";
-  } else if (diff >= -5) {
-    status = "on_track";
-    statusMessage = "Right on track! Keep going. 💪";
-    recommendation = "Maintain your current pace. Don't skip sessions.";
-  } else if (diff >= -15) {
-    status = "behind";
-    statusMessage = "Slightly behind — adjustable.";
-    recommendation = `Add ${Math.ceil(Math.abs(diff) / 10)} extra sessions per week to catch up.`;
-  } else {
-    status = "critical";
-    statusMessage = "Significantly behind. Plan adjustment needed.";
-    recommendation = "Focus intensely on high-weightage topics.";
-  }
+  if (weeksElapsed === 0) { status = "on_track"; statusMessage = "Roadmap created — ready to begin! 🌱"; recommendation = "Start Phase 1 with consistent daily study."; }
+  else if (diff >= 10) { status = "ahead"; statusMessage = "Excellent! Ahead of schedule. 🎉"; recommendation = "Use extra time for deeper practice and mock tests."; }
+  else if (diff >= -5) { status = "on_track"; statusMessage = "Right on track! Keep going. 💪"; recommendation = "Maintain your current pace. Don't skip sessions."; }
+  else if (diff >= -15) { status = "behind"; statusMessage = "Slightly behind — adjustable."; recommendation = `Add ${Math.ceil(Math.abs(diff) / 10)} extra sessions per week to catch up.`; }
+  else { status = "critical"; statusMessage = "Significantly behind. Plan adjustment needed."; recommendation = "Focus intensely on high-weightage topics."; }
 
-  const remaining = roadmap.phases.filter((p) => p.status !== "done");
+  const remaining      = roadmap.phases.filter(p => p.status !== "done");
   const remainingTotal = remaining.reduce((s, p) => s + p.durationWeeks, 0);
-  const adjustedPhases = roadmap.phases.map((p) => {
+  const adjustedPhases = roadmap.phases.map(p => {
     if (p.status === "done") return p;
     const prop = remainingTotal > 0 ? p.durationWeeks / remainingTotal : 0;
-    return {
-      ...p,
-      durationWeeks: p.durationWeeks + Math.round(unavailableWeeks * prop),
-    };
+    return { ...p, durationWeeks: p.durationWeeks + Math.round(unavailableWeeks * prop) };
   });
 
   return {
-    effectiveWeeks,
-    unavailableWeeks,
+    effectiveWeeks, unavailableWeeks,
     estimatedEndDate: format(estimatedEnd, "MMMM d, yyyy"),
-    weeklyTargetPercent:
-      weeksLeft > 0 ? Math.ceil((100 - completedPercent) / weeksLeft) : 0,
-    completedPercent,
-    status,
-    statusMessage,
-    recommendation,
-    adjustedPhases,
+    weeklyTargetPercent: weeksLeft > 0 ? Math.ceil((100 - completedPercent) / weeksLeft) : 0,
+    completedPercent, status, statusMessage, recommendation, adjustedPhases,
   };
 }
 
+
 /* ─── Tick Button ──────────────────────── */
-function TickButton({
-  allDone,
-  anyDone,
-  onClick,
-  size = "sm",
-}: {
-  allDone: boolean;
-  anyDone: boolean;
+function TickButton({ allDone, anyDone, onClick, size = "sm" }: {
+  allDone: boolean; anyDone: boolean;
   onClick: (e: React.MouseEvent) => void;
   size?: "sm" | "lg";
 }) {
   const dim = size === "lg" ? "w-7 h-7" : "w-6 h-6";
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <button type="button" onClick={onClick}
       title={allDone ? "Unmark all" : "Mark all as done"}
       className={`flex-shrink-0 ${dim} rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110`}
       style={{
         borderColor: allDone ? OLIVE : anyDone ? GOLD : BORDER,
-        background: allDone ? OLIVE : "transparent",
-        boxShadow: allDone ? `0 0 0 3px ${OLIVE}22` : "none",
-      }}
-    >
+        background:  allDone ? OLIVE : "transparent",
+        boxShadow:   allDone ? `0 0 0 3px ${OLIVE}22` : "none",
+      }}>
       {allDone ? (
         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-          <path
-            d="M1 4L3.5 6.5L9 1"
-            stroke="white"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ) : anyDone ? (
         <div className="w-2 h-2 rounded-full" style={{ background: GOLD }} />
@@ -992,84 +558,52 @@ function TickButton({
 }
 
 /* ─── My Progress Tab ──────────────────── */
-function MyProgressTab({
-  userId,
-  examType,
-}: {
-  userId: string;
-  examType: string;
-}) {
+function MyProgressTab({ userId, examType }: { userId: string; examType: string }) {
   const isJAM = examType === "JAM";
-  const [progress, setProgress] = useState<SyllabusProgress>(() =>
-    loadSyllabusProgress(userId),
-  );
-  const [expandedSubj, setExpandedSubj] = useState<Record<string, boolean>>({});
-  const [expandedTopic, setExpandedTopic] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [progress,      setProgress]      = useState<SyllabusProgress>(() => loadSyllabusProgress(userId));
+  const [expandedSubj,  setExpandedSubj]  = useState<Record<string, boolean>>({});
+  const [expandedTopic, setExpandedTopic] = useState<Record<string, boolean>>({});
 
-  const filteredSyllabus = SYLLABUS.filter(
-    (s) => !(s.netOnly && isJAM) && !(s.jamOnly && !isJAM),
-  ).map((s) => ({
-    ...s,
-    topics: s.topics
-      .filter((t) => !(t.netOnly && isJAM) && !(t.jamOnly && !isJAM))
-      .map((t) => ({
-        ...t,
-        subtopics: t.subtopics.filter((st: any) => !(st.netOnly && isJAM)),
-      })),
-  }));
+  const filteredSyllabus = SYLLABUS
+    .filter(s => !(s.netOnly && isJAM) && !(s.jamOnly && !isJAM))
+    .map(s => ({
+      ...s,
+      topics: s.topics
+        .filter(t => !(t.netOnly && isJAM) && !(t.jamOnly && !isJAM))
+        .map(t => ({ ...t, subtopics: t.subtopics.filter((st: any) => !(st.netOnly && isJAM)) })),
+    }));
 
-  const totalSubs = filteredSyllabus.reduce(
-    (a, s) => a + s.topics.reduce((b, t) => b + t.subtopics.length, 0),
-    0,
-  );
-  const doneSubs = Object.values(progress).filter(
-    (v) => v.status === "done",
-  ).length;
-  const inProgSubs = Object.values(progress).filter(
-    (v) => v.status === "in_progress",
-  ).length;
+  const totalSubs  = filteredSyllabus.reduce((a, s) => a + s.topics.reduce((b, t) => b + t.subtopics.length, 0), 0);
+  const doneSubs   = Object.values(progress).filter(v => v.status === "done").length;
+  const inProgSubs = Object.values(progress).filter(v => v.status === "in_progress").length;
   const overallPct = totalSubs ? Math.round((doneSubs / totalSubs) * 100) : 0;
 
   /* Save to localStorage and update state */
   function persistProgress(next: SyllabusProgress) {
     setProgress(next);
-    try {
-      localStorage.setItem(`hs_syllabus_${userId}`, JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
+    try { localStorage.setItem(`hs_syllabus_${userId}`, JSON.stringify(next)); } catch { /* ignore */ }
   }
 
   /* Cycle a single subtopic */
   function cycleSubtopic(stId: string) {
-    const prev = progress[stId] ?? { status: "not_started" as const };
-    const now = new Date().toISOString();
+    const prev      = progress[stId] ?? { status: "not_started" as const };
+    const now       = new Date().toISOString();
     const nextStatus: Record<string, "not_started" | "in_progress" | "done"> = {
-      not_started: "in_progress",
-      in_progress: "done",
-      done: "not_started",
+      not_started: "in_progress", in_progress: "done", done: "not_started",
     };
-    const newStatus = nextStatus[prev.status] as
-      | "not_started"
-      | "in_progress"
-      | "done";
+    const newStatus = nextStatus[prev.status] as "not_started" | "in_progress" | "done";
     persistProgress({
       ...progress,
-      [stId]: {
-        status: newStatus,
-        doneAt: newStatus === "done" ? (prev.doneAt ?? now) : undefined,
-      },
+      [stId]: { status: newStatus, doneAt: newStatus === "done" ? (prev.doneAt ?? now) : undefined },
     });
   }
 
   /* Toggle all subtopics in a topic */
   function toggleSubtopics(subtopics: { id: string }[]) {
-    const allDone = subtopics.every((st) => progress[st.id]?.status === "done");
-    const now = new Date().toISOString();
+    const allDone = subtopics.every(st => progress[st.id]?.status === "done");
+    const now     = new Date().toISOString();
     const updated = { ...progress };
-    subtopics.forEach((st) => {
+    subtopics.forEach(st => {
       const prev = updated[st.id];
       updated[st.id] = allDone
         ? { status: "not_started", doneAt: undefined }
@@ -1089,121 +623,53 @@ function MyProgressTab({
       {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          {
-            label: "Overall",
-            value: `${overallPct}%`,
-            color: OLIVE,
-            sub: "complete",
-          },
-          { label: "Done", value: doneSubs, color: OLIVE, sub: "subtopics" },
-          {
-            label: "In Progress",
-            value: inProgSubs,
-            color: GOLD,
-            sub: "subtopics",
-          },
-          {
-            label: "Remaining",
-            value: totalSubs - doneSubs - inProgSubs,
-            color: MUTED,
-            sub: "not started",
-          },
+          { label: "Overall",     value: `${overallPct}%`,              color: OLIVE, sub: "complete"     },
+          { label: "Done",        value: doneSubs,                       color: OLIVE, sub: "subtopics"    },
+          { label: "In Progress", value: inProgSubs,                     color: GOLD,  sub: "subtopics"    },
+          { label: "Remaining",   value: totalSubs - doneSubs - inProgSubs, color: MUTED, sub: "not started" },
         ].map(({ label, value, color, sub }) => (
-          <div
-            key={label}
-            className="rounded-2xl p-5 text-center"
-            style={{ background: CARD, border: `1px solid ${BORDER}` }}
-          >
-            <div className="text-2xl font-bold font-serif" style={{ color }}>
-              {value}
-            </div>
-            <div
-              className="text-xs font-semibold mt-1"
-              style={{ color: CHARCOAL }}
-            >
-              {label}
-            </div>
-            <div className="text-[10px]" style={{ color: MUTED }}>
-              {sub}
-            </div>
+          <div key={label} className="rounded-2xl p-5 text-center"
+            style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+            <div className="text-2xl font-bold font-serif" style={{ color }}>{value}</div>
+            <div className="text-xs font-semibold mt-1" style={{ color: CHARCOAL }}>{label}</div>
+            <div className="text-[10px]" style={{ color: MUTED }}>{sub}</div>
           </div>
         ))}
       </div>
 
       {/* Progress bar */}
-      <div
-        className="rounded-2xl p-5"
-        style={{ background: CARD, border: `1px solid ${BORDER}` }}
-      >
+      <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
         <div className="flex justify-between text-sm mb-2">
-          <span className="font-semibold" style={{ color: CHARCOAL }}>
-            Syllabus Progress
-          </span>
-          <span className="font-bold" style={{ color: OLIVE }}>
-            {overallPct}%
-          </span>
+          <span className="font-semibold" style={{ color: CHARCOAL }}>Syllabus Progress</span>
+          <span className="font-bold" style={{ color: OLIVE }}>{overallPct}%</span>
         </div>
-        <div
-          className="h-3 rounded-full overflow-hidden"
-          style={{ background: BORDER }}
-        >
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${overallPct}%`,
-              background: `linear-gradient(90deg, ${OLIVE} 0%, ${GOLD} 100%)`,
-            }}
-          />
+        <div className="h-3 rounded-full overflow-hidden" style={{ background: BORDER }}>
+          <div className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${overallPct}%`, background: `linear-gradient(90deg, ${OLIVE} 0%, ${GOLD} 100%)` }} />
         </div>
         <p className="text-xs mt-2" style={{ color: MUTED }}>
-          {doneSubs} of {totalSubs} subtopics completed · Click ○ on a topic to
-          mark all done · Click any subtopic to cycle status
+          {doneSubs} of {totalSubs} subtopics completed ·
+          Click ○ on a topic to mark all done · Click any subtopic to cycle status
         </p>
       </div>
 
       {/* Recent completions */}
       {recentDone.length > 0 && (
-        <div
-          className="rounded-2xl p-5"
-          style={{ background: CARD, border: `1px solid ${BORDER}` }}
-        >
-          <h3
-            className="font-semibold text-sm mb-3"
-            style={{ color: CHARCOAL }}
-          >
-            Recently Completed
-          </h3>
+        <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          <h3 className="font-semibold text-sm mb-3" style={{ color: CHARCOAL }}>Recently Completed</h3>
           <div className="space-y-2">
             {recentDone.map(([id, entry]) => {
               let subtopicName = id;
-              SYLLABUS.forEach((subj) =>
-                subj.topics.forEach((t) =>
-                  t.subtopics.forEach((st) => {
-                    if (st.id === id) subtopicName = st.name;
-                  }),
-                ),
-              );
+              SYLLABUS.forEach(subj => subj.topics.forEach(t => t.subtopics.forEach(st => {
+                if (st.id === id) subtopicName = st.name;
+              })));
               return (
-                <div
-                  key={id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                  style={{
-                    background: `${OLIVE}10`,
-                    border: `1px solid ${OLIVE}33`,
-                  }}
-                >
-                  <CheckCircle2
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: OLIVE }}
-                  />
-                  <span className="flex-1 text-sm" style={{ color: CHARCOAL }}>
-                    {subtopicName}
-                  </span>
+                <div key={id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                  style={{ background: `${OLIVE}10`, border: `1px solid ${OLIVE}33` }}>
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: OLIVE }} />
+                  <span className="flex-1 text-sm" style={{ color: CHARCOAL }}>{subtopicName}</span>
                   {entry.doneAt && (
-                    <span
-                      className="text-[10px] flex-shrink-0"
-                      style={{ color: OLIVE }}
-                    >
+                    <span className="text-[10px] flex-shrink-0" style={{ color: OLIVE }}>
                       {format(new Date(entry.doneAt), "MMM d, yyyy")}
                     </span>
                   )}
@@ -1216,110 +682,50 @@ function MyProgressTab({
 
       {/* Subject breakdown */}
       <div>
-        <h3
-          className="font-serif text-lg font-semibold mb-3"
-          style={{ color: CHARCOAL }}
-        >
-          Subject Breakdown
-        </h3>
+        <h3 className="font-serif text-lg font-semibold mb-3" style={{ color: CHARCOAL }}>Subject Breakdown</h3>
         <div className="space-y-3">
-          {filteredSyllabus.map((subject) => {
-            const allSubtopics = subject.topics.flatMap((t) => t.subtopics);
-            const total = allSubtopics.length;
-            const done = allSubtopics.filter(
-              (st) => progress[st.id]?.status === "done",
-            ).length;
-            const inProg = allSubtopics.filter(
-              (st) => progress[st.id]?.status === "in_progress",
-            ).length;
-            const pct = total ? Math.round((done / total) * 100) : 0;
+          {filteredSyllabus.map(subject => {
+            const allSubtopics = subject.topics.flatMap(t => t.subtopics);
+            const total  = allSubtopics.length;
+            const done   = allSubtopics.filter(st => progress[st.id]?.status === "done").length;
+            const inProg = allSubtopics.filter(st => progress[st.id]?.status === "in_progress").length;
+            const pct    = total ? Math.round((done / total) * 100) : 0;
             const isOpen = expandedSubj[subject.id] ?? false;
 
             return (
-              <div
-                key={subject.id}
-                className="rounded-2xl overflow-hidden"
-                style={{ background: CARD, border: `1px solid ${BORDER}` }}
-              >
+              <div key={subject.id} className="rounded-2xl overflow-hidden"
+                style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+
                 {/* Subject header */}
-                <div
-                  className="flex items-center gap-3 px-4"
-                  style={{ background: isOpen ? `${GOLD}08` : CARD }}
-                >
+                <div className="flex items-center gap-3 px-4"
+                  style={{ background: isOpen ? `${GOLD}08` : CARD }}>
                   <TickButton
-                    allDone={allSubtopics.every(
-                      (st) => progress[st.id]?.status === "done",
-                    )}
-                    anyDone={allSubtopics.some(
-                      (st) =>
-                        progress[st.id]?.status === "done" ||
-                        progress[st.id]?.status === "in_progress",
-                    )}
+                    allDone={allSubtopics.every(st => progress[st.id]?.status === "done")}
+                    anyDone={allSubtopics.some(st => progress[st.id]?.status === "done" || progress[st.id]?.status === "in_progress")}
                     size="lg"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleSubtopics(allSubtopics);
-                    }}
+                    onClick={e => { e.stopPropagation(); toggleSubtopics(allSubtopics); }}
                   />
-                  <button
-                    onClick={() =>
-                      setExpandedSubj((p) => ({
-                        ...p,
-                        [subject.id]: !p[subject.id],
-                      }))
-                    }
-                    className="flex-1 flex items-center gap-4 py-4 text-left"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span
-                          className="font-semibold text-sm"
-                          style={{ color: CHARCOAL }}
-                        >
-                          {subject.name}
-                        </span>
-                        {pct === 100 && (
-                          <span
-                            className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                            style={{ background: `${OLIVE}22`, color: OLIVE }}
-                          >
-                            ✓ Complete
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="flex-1 h-1.5 rounded-full overflow-hidden"
-                          style={{ background: BORDER }}
-                        >
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${pct}%`,
-                              background: pct === 100 ? OLIVE : GOLD,
-                            }}
-                          />
-                        </div>
-                        <span
-                          className="text-xs flex-shrink-0"
-                          style={{ color: pct === 100 ? OLIVE : MUTED }}
-                        >
-                          {pct}% · {done}/{total}
-                          {inProg > 0 && ` · ${inProg} in progress`}
-                        </span>
-                      </div>
+                  <button onClick={() => setExpandedSubj(p => ({ ...p, [subject.id]: !p[subject.id] }))}
+                    className="flex-1 flex items-center gap-4 py-4 text-left">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-semibold text-sm" style={{ color: CHARCOAL }}>{subject.name}</span>
+                      {pct === 100 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                          style={{ background: `${OLIVE}22`, color: OLIVE }}>✓ Complete</span>
+                      )}
                     </div>
-                    {isOpen ? (
-                      <ChevronDown
-                        className="w-4 h-4"
-                        style={{ color: MUTED }}
-                      />
-                    ) : (
-                      <ChevronRight
-                        className="w-4 h-4"
-                        style={{ color: MUTED }}
-                      />
-                    )}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct === 100 ? OLIVE : GOLD }} />
+                      </div>
+                      <span className="text-xs flex-shrink-0" style={{ color: pct === 100 ? OLIVE : MUTED }}>
+                        {pct}% · {done}/{total}{inProg > 0 && ` · ${inProg} in progress`}
+                      </span>
+                    </div>
+                  </div>
+                  {isOpen ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
+                           : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
                   </button>
                 </div>
 
@@ -1327,83 +733,42 @@ function MyProgressTab({
                 {isOpen && (
                   <div style={{ borderTop: `1px solid ${BORDER}` }}>
                     {subject.topics.map((topic, tIdx) => {
-                      const topicDone = topic.subtopics.filter(
-                        (st) => progress[st.id]?.status === "done",
-                      ).length;
+                      const topicDone   = topic.subtopics.filter(st => progress[st.id]?.status === "done").length;
                       const topicAllDone = topicDone === topic.subtopics.length;
-                      const topicInProg = topic.subtopics.some(
-                        (st) =>
-                          progress[st.id]?.status === "in_progress" ||
-                          progress[st.id]?.status === "done",
-                      );
-                      const isTopicOpen = expandedTopic[topic.id] ?? false;
+                      const topicInProg  = topic.subtopics.some(st => progress[st.id]?.status === "in_progress" || progress[st.id]?.status === "done");
+                      const isTopicOpen  = expandedTopic[topic.id] ?? false;
 
                       return (
-                        <div
-                          key={topic.id}
-                          style={{
-                            borderBottom:
-                              tIdx < subject.topics.length - 1
-                                ? `1px solid ${BORDER}`
-                                : "none",
-                          }}
-                        >
+                        <div key={topic.id}
+                          style={{ borderBottom: tIdx < subject.topics.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+
                           {/* Topic row */}
-                          <div
-                            className="flex items-center gap-2 px-4"
-                            style={{
-                              background: isTopicOpen ? `${GOLD}06` : CREAM,
-                            }}
-                          >
+                          <div className="flex items-center gap-2 px-4"
+                            style={{ background: isTopicOpen ? `${GOLD}06` : CREAM }}>
+
                             {/* Topic tick button */}
                             <TickButton
                               allDone={topicAllDone}
                               anyDone={topicInProg}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleSubtopics(topic.subtopics);
-                              }}
+                              onClick={e => { e.stopPropagation(); toggleSubtopics(topic.subtopics); }}
                             />
 
                             {/* Topic expand button */}
-                            <button
-                              onClick={() =>
-                                setExpandedTopic((p) => ({
-                                  ...p,
-                                  [topic.id]: !p[topic.id],
-                                }))
-                              }
-                              className="flex flex-1 items-center gap-2 py-3 text-left"
-                            >
+                            <button onClick={() => setExpandedTopic(p => ({ ...p, [topic.id]: !p[topic.id] }))}
+                              className="flex flex-1 items-center gap-2 py-3 text-left">
                               <div className="w-4 flex-shrink-0 flex items-center justify-center">
-                                {isTopicOpen ? (
-                                  <ChevronDown
-                                    className="w-3.5 h-3.5"
-                                    style={{ color: MUTED }}
-                                  />
-                                ) : (
-                                  <ChevronRight
-                                    className="w-3.5 h-3.5"
-                                    style={{ color: MUTED }}
-                                  />
-                                )}
+                                {isTopicOpen
+                                  ? <ChevronDown className="w-3.5 h-3.5" style={{ color: MUTED }} />
+                                  : <ChevronRight className="w-3.5 h-3.5" style={{ color: MUTED }} />}
                               </div>
-                              <span
-                                className="flex-1 text-sm font-semibold"
-                                style={{
-                                  color: topicAllDone ? OLIVE : CHARCOAL,
-                                  textDecoration: topicAllDone
-                                    ? "line-through"
-                                    : "none",
-                                  textDecorationColor: MUTED,
-                                }}
-                              >
+                              <span className="flex-1 text-sm font-semibold" style={{
+                                color: topicAllDone ? OLIVE : CHARCOAL,
+                                textDecoration: topicAllDone ? "line-through" : "none",
+                                textDecorationColor: MUTED,
+                              }}>
                                 {topic.name}
                               </span>
-                              <span
-                                className="text-xs mr-1"
-                                style={{ color: topicAllDone ? OLIVE : MUTED }}
-                              >
+                              <span className="text-xs mr-1" style={{ color: topicAllDone ? OLIVE : MUTED }}>
                                 {topicDone}/{topic.subtopics.length}
                               </span>
                             </button>
@@ -1411,99 +776,40 @@ function MyProgressTab({
 
                           {/* Subtopics — clickable */}
                           {isTopicOpen && (
-                            <div
-                              className="px-5 pb-3 space-y-1.5"
-                              style={{ background: "#FDFBF8" }}
-                            >
-                              {topic.subtopics.map((st) => {
-                                const entry = progress[st.id] ?? {
-                                  status: "not_started" as const,
-                                };
+                            <div className="px-5 pb-3 space-y-1.5" style={{ background: "#FDFBF8" }}>
+                              {topic.subtopics.map(st => {
+                                const entry  = progress[st.id] ?? { status: "not_started" as const };
                                 const status = entry.status;
-                                const Icon =
-                                  status === "done"
-                                    ? CheckCircle2
-                                    : status === "in_progress"
-                                      ? PlayCircle
-                                      : Circle;
-                                const color =
-                                  status === "done"
-                                    ? OLIVE
-                                    : status === "in_progress"
-                                      ? GOLD
-                                      : MUTED;
-                                const bg =
-                                  status === "done"
-                                    ? `${OLIVE}12`
-                                    : status === "in_progress"
-                                      ? `${GOLD}12`
-                                      : `${BORDER}55`;
+                                const Icon   = status === "done" ? CheckCircle2 : status === "in_progress" ? PlayCircle : Circle;
+                                const color  = status === "done" ? OLIVE : status === "in_progress" ? GOLD : MUTED;
+                                const bg     = status === "done" ? `${OLIVE}12` : status === "in_progress" ? `${GOLD}12` : `${BORDER}55`;
 
                                 return (
-                                  <button
-                                    key={st.id}
-                                    type="button"
+                                  <button key={st.id} type="button"
                                     onClick={() => cycleSubtopic(st.id)}
                                     className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 hover:scale-[1.01]"
-                                    style={{
-                                      background: bg,
-                                      border: `1px solid ${color}33`,
-                                    }}
-                                  >
-                                    <Icon
-                                      className="w-4 h-4 flex-shrink-0 mt-0.5"
-                                      style={{ color }}
-                                    />
+                                    style={{ background: bg, border: `1px solid ${color}33` }}>
+                                    <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color }} />
                                     <div className="flex-1">
-                                      <span
-                                        className="text-sm"
-                                        style={{
-                                          color:
-                                            status === "done"
-                                              ? OLIVE
-                                              : CHARCOAL,
-                                          textDecoration:
-                                            status === "done"
-                                              ? "line-through"
-                                              : "none",
-                                          textDecorationColor: MUTED,
-                                        }}
-                                      >
+                                      <span className="text-sm" style={{
+                                        color: status === "done" ? OLIVE : CHARCOAL,
+                                        textDecoration: status === "done" ? "line-through" : "none",
+                                        textDecorationColor: MUTED,
+                                      }}>
                                         {st.name}
                                       </span>
                                       {status === "done" && entry.doneAt && (
-                                        <p
-                                          className="text-[10px] mt-0.5"
-                                          style={{ color: OLIVE }}
-                                        >
-                                          Completed on{" "}
-                                          {format(
-                                            new Date(entry.doneAt),
-                                            "MMMM d, yyyy",
-                                          )}
+                                        <p className="text-[10px] mt-0.5" style={{ color: OLIVE }}>
+                                          Completed on {format(new Date(entry.doneAt), "MMMM d, yyyy")}
                                         </p>
                                       )}
                                       {status === "in_progress" && (
-                                        <p
-                                          className="text-[10px] mt-0.5"
-                                          style={{ color: GOLD }}
-                                        >
-                                          In Progress
-                                        </p>
+                                        <p className="text-[10px] mt-0.5" style={{ color: GOLD }}>In Progress</p>
                                       )}
                                     </div>
-                                    <span
-                                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
-                                      style={{
-                                        background: `${color}22`,
-                                        color,
-                                      }}
-                                    >
-                                      {status === "done"
-                                        ? "Done"
-                                        : status === "in_progress"
-                                          ? "In Progress"
-                                          : "Not Started"}
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                                      style={{ background: `${color}22`, color }}>
+                                      {status === "done" ? "Done" : status === "in_progress" ? "In Progress" : "Not Started"}
                                     </span>
                                   </button>
                                 );
@@ -1522,20 +828,11 @@ function MyProgressTab({
       </div>
 
       {doneSubs === 0 && (
-        <div
-          className="text-center py-12 rounded-2xl"
-          style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
-        >
-          <BarChart2
-            className="w-10 h-10 mx-auto mb-3 opacity-30"
-            style={{ color: GOLD }}
-          />
-          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-            No topics completed yet
-          </p>
+        <div className="text-center py-12 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+          <BarChart2 className="w-10 h-10 mx-auto mb-3 opacity-30" style={{ color: GOLD }} />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No topics completed yet</p>
           <p className="text-xs mt-1" style={{ color: MUTED }}>
-            Click the circle next to any topic to mark it done, or click any
-            subtopic to cycle its status.
+            Click the circle next to any topic to mark it done, or click any subtopic to cycle its status.
           </p>
         </div>
       )}
@@ -1546,236 +843,114 @@ function MyProgressTab({
 /* ─── Completion Forecast ──────────────── */
 function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
   const [showBreakdown, setShowBreakdown] = useState(false);
-  const fullCount = schedule.subjectForecasts.filter(
-    (s) => s.canComplete && s.syllabusPercent < 100,
-  ).length;
-  const partialCount = schedule.subjectForecasts.filter(
-    (s) =>
-      !s.canComplete && s.percentCompletable > 0 && s.syllabusPercent < 100,
-  ).length;
-  const zeroCount = schedule.subjectForecasts.filter(
-    (s) =>
-      !s.canComplete && s.percentCompletable === 0 && s.syllabusPercent < 100,
-  ).length;
-  const doneCount = schedule.subjectForecasts.filter(
-    (s) => s.syllabusPercent === 100,
-  ).length;
+  const fullCount    = schedule.subjectForecasts.filter(s => s.canComplete && s.syllabusPercent < 100).length;
+  const partialCount = schedule.subjectForecasts.filter(s => !s.canComplete && s.percentCompletable > 0 && s.syllabusPercent < 100).length;
+  const zeroCount    = schedule.subjectForecasts.filter(s => !s.canComplete && s.percentCompletable === 0 && s.syllabusPercent < 100).length;
+  const doneCount    = schedule.subjectForecasts.filter(s => s.syllabusPercent === 100).length;
 
   return (
-    <div
-      className="rounded-2xl p-5 space-y-4"
-      style={{ background: `${GOLD}08`, border: `1.5px solid ${GOLD}44` }}
-    >
+    <div className="rounded-2xl p-5 space-y-4" style={{ background: `${GOLD}08`, border: `1.5px solid ${GOLD}44` }}>
       <div className="flex items-center gap-2">
         <Target className="w-4 h-4" style={{ color: GOLD }} />
-        <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
-          What You Can Complete
-        </h3>
+        <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>What You Can Complete</h3>
       </div>
       <p className="text-xs" style={{ color: MUTED }}>
-        With{" "}
-        <strong style={{ color: DARK }}>
-          {schedule.hoursPerDay} hrs/day × {schedule.daysPerWeek} days/week
-        </strong>{" "}
-        for{" "}
-        <strong style={{ color: DARK }}>{schedule.targetMonths} months</strong>,
-        factoring in your syllabus progress:
+        With <strong style={{ color: DARK }}>{schedule.hoursPerDay} hrs/day × {schedule.daysPerWeek} days/week</strong> for{" "}
+        <strong style={{ color: DARK }}>{schedule.targetMonths} months</strong>, factoring in your syllabus progress:
       </p>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {doneCount > 0 && (
-          <div
-            className="rounded-xl p-3 text-center"
-            style={{ background: `${OLIVE}22`, border: `1px solid ${OLIVE}44` }}
-          >
-            <div
-              className="text-xl font-bold font-serif"
-              style={{ color: OLIVE }}
-            >
-              {doneCount}
-            </div>
-            <div className="text-[10px] mt-0.5" style={{ color: OLIVE }}>
-              Already Done ✓
-            </div>
+          <div className="rounded-xl p-3 text-center" style={{ background: `${OLIVE}22`, border: `1px solid ${OLIVE}44` }}>
+            <div className="text-xl font-bold font-serif" style={{ color: OLIVE }}>{doneCount}</div>
+            <div className="text-[10px] mt-0.5" style={{ color: OLIVE }}>Already Done ✓</div>
           </div>
         )}
-        <div
-          className="rounded-xl p-3 text-center"
-          style={{ background: `${OLIVE}15`, border: `1px solid ${OLIVE}33` }}
-        >
-          <div
-            className="text-xl font-bold font-serif"
-            style={{ color: OLIVE }}
-          >
-            {fullCount}
-          </div>
-          <div className="text-[10px] mt-0.5" style={{ color: OLIVE }}>
-            Fully Complete
-          </div>
+        <div className="rounded-xl p-3 text-center" style={{ background: `${OLIVE}15`, border: `1px solid ${OLIVE}33` }}>
+          <div className="text-xl font-bold font-serif" style={{ color: OLIVE }}>{fullCount}</div>
+          <div className="text-[10px] mt-0.5" style={{ color: OLIVE }}>Fully Complete</div>
         </div>
         {partialCount > 0 && (
-          <div
-            className="rounded-xl p-3 text-center"
-            style={{ background: "#FFF8DC", border: "1px solid #B8860B33" }}
-          >
-            <div
-              className="text-xl font-bold font-serif"
-              style={{ color: "#B8860B" }}
-            >
-              {partialCount}
-            </div>
-            <div className="text-[10px] mt-0.5" style={{ color: "#B8860B" }}>
-              Partially Done
-            </div>
+          <div className="rounded-xl p-3 text-center" style={{ background: "#FFF8DC", border: "1px solid #B8860B33" }}>
+            <div className="text-xl font-bold font-serif" style={{ color: "#B8860B" }}>{partialCount}</div>
+            <div className="text-[10px] mt-0.5" style={{ color: "#B8860B" }}>Partially Done</div>
           </div>
         )}
         {zeroCount > 0 && (
-          <div
-            className="rounded-xl p-3 text-center"
-            style={{ background: "#FDE8E8", border: "1px solid #C0392B33" }}
-          >
-            <div
-              className="text-xl font-bold font-serif"
-              style={{ color: "#C0392B" }}
-            >
-              {zeroCount}
-            </div>
-            <div className="text-[10px] mt-0.5" style={{ color: "#C0392B" }}>
-              Not Reachable
-            </div>
+          <div className="rounded-xl p-3 text-center" style={{ background: "#FDE8E8", border: "1px solid #C0392B33" }}>
+            <div className="text-xl font-bold font-serif" style={{ color: "#C0392B" }}>{zeroCount}</div>
+            <div className="text-[10px] mt-0.5" style={{ color: "#C0392B" }}>Not Reachable</div>
           </div>
         )}
-        <div
-          className="rounded-xl p-3 text-center"
-          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-        >
-          <div className="text-xl font-bold font-serif" style={{ color: DARK }}>
-            {schedule.minimumMonthsNeeded} mo
-          </div>
-          <div className="text-[10px] mt-0.5" style={{ color: MUTED }}>
-            Minimum Needed
-          </div>
+        <div className="rounded-xl p-3 text-center" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+          <div className="text-xl font-bold font-serif" style={{ color: DARK }}>{schedule.minimumMonthsNeeded} mo</div>
+          <div className="text-[10px] mt-0.5" style={{ color: MUTED }}>Minimum Needed</div>
         </div>
       </div>
 
-      <div
-        className="rounded-xl px-4 py-3"
-        style={{
-          background: schedule.isAchievable ? `${OLIVE}15` : "#FDE8E8",
-          border: `1px solid ${schedule.isAchievable ? OLIVE : "#C0392B"}33`,
-        }}
-      >
+      <div className="rounded-xl px-4 py-3" style={{
+        background: schedule.isAchievable ? `${OLIVE}15` : "#FDE8E8",
+        border: `1px solid ${schedule.isAchievable ? OLIVE : "#C0392B"}33`,
+      }}>
         {schedule.isAchievable ? (
           <p className="text-sm font-semibold" style={{ color: OLIVE }}>
-            ✅ You can complete the remaining syllabus in{" "}
-            {schedule.targetMonths} months at this pace!
+            ✅ You can complete the remaining syllabus in {schedule.targetMonths} months at this pace!
           </p>
         ) : (
           <p className="text-sm font-semibold" style={{ color: "#C0392B" }}>
-            ⚠️ At this pace you can fully cover {fullCount + doneCount} of{" "}
-            {schedule.totalSubjects} subjects. You need at least{" "}
-            {schedule.minimumMonthsNeeded} months for the full syllabus.
+            ⚠️ At this pace you can fully cover {fullCount + doneCount} of {schedule.totalSubjects} subjects.
+            You need at least {schedule.minimumMonthsNeeded} months for the full syllabus.
           </p>
         )}
         {schedule.completedSubjectsSkipped > 0 && (
           <p className="text-xs mt-1" style={{ color: MUTED }}>
-            {schedule.completedSubjectsSkipped} subject(s) are 100% done in your
-            syllabus tracker — skipped from schedule.
+            {schedule.completedSubjectsSkipped} subject(s) are 100% done in your syllabus tracker — skipped from schedule.
           </p>
         )}
       </div>
 
-      <button
-        onClick={() => setShowBreakdown(!showBreakdown)}
-        className="flex items-center gap-2 text-xs font-semibold"
-        style={{ color: GOLD }}
-      >
-        {showBreakdown ? (
-          <ChevronDown className="w-3.5 h-3.5" />
-        ) : (
-          <ChevronRight className="w-3.5 h-3.5" />
-        )}
+      <button onClick={() => setShowBreakdown(!showBreakdown)}
+        className="flex items-center gap-2 text-xs font-semibold" style={{ color: GOLD }}>
+        {showBreakdown ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         {showBreakdown ? "Hide" : "Show"} subject-by-subject breakdown
       </button>
 
       {showBreakdown && (
         <div className="space-y-2">
-          {schedule.subjectForecasts.map((sf) => (
-            <div
-              key={sf.name}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl"
+          {schedule.subjectForecasts.map(sf => (
+            <div key={sf.name} className="flex items-center gap-3 px-4 py-3 rounded-xl"
               style={{
-                background:
-                  sf.syllabusPercent === 100
-                    ? `${OLIVE}10`
-                    : sf.canComplete
-                      ? `${OLIVE}08`
-                      : sf.percentCompletable > 0
-                        ? "#FFF8DC"
-                        : "#FDE8E8",
+                background: sf.syllabusPercent === 100 ? `${OLIVE}10` : sf.canComplete ? `${OLIVE}08` : sf.percentCompletable > 0 ? "#FFF8DC" : "#FDE8E8",
                 border: `1px solid ${sf.syllabusPercent === 100 ? `${OLIVE}44` : sf.canComplete ? `${OLIVE}33` : sf.percentCompletable > 0 ? "#B8860B33" : "#C0392B33"}`,
-              }}
-            >
+              }}>
               <span className="text-base flex-shrink-0">
-                {sf.syllabusPercent === 100
-                  ? "✅"
-                  : sf.canComplete
-                    ? "✅"
-                    : sf.percentCompletable > 0
-                      ? "⚠️"
-                      : "❌"}
+                {sf.syllabusPercent === 100 ? "✅" : sf.canComplete ? "✅" : sf.percentCompletable > 0 ? "⚠️" : "❌"}
               </span>
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className="text-sm font-semibold"
-                    style={{ color: CHARCOAL }}
-                  >
-                    {sf.name}
-                  </span>
+                  <span className="text-sm font-semibold" style={{ color: CHARCOAL }}>{sf.name}</span>
                   {sf.syllabusPercent > 0 && sf.syllabusPercent < 100 && (
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                      style={{ background: `${GOLD}22`, color: DARK }}
-                    >
-                      {sf.syllabusPercent}% done in syllabus
-                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: `${GOLD}22`, color: DARK }}>{sf.syllabusPercent}% done in syllabus</span>
                   )}
                   {sf.syllabusPercent === 100 && (
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                      style={{ background: `${OLIVE}22`, color: OLIVE }}
-                    >
-                      100% in syllabus
-                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: `${OLIVE}22`, color: OLIVE }}>100% in syllabus</span>
                   )}
                 </div>
                 {sf.syllabusPercent < 100 && (
                   <>
-                    <div
-                      className="h-1 rounded-full mt-1.5 overflow-hidden"
-                      style={{ background: BORDER }}
-                    >
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${sf.percentCompletable}%`,
-                          background: sf.canComplete
-                            ? OLIVE
-                            : sf.percentCompletable > 0
-                              ? "#B8860B"
-                              : "#C0392B",
-                        }}
-                      />
+                    <div className="h-1 rounded-full mt-1.5 overflow-hidden" style={{ background: BORDER }}>
+                      <div className="h-full rounded-full" style={{
+                        width: `${sf.percentCompletable}%`,
+                        background: sf.canComplete ? OLIVE : sf.percentCompletable > 0 ? "#B8860B" : "#C0392B",
+                      }} />
                     </div>
                     <p className="text-[10px] mt-1" style={{ color: MUTED }}>
-                      {sf.adjustedWeeks === 0
-                        ? "Fully covered in syllabus — skipped"
-                        : sf.canComplete
-                          ? `${sf.weeksNeeded} weeks needed — completable`
-                          : sf.percentCompletable > 0
-                            ? `~${sf.percentCompletable}% completable (${sf.weeksAvailable}/${sf.weeksNeeded} wks)`
-                            : "Not reachable in target timeframe"}
+                      {sf.adjustedWeeks === 0 ? "Fully covered in syllabus — skipped"
+                        : sf.canComplete ? `${sf.weeksNeeded} weeks needed — completable`
+                        : sf.percentCompletable > 0 ? `~${sf.percentCompletable}% completable (${sf.weeksAvailable}/${sf.weeksNeeded} wks)`
+                        : "Not reachable in target timeframe"}
                     </p>
                   </>
                 )}
@@ -1792,116 +967,50 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
 function loadScheduleInputs(userId: string) {
   try {
     const r = localStorage.getItem(`hs_schedule_inputs_${userId}`);
-    return r
-      ? JSON.parse(r)
-      : {
-          hoursPerDay: 2,
-          daysPerWeek: 5,
-          targetMonths: 6,
-          revisionPercent: 30,
-        };
-  } catch {
-    return {
-      hoursPerDay: 2,
-      daysPerWeek: 5,
-      targetMonths: 6,
-      revisionPercent: 30,
-    };
-  }
+    return r ? JSON.parse(r) : { hoursPerDay: 2, daysPerWeek: 5, targetMonths: 6, revisionPercent: 30 };
+  } catch { return { hoursPerDay: 2, daysPerWeek: 5, targetMonths: 6, revisionPercent: 30 }; }
 }
-function saveScheduleInputs(
-  userId: string,
-  inputs: {
-    hoursPerDay: number;
-    daysPerWeek: number;
-    targetMonths: number;
-    revisionPercent: number;
-  },
-) {
-  try {
-    localStorage.setItem(
-      `hs_schedule_inputs_${userId}`,
-      JSON.stringify(inputs),
-    );
-  } catch {
-    /* ignore */
-  }
+function saveScheduleInputs(userId: string, inputs: { hoursPerDay: number; daysPerWeek: number; targetMonths: number; revisionPercent: number }) {
+  try { localStorage.setItem(`hs_schedule_inputs_${userId}`, JSON.stringify(inputs)); } catch { /* ignore */ }
 }
 
 /* ─── Variable Weeks Panel ──────────────── */
-function VariableWeeksPanel({
-  variableWeeks,
-  unavailablePeriods,
-  baseHoursPerDay,
-  daysPerWeek,
-}: {
+function VariableWeeksPanel({ variableWeeks, unavailablePeriods, baseHoursPerDay, daysPerWeek }: {
   variableWeeks: VariableWeek[];
   unavailablePeriods: UnavailablePeriod[];
   baseHoursPerDay: number;
   daysPerWeek: number;
 }) {
-  if (variableWeeks.length === 0 && unavailablePeriods.length === 0)
-    return null;
+  if (variableWeeks.length === 0 && unavailablePeriods.length === 0) return null;
 
   return (
-    <div
-      className="rounded-2xl p-4 space-y-2"
-      style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}33` }}
-    >
-      <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>
-        Special Weeks in Schedule
-      </p>
-      {unavailablePeriods.map((up) => (
-        <div
-          key={up.id}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl"
-          style={{ background: `${ROSE}15`, border: `1px solid ${ROSE}44` }}
-        >
+    <div className="rounded-2xl p-4 space-y-2" style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}33` }}>
+      <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>Special Weeks in Schedule</p>
+      {unavailablePeriods.map(up => (
+        <div key={up.id} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+          style={{ background: `${ROSE}15`, border: `1px solid ${ROSE}44` }}>
           <span className="text-sm">⏸</span>
-          <span
-            className="flex-1 text-xs font-medium"
-            style={{ color: CHARCOAL }}
-          >
-            {up.label}
-          </span>
+          <span className="flex-1 text-xs font-medium" style={{ color: CHARCOAL }}>{up.label}</span>
           <span className="text-[10px]" style={{ color: MUTED }}>
-            {up.startDate ? format(parseISO(up.startDate), "MMM d") : ""} ·{" "}
-            {up.weeks} week{up.weeks > 1 ? "s" : ""} · 0 hrs
+            {up.startDate ? format(parseISO(up.startDate), "MMM d") : ""} · {up.weeks} week{up.weeks > 1 ? "s" : ""} · 0 hrs
           </span>
         </div>
       ))}
-      {variableWeeks.map((vw) => {
-        const effectiveHrs =
-          vw.customHours !== undefined
-            ? vw.customHours * daysPerWeek
-            : baseHoursPerDay * daysPerWeek * (vw.multiplier ?? 1);
+      {variableWeeks.map(vw => {
+        const effectiveHrs = vw.customHours !== undefined
+          ? vw.customHours * daysPerWeek
+          : baseHoursPerDay * daysPerWeek * (vw.multiplier ?? 1);
         const baseHrs = baseHoursPerDay * daysPerWeek;
         const isMore = effectiveHrs > baseHrs;
         return (
-          <div
-            key={vw.id}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl"
-            style={{
-              background: isMore ? `${OLIVE}12` : "#FFF8DC",
-              border: `1px solid ${isMore ? OLIVE : "#B8860B"}33`,
-            }}
-          >
+          <div key={vw.id} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+            style={{ background: isMore ? `${OLIVE}12` : "#FFF8DC", border: `1px solid ${isMore ? OLIVE : "#B8860B"}33` }}>
             <span className="text-sm">{isMore ? "⚡" : "🐌"}</span>
-            <span
-              className="flex-1 text-xs font-medium"
-              style={{ color: CHARCOAL }}
-            >
-              {vw.label}
-            </span>
-            <span
-              className="text-[10px]"
-              style={{ color: isMore ? OLIVE : "#B8860B" }}
-            >
+            <span className="flex-1 text-xs font-medium" style={{ color: CHARCOAL }}>{vw.label}</span>
+            <span className="text-[10px]" style={{ color: isMore ? OLIVE : "#B8860B" }}>
               {vw.startDate ? format(parseISO(vw.startDate), "MMM d") : ""} ·
-              {vw.customHours !== undefined
-                ? ` ${vw.customHours} hrs/day`
-                : ` ${vw.multiplier}x`}{" "}
-              ·{effectiveHrs} hrs/week
+              {vw.customHours !== undefined ? ` ${vw.customHours} hrs/day` : ` ${vw.multiplier}x`} ·
+              {effectiveHrs} hrs/week
             </span>
           </div>
         );
@@ -1910,200 +1019,101 @@ function VariableWeeksPanel({
   );
 }
 
+
 /* ─── Unavailable Periods Manager ───────── */
-function UnavailablePeriodsManager({
-  rm,
-  persist,
-}: {
-  rm: Roadmap;
-  persist: (next: Roadmap) => void;
-}) {
-  const [show, setShow] = useState(false);
-  const [label, setLabel] = useState("");
+function UnavailablePeriodsManager({ rm, persist }: { rm: Roadmap; persist: (next: Roadmap) => void }) {
+  const [show,     setShow]     = useState(false);
+  const [label,    setLabel]    = useState("");
   const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [endDate,  setEndDate]  = useState("");
 
   function add() {
     if (!label || !startDate || !endDate) return;
     if (new Date(endDate) <= new Date(startDate)) return;
-    persist({
-      ...rm,
-      unavailablePeriods: [
-        ...rm.unavailablePeriods,
-        { id: `${Date.now()}`, label, startDate, endDate },
-      ],
-    });
-    setLabel("");
-    setStartDate("");
-    setEndDate("");
+    persist({ ...rm, unavailablePeriods: [...rm.unavailablePeriods, { id: `${Date.now()}`, label, startDate, endDate }] });
+    setLabel(""); setStartDate(""); setEndDate("");
     setShow(false);
   }
 
   return (
-    <div
-      className="rounded-2xl p-5 space-y-3"
-      style={{ background: CARD, border: `1px solid ${BORDER}` }}
-    >
+    <div className="rounded-2xl p-5 space-y-3" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4" style={{ color: ROSE }} />
-          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
-            Unavailable Periods
-          </h3>
+          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>Unavailable Periods</h3>
         </div>
         {!show && (
-          <button
-            onClick={() => setShow(true)}
+          <button onClick={() => setShow(true)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-            style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
-          >
+            style={{ background: `${ROSE}33`, color: "#8B3A3A" }}>
             <Plus className="w-3 h-3" /> Add
           </button>
         )}
       </div>
       <p className="text-xs" style={{ color: MUTED }}>
-        Add periods when you cannot study. These appear in your schedule as
-        paused weeks and push your end date forward.
+        Add periods when you cannot study. These appear in your schedule as paused weeks and push your end date forward.
       </p>
 
       {show && (
-        <div
-          className="rounded-xl p-4 space-y-3"
-          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-        >
+        <div className="rounded-xl p-4 space-y-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
           <div>
-            <label
-              className="text-xs font-semibold mb-1 block"
-              style={{ color: MUTED }}
-            >
-              Reason
-            </label>
-            <input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
+            <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Reason</label>
+            <input value={label} onChange={e => setLabel(e.target.value)}
               placeholder="e.g. College exams, Family trip…"
               className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-              style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }}
-            />
+              style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label
-                className="text-xs font-semibold mb-1 block"
-                style={{ color: MUTED }}
-              >
-                Start date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+              <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Start date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                 className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                style={{
-                  background: CARD,
-                  borderColor: BORDER,
-                  color: CHARCOAL,
-                }}
-              />
+                style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
             </div>
             <div>
-              <label
-                className="text-xs font-semibold mb-1 block"
-                style={{ color: MUTED }}
-              >
-                End date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+              <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>End date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
                 min={startDate}
                 className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                style={{
-                  background: CARD,
-                  borderColor: BORDER,
-                  color: CHARCOAL,
-                }}
-              />
+                style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
             </div>
           </div>
           {startDate && endDate && new Date(endDate) <= new Date(startDate) && (
-            <p className="text-xs" style={{ color: "#C0392B" }}>
-              End date must be after start date.
-            </p>
+            <p className="text-xs" style={{ color: "#C0392B" }}>End date must be after start date.</p>
           )}
           <div className="flex gap-2">
-            <button
-              onClick={add}
+            <button onClick={add}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
-              style={{
-                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
-                color: "#fff",
-              }}
-            >
+              style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
               <Save className="w-3 h-3" /> Add Period
             </button>
-            <button
-              onClick={() => setShow(false)}
+            <button onClick={() => setShow(false)}
               className="px-4 py-2 rounded-xl text-xs font-semibold"
-              style={{ background: BORDER, color: MUTED }}
-            >
-              Cancel
-            </button>
+              style={{ background: BORDER, color: MUTED }}>Cancel</button>
           </div>
         </div>
       )}
 
       {rm.unavailablePeriods.length === 0 && !show && (
-        <p className="text-xs" style={{ color: MUTED }}>
-          No unavailable periods added.
-        </p>
+        <p className="text-xs" style={{ color: MUTED }}>No unavailable periods added.</p>
       )}
 
       <div className="space-y-2">
-        {rm.unavailablePeriods.map((p) => {
-          const days =
-            p.startDate && p.endDate
-              ? Math.max(
-                  0,
-                  Math.round(
-                    (new Date(p.endDate).getTime() -
-                      new Date(p.startDate).getTime()) /
-                      (24 * 60 * 60 * 1000),
-                  ),
-                )
-              : 0;
+        {rm.unavailablePeriods.map(p => {
+          const days = p.startDate && p.endDate
+            ? Math.max(0, Math.round((new Date(p.endDate).getTime() - new Date(p.startDate).getTime()) / (24 * 60 * 60 * 1000)))
+            : 0;
           return (
-            <div
-              key={p.id}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-              style={{ background: `${ROSE}15`, border: `1px solid ${ROSE}44` }}
-            >
+            <div key={p.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+              style={{ background: `${ROSE}15`, border: `1px solid ${ROSE}44` }}>
               <div>
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: CHARCOAL }}
-                >
-                  {p.label}
-                </span>
+                <span className="text-sm font-medium" style={{ color: CHARCOAL }}>{p.label}</span>
                 <span className="text-xs ml-2" style={{ color: MUTED }}>
-                  {p.startDate ? format(parseISO(p.startDate), "MMM d") : ""} →{" "}
-                  {p.endDate ? format(parseISO(p.endDate), "MMM d") : ""} ·{" "}
-                  {days} day{days !== 1 ? "s" : ""}
+                  {p.startDate ? format(parseISO(p.startDate), "MMM d") : ""} → {p.endDate ? format(parseISO(p.endDate), "MMM d") : ""} · {days} day{days !== 1 ? "s" : ""}
                 </span>
               </div>
-              <button
-                onClick={() =>
-                  persist({
-                    ...rm,
-                    unavailablePeriods: rm.unavailablePeriods.filter(
-                      (x) => x.id !== p.id,
-                    ),
-                  })
-                }
-                className="p-1 rounded-lg"
-                style={{ color: "#C0392B" }}
-              >
+              <button onClick={() => persist({ ...rm, unavailablePeriods: rm.unavailablePeriods.filter(x => x.id !== p.id) })}
+                className="p-1 rounded-lg" style={{ color: "#C0392B" }}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -2115,295 +1125,154 @@ function UnavailablePeriodsManager({
 }
 
 /* ─── Variable Intensity Weeks Manager ─── */
-function VariableWeeksManager({
-  rm,
-  persist,
-}: {
-  rm: Roadmap;
-  persist: (next: Roadmap) => void;
-}) {
-  const [show, setShow] = useState(false);
-  const [label, setLabel] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+function VariableWeeksManager({ rm, persist }: { rm: Roadmap; persist: (next: Roadmap) => void }) {
+  const [show,          setShow]          = useState(false);
+  const [label,         setLabel]         = useState("");
+  const [startDate,     setStartDate]     = useState("");
+  const [endDate,       setEndDate]       = useState("");
   const [useMultiplier, setUseMultiplier] = useState(true);
-  const [multiplier, setMultiplier] = useState(2);
-  const [customHours, setCustomHours] = useState(4);
+  const [multiplier,    setMultiplier]    = useState(2);
+  const [customHours,   setCustomHours]   = useState(4);
 
   function add() {
     if (!label || !startDate || !endDate) return;
     if (new Date(endDate) <= new Date(startDate)) return;
     const newVW: VariableWeek = {
-      id: `${Date.now()}`,
-      label,
-      startDate,
-      endDate,
+      id: `${Date.now()}`, label, startDate, endDate,
       ...(useMultiplier ? { multiplier } : { customHours }),
     };
     persist({ ...rm, variableWeeks: [...(rm.variableWeeks ?? []), newVW] });
-    setLabel("");
-    setStartDate("");
-    setEndDate("");
+    setLabel(""); setStartDate(""); setEndDate("");
     setShow(false);
   }
 
   return (
-    <div
-      className="rounded-2xl p-5 space-y-3"
-      style={{ background: CARD, border: `1px solid ${BORDER}` }}
-    >
+    <div className="rounded-2xl p-5 space-y-3" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4" style={{ color: GOLD }} />
-          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
-            Variable Intensity Periods
-          </h3>
+          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>Variable Intensity Periods</h3>
         </div>
         {!show && (
-          <button
-            onClick={() => setShow(true)}
+          <button onClick={() => setShow(true)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-            style={{ background: `${GOLD}22`, color: DARK }}
-          >
+            style={{ background: `${GOLD}22`, color: DARK }}>
             <Plus className="w-3 h-3" /> Add
           </button>
         )}
       </div>
       <p className="text-xs" style={{ color: MUTED }}>
-        Add periods when you can study more or less than usual — e.g. a holiday
-        with double hours, or exam week with half hours.
+        Add periods when you can study more or less than usual — e.g. a holiday with double hours, or exam week with half hours.
       </p>
 
       {show && (
-        <div
-          className="rounded-xl p-4 space-y-3"
-          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-        >
+        <div className="rounded-xl p-4 space-y-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
           <div>
-            <label
-              className="text-xs font-semibold mb-1 block"
-              style={{ color: MUTED }}
-            >
-              Label
-            </label>
-            <input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
+            <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Label</label>
+            <input value={label} onChange={e => setLabel(e.target.value)}
               placeholder="e.g. Summer holiday, Exam prep week…"
               className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-              style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }}
-            />
+              style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label
-                className="text-xs font-semibold mb-1 block"
-                style={{ color: MUTED }}
-              >
-                Start date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+              <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Start date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                 className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                style={{
-                  background: CARD,
-                  borderColor: BORDER,
-                  color: CHARCOAL,
-                }}
-              />
+                style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
             </div>
             <div>
-              <label
-                className="text-xs font-semibold mb-1 block"
-                style={{ color: MUTED }}
-              >
-                End date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+              <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>End date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
                 min={startDate}
                 className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                style={{
-                  background: CARD,
-                  borderColor: BORDER,
-                  color: CHARCOAL,
-                }}
-              />
+                style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
             </div>
           </div>
           {startDate && endDate && new Date(endDate) <= new Date(startDate) && (
-            <p className="text-xs" style={{ color: "#C0392B" }}>
-              End date must be after start date.
-            </p>
+            <p className="text-xs" style={{ color: "#C0392B" }}>End date must be after start date.</p>
           )}
 
           {/* Toggle multiplier vs custom hours */}
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setUseMultiplier(true)}
+            <button type="button" onClick={() => setUseMultiplier(true)}
               className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
-              style={
-                useMultiplier
-                  ? { background: DARK, color: CREAM }
-                  : { background: `${BORDER}88`, color: MUTED }
-              }
-            >
+              style={useMultiplier ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
               Multiplier (e.g. 2×)
             </button>
-            <button
-              type="button"
-              onClick={() => setUseMultiplier(false)}
+            <button type="button" onClick={() => setUseMultiplier(false)}
               className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
-              style={
-                !useMultiplier
-                  ? { background: DARK, color: CREAM }
-                  : { background: `${BORDER}88`, color: MUTED }
-              }
-            >
+              style={!useMultiplier ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
               Custom hrs/day
             </button>
           </div>
 
           {useMultiplier ? (
             <div>
-              <label
-                className="text-xs font-semibold mb-2 block"
-                style={{ color: MUTED }}
-              >
-                Multiplier:{" "}
-                <span style={{ color: GOLD }}>{multiplier}× normal hours</span>
+              <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>
+                Multiplier: <span style={{ color: GOLD }}>{multiplier}× normal hours</span>
                 <span className="ml-2 text-[10px]" style={{ color: MUTED }}>
                   (0.5× = half, 1× = same, 2× = double)
                 </span>
               </label>
-              <input
-                type="range"
-                min={0.1}
-                max={4}
-                step={0.1}
-                value={multiplier}
-                onChange={(e) => setMultiplier(parseFloat(e.target.value))}
-                className="w-full accent-amber-600"
-              />
-              <div
-                className="flex justify-between text-[10px] mt-1"
-                style={{ color: MUTED }}
-              >
-                <span>0.1× (very little)</span>
-                <span>4× (intensive)</span>
+              <input type="range" min={0.1} max={4} step={0.1} value={multiplier}
+                onChange={e => setMultiplier(parseFloat(e.target.value))}
+                className="w-full accent-amber-600" />
+              <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}>
+                <span>0.1× (very little)</span><span>4× (intensive)</span>
               </div>
             </div>
           ) : (
             <div>
-              <label
-                className="text-xs font-semibold mb-2 block"
-                style={{ color: MUTED }}
-              >
-                Custom hours per day:{" "}
-                <span style={{ color: GOLD }}>{customHours} hrs/day</span>
+              <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>
+                Custom hours per day: <span style={{ color: GOLD }}>{customHours} hrs/day</span>
               </label>
-              <input
-                type="range"
-                min={0.5}
-                max={16}
-                step={0.5}
-                value={customHours}
-                onChange={(e) => setCustomHours(parseFloat(e.target.value))}
-                className="w-full accent-amber-600"
-              />
-              <div
-                className="flex justify-between text-[10px] mt-1"
-                style={{ color: MUTED }}
-              >
-                <span>0.5 hrs</span>
-                <span>16 hrs</span>
+              <input type="range" min={0.5} max={16} step={0.5} value={customHours}
+                onChange={e => setCustomHours(parseFloat(e.target.value))}
+                className="w-full accent-amber-600" />
+              <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}>
+                <span>0.5 hrs</span><span>16 hrs</span>
               </div>
             </div>
           )}
 
           <div className="flex gap-2">
-            <button
-              onClick={add}
+            <button onClick={add}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
-              style={{
-                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
-                color: "#fff",
-              }}
-            >
+              style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
               <Save className="w-3 h-3" /> Add Period
             </button>
-            <button
-              onClick={() => setShow(false)}
+            <button onClick={() => setShow(false)}
               className="px-4 py-2 rounded-xl text-xs font-semibold"
-              style={{ background: BORDER, color: MUTED }}
-            >
-              Cancel
-            </button>
+              style={{ background: BORDER, color: MUTED }}>Cancel</button>
           </div>
         </div>
       )}
 
       {(rm.variableWeeks ?? []).length === 0 && !show && (
-        <p className="text-xs" style={{ color: MUTED }}>
-          No variable intensity periods added.
-        </p>
+        <p className="text-xs" style={{ color: MUTED }}>No variable intensity periods added.</p>
       )}
 
       <div className="space-y-2">
-        {(rm.variableWeeks ?? []).map((vw) => {
-          const days =
-            vw.startDate && vw.endDate
-              ? Math.max(
-                  0,
-                  Math.round(
-                    (new Date(vw.endDate).getTime() -
-                      new Date(vw.startDate).getTime()) /
-                      (24 * 60 * 60 * 1000),
-                  ),
-                )
-              : 0;
-          const isMore =
-            (vw.multiplier !== undefined && vw.multiplier > 1) ||
-            vw.customHours !== undefined;
+        {(rm.variableWeeks ?? []).map(vw => {
+          const days = vw.startDate && vw.endDate
+            ? Math.max(0, Math.round((new Date(vw.endDate).getTime() - new Date(vw.startDate).getTime()) / (24 * 60 * 60 * 1000)))
+            : 0;
+          const isMore = (vw.multiplier !== undefined && vw.multiplier > 1) || (vw.customHours !== undefined);
           return (
-            <div
-              key={vw.id}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-              style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}33` }}
-            >
+            <div key={vw.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+              style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}33` }}>
               <div>
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: CHARCOAL }}
-                >
+                <span className="text-sm font-medium" style={{ color: CHARCOAL }}>
                   {isMore ? "⚡" : "🐌"} {vw.label}
                 </span>
                 <span className="text-xs ml-2" style={{ color: MUTED }}>
-                  {vw.startDate ? format(parseISO(vw.startDate), "MMM d") : ""}{" "}
-                  → {vw.endDate ? format(parseISO(vw.endDate), "MMM d") : ""} ·{" "}
-                  {days} day{days !== 1 ? "s" : ""} ·
-                  {vw.customHours !== undefined
-                    ? ` ${vw.customHours} hrs/day`
-                    : ` ${vw.multiplier}×`}
+                  {vw.startDate ? format(parseISO(vw.startDate), "MMM d") : ""} → {vw.endDate ? format(parseISO(vw.endDate), "MMM d") : ""} · {days} day{days !== 1 ? "s" : ""} ·
+                  {vw.customHours !== undefined ? ` ${vw.customHours} hrs/day` : ` ${vw.multiplier}×`}
                 </span>
               </div>
-              <button
-                onClick={() =>
-                  persist({
-                    ...rm,
-                    variableWeeks: (rm.variableWeeks ?? []).filter(
-                      (x) => x.id !== vw.id,
-                    ),
-                  })
-                }
-                className="p-1 rounded-lg"
-                style={{ color: "#C0392B" }}
-              >
+              <button onClick={() => persist({ ...rm, variableWeeks: (rm.variableWeeks ?? []).filter(x => x.id !== vw.id) })}
+                className="p-1 rounded-lg" style={{ color: "#C0392B" }}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -2415,277 +1284,287 @@ function VariableWeeksManager({
 }
 
 /* ─── Live Schedule Tab ─────────────────── */
-function LiveScheduleTab({
-  examType,
-  startDate,
-  syllabusProgress,
-  userId,
-  onSave,
-  unavailablePeriods,
-  variableWeeks,
-  rm,
-  persist,
-}: {
-  examType: string;
-  startDate: string;
-  syllabusProgress: SyllabusProgress;
-  userId: string;
-  onSave: (schedule: SmartSchedule) => void;
+function LiveScheduleTab({ examType, startDate, syllabusProgress, userId, onSave, unavailablePeriods, variableWeeks, rm, persist }: {
+  examType: string; startDate: string; syllabusProgress: SyllabusProgress;
+  userId: string; onSave: (schedule: SmartSchedule) => void;
   unavailablePeriods: UnavailablePeriod[];
   variableWeeks: VariableWeek[];
   rm: Roadmap;
   persist: (next: Roadmap) => void;
 }) {
   const saved = loadScheduleInputs(userId);
-  const [hoursPerDay, setHoursPerDay] = useState(saved.hoursPerDay);
-  const [daysPerWeek, setDaysPerWeek] = useState(saved.daysPerWeek);
-  const [targetMonths, setTargetMonths] = useState(saved.targetMonths);
-  const [revisionPercent, setRevisionPercent] = useState(saved.revisionPercent);
-  const [filter, setFilter] = useState<WeekType | "all">("all");
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [hoursPerDay,     setHoursPerDay]     = useState(saved.hoursPerDay);
+  const [daysPerWeek,     setDaysPerWeek]      = useState(saved.daysPerWeek);
+  const [targetMonths,    setTargetMonths]     = useState(saved.targetMonths);
+  const [revisionPercent, setRevisionPercent]  = useState(saved.revisionPercent);
+  const [filter,          setFilter]           = useState<WeekType | "all">("all");
+  const [expanded,        setExpanded]         = useState<Record<string, boolean>>({});
+  const [showSpeedPanel,  setShowSpeedPanel]   = useState(false);
+  const [showBasePanel,   setShowBasePanel]    = useState(false);
 
-  const hoursPerWeek = hoursPerDay * daysPerWeek;
+  /* Live loads — always fresh */
+  const topicSpeed       = loadTopicSpeed(userId);
+  const baseWeeksOverride = loadBaseWeeks(userId);
+  const practiceProgress  = loadPracticeProgress(userId);
+
+  const hoursPerWeek  = hoursPerDay * daysPerWeek;
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
-  const skipped = Object.values(syllabusPercs).filter((p) => p === 100).length;
+  const skipped       = Object.values(syllabusPercs).filter(p => p === 100).length;
+  const allSubjects   = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
 
-  /* Live schedule — always recalculated with unavailable + variable weeks */
+  /* Live schedule — always recalculated with ALL factors */
   const schedule = generateSmartSchedule(
-    examType,
-    hoursPerDay,
-    daysPerWeek,
-    targetMonths,
-    revisionPercent,
-    startDate,
-    syllabusProgress,
-    unavailablePeriods,
-    variableWeeks,
+    examType, hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
+    startDate, syllabusProgress,
+    rm.unavailablePeriods, rm.variableWeeks ?? [],
+    topicSpeed, baseWeeksOverride, practiceProgress
   );
 
   /* Save inputs + notify parent whenever anything changes */
-  function update(
-    patch: Partial<{
-      hoursPerDay: number;
-      daysPerWeek: number;
-      targetMonths: number;
-      revisionPercent: number;
-    }>,
-  ) {
-    const next = {
-      hoursPerDay,
-      daysPerWeek,
-      targetMonths,
-      revisionPercent,
-      ...patch,
-    };
-    if (patch.hoursPerDay !== undefined) setHoursPerDay(patch.hoursPerDay);
-    if (patch.daysPerWeek !== undefined) setDaysPerWeek(patch.daysPerWeek);
-    if (patch.targetMonths !== undefined) setTargetMonths(patch.targetMonths);
-    if (patch.revisionPercent !== undefined)
-      setRevisionPercent(patch.revisionPercent);
+  function update(patch: Partial<{ hoursPerDay: number; daysPerWeek: number; targetMonths: number; revisionPercent: number }>) {
+    const next = { hoursPerDay, daysPerWeek, targetMonths, revisionPercent, ...patch };
+    if (patch.hoursPerDay     !== undefined) setHoursPerDay(patch.hoursPerDay);
+    if (patch.daysPerWeek     !== undefined) setDaysPerWeek(patch.daysPerWeek);
+    if (patch.targetMonths    !== undefined) setTargetMonths(patch.targetMonths);
+    if (patch.revisionPercent !== undefined) setRevisionPercent(patch.revisionPercent);
     saveScheduleInputs(userId, next);
-    onSave(
-      generateSmartSchedule(
-        examType,
-        next.hoursPerDay,
-        next.daysPerWeek,
-        next.targetMonths,
-        next.revisionPercent,
-        startDate,
-        syllabusProgress,
-        unavailablePeriods,
-        variableWeeks,
-      ),
-    );
+    onSave(generateSmartSchedule(examType, next.hoursPerDay, next.daysPerWeek, next.targetMonths, next.revisionPercent,
+      startDate, syllabusProgress, rm.unavailablePeriods, rm.variableWeeks ?? [],
+      topicSpeed, baseWeeksOverride, practiceProgress));
   }
 
-  const filtered =
-    filter === "all"
-      ? schedule.weeks
-      : schedule.weeks.filter((w) => w.type === filter);
-  const subjects = [...new Set(schedule.weeks.map((w) => w.subject))];
+  function updateSpeed(subjectId: string, key: TopicSpeedKey) {
+    const next = { ...topicSpeed, [subjectId]: key };
+    saveTopicSpeed(userId, next);
+    onSave(generateSmartSchedule(examType, hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
+      startDate, syllabusProgress, rm.unavailablePeriods, rm.variableWeeks ?? [],
+      next, baseWeeksOverride, practiceProgress));
+  }
+
+  function updateBaseWeeks(subjectId: string, weeks: number) {
+    const next = { ...baseWeeksOverride, [subjectId]: Math.max(0.5, weeks) };
+    saveBaseWeeks(userId, next);
+    onSave(generateSmartSchedule(examType, hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
+      startDate, syllabusProgress, rm.unavailablePeriods, rm.variableWeeks ?? [],
+      topicSpeed, next, practiceProgress));
+  }
+
+  const filtered = filter === "all" ? schedule.weeks : schedule.weeks.filter(w => w.type === filter);
+  const subjects = [...new Set(schedule.weeks.map(w => w.subject))];
 
   return (
     <div className="space-y-6">
+
       {/* Unavailable + Variable periods — live in schedule tab */}
       <UnavailablePeriodsManager rm={rm} persist={persist} />
       <VariableWeeksManager rm={rm} persist={persist} />
 
+      {/* Topic Learning Speed */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <button onClick={() => setShowSpeedPanel(!showSpeedPanel)}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left"
+          style={{ background: showSpeedPanel ? `${GOLD}08` : CARD }}>
+          <Brain className="w-4 h-4" style={{ color: GOLD }} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>Topic Learning Speed</p>
+            <p className="text-xs mt-0.5" style={{ color: MUTED }}>Set your pace per subject — adjusts study weeks automatically</p>
+          </div>
+          {showSpeedPanel ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
+        </button>
+        {showSpeedPanel && (
+          <div className="px-5 pb-5 space-y-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+            <div className="grid grid-cols-2 gap-3 pt-4">
+              {[
+                { key: "first", label: "First Time Learner", options: [
+                  { k: "first_slow" as TopicSpeedKey,   e: "🐢", l: "Slow ×1.3"   },
+                  { k: "first_normal" as TopicSpeedKey, e: "🚶", l: "Normal ×1.0" },
+                  { k: "first_fast" as TopicSpeedKey,   e: "⚡", l: "Fast ×0.8"   },
+                ]},
+                { key: "second", label: "Second Time Learner", options: [
+                  { k: "second_slow" as TopicSpeedKey,   e: "🐢", l: "Slow ×1.0"  },
+                  { k: "second_normal" as TopicSpeedKey, e: "🚶", l: "Normal ×1.5" },
+                  { k: "second_fast" as TopicSpeedKey,   e: "⚡", l: "Fast ×2.0"   },
+                ]},
+              ].map(group => (
+                <div key={group.key} className="rounded-xl p-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>{group.label}</p>
+                  <div className="flex gap-1">
+                    {group.options.map(opt => (
+                      <span key={opt.k} className="text-[10px] px-2 py-1 rounded-lg font-semibold"
+                        style={{ background: `${GOLD}22`, color: DARK }}>
+                        {opt.e} {opt.l}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              {allSubjects.map(s => {
+                const current = (topicSpeed[s.id] ?? "first_normal") as TopicSpeedKey;
+                const cfg     = SPEED_CFG[current];
+                const baseW   = baseWeeksOverride[s.id] ?? s.studyWeeks;
+                const mult    = SPEED_MULTIPLIERS[current];
+                const effectW = Math.ceil(baseW * mult);
+                return (
+                  <div key={s.id} className="rounded-xl p-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold flex-1" style={{ color: CHARCOAL }}>{s.name}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: `${cfg.color}22`, color: cfg.color }}>
+                        {cfg.emoji} {cfg.label} → {effectW} wks
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(["first_slow","first_normal","first_fast","second_slow","second_normal","second_fast"] as TopicSpeedKey[]).map(key => (
+                        <button key={key} type="button"
+                          onClick={() => updateSpeed(s.id, key)}
+                          className="text-[10px] px-2 py-1 rounded-lg font-semibold transition-all"
+                          style={current === key
+                            ? { background: SPEED_CFG[key].color, color: "#fff" }
+                            : { background: `${BORDER}88`, color: MUTED }}>
+                          {SPEED_CFG[key].emoji} {SPEED_CFG[key].label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Base Timeline (editable) */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <button onClick={() => setShowBasePanel(!showBasePanel)}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left"
+          style={{ background: showBasePanel ? `${GOLD}08` : CARD }}>
+          <Edit3 className="w-4 h-4" style={{ color: GOLD }} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>Base Timeline Per Subject</p>
+            <p className="text-xs mt-0.5" style={{ color: MUTED }}>Override default study weeks — speed multiplier applies on top</p>
+          </div>
+          {showBasePanel ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
+        </button>
+        {showBasePanel && (
+          <div className="px-5 pb-5 space-y-3 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+            <p className="text-xs" style={{ color: MUTED }}>
+              Defaults are based on typical IIT JAM / CSIR NET timelines. Increase if a subject needs more depth, decrease if you know it well.
+            </p>
+            {allSubjects.map(s => {
+              const base = baseWeeksOverride[s.id] ?? s.studyWeeks;
+              return (
+                <div key={s.id} className="flex items-center gap-4 px-4 py-3 rounded-xl"
+                  style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                  <span className="flex-1 text-sm font-semibold" style={{ color: CHARCOAL }}>{s.name}</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button"
+                      onClick={() => updateBaseWeeks(s.id, base - 0.5)}
+                      className="w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center"
+                      style={{ background: `${BORDER}`, color: CHARCOAL }}>−</button>
+                    <span className="text-sm font-bold w-16 text-center font-serif" style={{ color: DARK }}>
+                      {base} wk{base !== 1 ? "s" : ""}
+                    </span>
+                    <button type="button"
+                      onClick={() => updateBaseWeeks(s.id, base + 0.5)}
+                      className="w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center"
+                      style={{ background: `${GOLD}22`, color: DARK }}>+</button>
+                    {baseWeeksOverride[s.id] !== undefined && baseWeeksOverride[s.id] !== s.studyWeeks && (
+                      <button type="button"
+                        onClick={() => updateBaseWeeks(s.id, s.studyWeeks)}
+                        className="text-[10px] px-1.5 py-0.5 rounded-lg"
+                        style={{ background: `${BORDER}`, color: MUTED }}>reset</button>
+                    )}
+                  </div>
+                  {baseWeeksOverride[s.id] !== undefined && baseWeeksOverride[s.id] !== s.studyWeeks && (
+                    <span className="text-[10px]" style={{ color: MUTED }}>default: {s.studyWeeks}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* QP Integration indicator */}
+      {Object.keys(practiceProgress).length > 0 && (
+        <div className="rounded-2xl px-5 py-4" style={{ background: `${OLIVE}10`, border: `1px solid ${OLIVE}33` }}>
+          <p className="text-xs font-semibold" style={{ color: OLIVE }}>
+            📊 Question Practice data is active — revision weeks are adjusted based on your accuracy and concept strength.
+          </p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>
+            Weak concepts (+1 week) · Low accuracy &lt;50% (+1 week) · Strong &gt;85% (−0.5 weeks) · Weighted 60% latest / 40% history
+          </p>
+        </div>
+      )}
+
       {/* Inputs */}
-      <div
-        className="rounded-2xl p-6 space-y-5"
-        style={{ background: CARD, border: `1px solid ${BORDER}` }}
-      >
+      <div className="rounded-2xl p-6 space-y-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
         <div className="flex items-center gap-2 flex-wrap">
           <Calendar className="w-5 h-5" style={{ color: GOLD }} />
-          <h3
-            className="font-serif text-lg font-semibold"
-            style={{ color: CHARCOAL }}
-          >
-            Study Schedule Planner
-          </h3>
-          <span
-            className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold"
-            style={{ background: `${OLIVE}22`, color: OLIVE }}
-          >
-            ⚡ Auto-updates with syllabus
-          </span>
+          <h3 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>Study Schedule Planner</h3>
+          <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: `${OLIVE}22`, color: OLIVE }}>⚡ Auto-updates with syllabus</span>
         </div>
         <p className="text-xs" style={{ color: MUTED }}>
-          Set your availability once. Schedule auto-recalculates whenever your
-          syllabus progress changes or you adjust these inputs.
+          Set your availability once. Schedule auto-recalculates whenever your syllabus progress changes or you adjust these inputs.
         </p>
 
         {skipped > 0 && (
-          <div
-            className="rounded-xl px-4 py-3"
-            style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}
-          >
+          <div className="rounded-xl px-4 py-3" style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}>
             <p className="text-xs font-semibold" style={{ color: OLIVE }}>
-              ✅ {skipped} subject(s) 100% complete in syllabus — automatically
-              skipped from schedule.
+              ✅ {skipped} subject(s) 100% complete in syllabus — automatically skipped from schedule.
             </p>
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label
-              className="text-xs font-semibold mb-2 block"
-              style={{ color: CHARCOAL }}
-            >
-              Study hours per day:{" "}
-              <span style={{ color: GOLD }}>{hoursPerDay} hrs</span>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Study hours per day: <span style={{ color: GOLD }}>{hoursPerDay} hrs</span>
             </label>
-            <input
-              type="range"
-              min={0.5}
-              max={12}
-              step={0.5}
-              value={hoursPerDay}
-              onChange={(e) =>
-                update({ hoursPerDay: parseFloat(e.target.value) })
-              }
-              className="w-full accent-amber-600"
-            />
-            <div
-              className="flex justify-between text-[10px] mt-1"
-              style={{ color: MUTED }}
-            >
-              <span>0.5 hrs</span>
-              <span>12 hrs</span>
-            </div>
+            <input type="range" min={0.5} max={12} step={0.5} value={hoursPerDay}
+              onChange={e => update({ hoursPerDay: parseFloat(e.target.value) })} className="w-full accent-amber-600" />
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}><span>0.5 hrs</span><span>12 hrs</span></div>
           </div>
           <div>
-            <label
-              className="text-xs font-semibold mb-2 block"
-              style={{ color: CHARCOAL }}
-            >
-              Study days per week:{" "}
-              <span style={{ color: GOLD }}>{daysPerWeek} days</span>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Study days per week: <span style={{ color: GOLD }}>{daysPerWeek} days</span>
             </label>
-            <input
-              type="range"
-              min={1}
-              max={7}
-              step={1}
-              value={daysPerWeek}
-              onChange={(e) =>
-                update({ daysPerWeek: parseInt(e.target.value) })
-              }
-              className="w-full accent-amber-600"
-            />
-            <div
-              className="flex justify-between text-[10px] mt-1"
-              style={{ color: MUTED }}
-            >
-              <span>1 day</span>
-              <span>7 days</span>
-            </div>
+            <input type="range" min={1} max={7} step={1} value={daysPerWeek}
+              onChange={e => update({ daysPerWeek: parseInt(e.target.value) })} className="w-full accent-amber-600" />
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}><span>1 day</span><span>7 days</span></div>
           </div>
           <div>
-            <label
-              className="text-xs font-semibold mb-2 block"
-              style={{ color: CHARCOAL }}
-            >
-              Target completion:{" "}
-              <span style={{ color: GOLD }}>{targetMonths} months</span>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Target completion: <span style={{ color: GOLD }}>{targetMonths} months</span>
             </label>
-            <input
-              type="range"
-              min={1}
-              max={36}
-              step={1}
-              value={targetMonths}
-              onChange={(e) =>
-                update({ targetMonths: parseInt(e.target.value) })
-              }
-              className="w-full accent-amber-600"
-            />
-            <div
-              className="flex justify-between text-[10px] mt-1"
-              style={{ color: MUTED }}
-            >
-              <span>1 month</span>
-              <span>36 months</span>
-            </div>
+            <input type="range" min={1} max={36} step={1} value={targetMonths}
+              onChange={e => update({ targetMonths: parseInt(e.target.value) })} className="w-full accent-amber-600" />
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}><span>1 month</span><span>36 months</span></div>
           </div>
           <div>
-            <label
-              className="text-xs font-semibold mb-2 block"
-              style={{ color: CHARCOAL }}
-            >
-              Revision intensity:{" "}
-              <span style={{ color: GOLD }}>
-                {revisionPercent}% of study time
-              </span>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Revision intensity: <span style={{ color: GOLD }}>{revisionPercent}% of study time</span>
             </label>
-            <input
-              type="range"
-              min={25}
-              max={100}
-              step={5}
-              value={revisionPercent}
-              onChange={(e) =>
-                update({ revisionPercent: parseInt(e.target.value) })
-              }
-              className="w-full accent-amber-600"
-            />
-            <div
-              className="flex justify-between text-[10px] mt-1"
-              style={{ color: MUTED }}
-            >
-              <span>25% (min)</span>
-              <span>100% (intensive)</span>
-            </div>
+            <input type="range" min={25} max={100} step={5} value={revisionPercent}
+              onChange={e => update({ revisionPercent: parseInt(e.target.value) })} className="w-full accent-amber-600" />
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}><span>25% (min)</span><span>100% (intensive)</span></div>
           </div>
         </div>
 
-        <div
-          className="rounded-xl p-4"
-          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-        >
-          <p className="text-xs font-semibold mb-2" style={{ color: CHARCOAL }}>
-            Your availability:
-          </p>
+        <div className="rounded-xl p-4" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: CHARCOAL }}>Your availability:</p>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Per Week", value: `${hoursPerWeek} hrs` },
-              { label: "Per Month", value: `${hoursPerWeek * 4} hrs` },
-              {
-                label: "In Target",
-                value: `${hoursPerWeek * targetMonths * 4} hrs total`,
-              },
+              { label: "Per Week",  value: `${hoursPerWeek} hrs`                         },
+              { label: "Per Month", value: `${hoursPerWeek * 4} hrs`                     },
+              { label: "In Target", value: `${hoursPerWeek * targetMonths * 4} hrs total` },
             ].map(({ label, value }) => (
               <div key={label} className="text-center">
-                <div
-                  className="text-sm font-bold font-serif"
-                  style={{ color: DARK }}
-                >
-                  {value}
-                </div>
-                <div className="text-[10px]" style={{ color: MUTED }}>
-                  {label}
-                </div>
+                <div className="text-sm font-bold font-serif" style={{ color: DARK }}>{value}</div>
+                <div className="text-[10px]" style={{ color: MUTED }}>{label}</div>
               </div>
             ))}
           </div>
@@ -2705,17 +1584,10 @@ function LiveScheduleTab({
 
       {/* Filter pills */}
       <div className="flex gap-2 flex-wrap">
-        {(["all", "study", "assignment", "revision"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
+        {(["all", "study", "assignment", "revision"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)}
             className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
-            style={
-              filter === f
-                ? { background: DARK, color: CREAM }
-                : { background: `${BORDER}88`, color: MUTED }
-            }
-          >
+            style={filter === f ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
             {f === "all" ? "All weeks" : WEEK_TYPE_CFG[f].label}
           </button>
         ))}
@@ -2723,132 +1595,59 @@ function LiveScheduleTab({
 
       {/* Legend */}
       <div className="flex gap-3 flex-wrap">
-        {(
-          Object.entries(WEEK_TYPE_CFG) as [
-            WeekType,
-            (typeof WEEK_TYPE_CFG)[WeekType],
-          ][]
-        ).map(([type, cfg]) => (
+        {(Object.entries(WEEK_TYPE_CFG) as [WeekType, typeof WEEK_TYPE_CFG[WeekType]][]).map(([type, cfg]) => (
           <div key={type} className="flex items-center gap-1.5">
-            <div
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ background: cfg.color }}
-            />
-            <span className="text-[11px]" style={{ color: MUTED }}>
-              {cfg.label}
-            </span>
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: cfg.color }} />
+            <span className="text-[11px]" style={{ color: MUTED }}>{cfg.label}</span>
           </div>
         ))}
       </div>
 
       {/* Week-by-week */}
-      {subjects.map((subject) => {
-        const subjectWeeks = filtered.filter((w) => w.subject === subject);
+      {subjects.map(subject => {
+        const subjectWeeks = filtered.filter(w => w.subject === subject);
         if (subjectWeeks.length === 0) return null;
-        const allWeeks = schedule.weeks.filter((w) => w.subject === subject);
+        const allWeeks   = schedule.weeks.filter(w => w.subject === subject);
         const isExpanded = expanded[subject] ?? false;
         return (
-          <div
-            key={subject}
-            className="rounded-2xl overflow-hidden"
-            style={{ background: CARD, border: `1px solid ${BORDER}` }}
-          >
-            <button
-              onClick={() =>
-                setExpanded((p) => ({ ...p, [subject]: !p[subject] }))
-              }
+          <div key={subject} className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+            <button onClick={() => setExpanded(p => ({ ...p, [subject]: !p[subject] }))}
               className="w-full flex items-center gap-3 px-5 py-4 text-left"
-              style={{ background: isExpanded ? `${GOLD}08` : CARD }}
-            >
+              style={{ background: isExpanded ? `${GOLD}08` : CARD }}>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span
-                    className="font-semibold text-sm"
-                    style={{ color: CHARCOAL }}
-                  >
-                    {subject}
-                  </span>
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full"
-                    style={{ background: `${GOLD}22`, color: DARK }}
-                  >
-                    {allWeeks.length} week(s)
-                  </span>
+                  <span className="font-semibold text-sm" style={{ color: CHARCOAL }}>{subject}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${GOLD}22`, color: DARK }}>{allWeeks.length} week(s)</span>
                 </div>
                 <div className="flex gap-2 mt-1 flex-wrap">
-                  {(["study", "assignment", "revision"] as WeekType[]).map(
-                    (t) => {
-                      const count = allWeeks.filter((w) => w.type === t).length;
-                      if (count === 0) return null;
-                      const cfg = WEEK_TYPE_CFG[t];
-                      return (
-                        <span
-                          key={t}
-                          className="text-[10px] px-1.5 py-0.5 rounded-full"
-                          style={{ background: cfg.bg, color: cfg.color }}
-                        >
-                          {count} {cfg.label}
-                        </span>
-                      );
-                    },
-                  )}
+                  {(["study", "assignment", "revision"] as WeekType[]).map(t => {
+                    const count = allWeeks.filter(w => w.type === t).length;
+                    if (count === 0) return null;
+                    const cfg = WEEK_TYPE_CFG[t];
+                    return <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: cfg.bg, color: cfg.color }}>{count} {cfg.label}</span>;
+                  })}
                 </div>
               </div>
-              {isExpanded ? (
-                <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
-              ) : (
-                <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />
-              )}
+              {isExpanded ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
             </button>
             {isExpanded && (
-              <div
-                className="divide-y"
-                style={{ borderTop: `1px solid ${BORDER}` }}
-              >
-                {subjectWeeks.map((week) => {
-                  const cfg = WEEK_TYPE_CFG[week.type];
+              <div className="divide-y" style={{ borderTop: `1px solid ${BORDER}` }}>
+                {subjectWeeks.map(week => {
+                  const cfg  = WEEK_TYPE_CFG[week.type];
                   const Icon = cfg.icon;
                   return (
-                    <div
-                      key={week.weekNumber}
-                      className="flex items-start gap-3 px-5 py-3"
-                      style={{ background: cfg.bg }}
-                    >
+                    <div key={week.weekNumber} className="flex items-start gap-3 px-5 py-3" style={{ background: cfg.bg }}>
                       <div className="flex-shrink-0 w-16 text-center">
-                        <div
-                          className="text-[10px] font-bold"
-                          style={{ color: cfg.color }}
-                        >
-                          Week {week.weekNumber}
-                        </div>
-                        <div className="text-[10px]" style={{ color: MUTED }}>
-                          {week.startDate}
-                        </div>
+                        <div className="text-[10px] font-bold" style={{ color: cfg.color }}>Week {week.weekNumber}</div>
+                        <div className="text-[10px]" style={{ color: MUTED }}>{week.startDate}</div>
                       </div>
-                      <Icon
-                        className="w-4 h-4 flex-shrink-0 mt-0.5"
-                        style={{ color: cfg.color }}
-                      />
+                      <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: cfg.color }} />
                       <div className="flex-1">
-                        <p className="text-sm" style={{ color: CHARCOAL }}>
-                          {week.focus}
-                        </p>
-                        <p
-                          className="text-[10px] mt-0.5"
-                          style={{ color: MUTED }}
-                        >
-                          ~{week.hoursAvailable} hrs available
-                        </p>
+                        <p className="text-sm" style={{ color: CHARCOAL }}>{week.focus}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: MUTED }}>~{week.hoursAvailable} hrs available</p>
                       </div>
-                      <span
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
-                        style={{
-                          background: `${cfg.color}22`,
-                          color: cfg.color,
-                        }}
-                      >
-                        {cfg.label}
-                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{ background: `${cfg.color}22`, color: cfg.color }}>{cfg.label}</span>
                     </div>
                   );
                 })}
@@ -2859,20 +1658,10 @@ function LiveScheduleTab({
       })}
 
       {schedule.weeks.length === 0 && (
-        <div
-          className="text-center py-12 rounded-2xl"
-          style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
-        >
-          <CheckCircle2
-            className="w-10 h-10 mx-auto mb-3"
-            style={{ color: OLIVE }}
-          />
-          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-            All subjects complete! 🎉
-          </p>
-          <p className="text-xs mt-1" style={{ color: MUTED }}>
-            Your syllabus tracker shows everything is done.
-          </p>
+        <div className="text-center py-12 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+          <CheckCircle2 className="w-10 h-10 mx-auto mb-3" style={{ color: OLIVE }} />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>All subjects complete! 🎉</p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>Your syllabus tracker shows everything is done.</p>
         </div>
       )}
     </div>
@@ -2880,132 +1669,56 @@ function LiveScheduleTab({
 }
 
 /* ─── Roadmap Selector ─────────────────── */
-function RoadmapSelector({
-  examType,
-  onSelect,
-}: {
-  examType: string;
-  onSelect: (type: RoadmapType, months: number) => void;
-}) {
+function RoadmapSelector({ examType, onSelect }: { examType: string; onSelect: (type: RoadmapType, months: number) => void }) {
   const [selected, setSelected] = useState<RoadmapType | null>(null);
-  const [months, setMonths] = useState(12);
+  const [months,   setMonths]   = useState(12);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div>
-        <h1
-          className="text-3xl font-serif font-bold"
-          style={{ color: CHARCOAL }}
-        >
-          My Roadmap
-        </h1>
+        <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>My Roadmap</h1>
         <p className="mt-1 text-sm" style={{ color: MUTED }}>
-          Set up your {examType === "JAM" ? "IIT JAM" : "CSIR NET / GATE"}{" "}
-          preparation roadmap.
+          Set up your {examType === "JAM" ? "IIT JAM" : "CSIR NET / GATE"} preparation roadmap.
         </p>
       </div>
-      <div
-        className="rounded-2xl p-6"
-        style={{ background: CARD, border: `1px solid ${BORDER}` }}
-      >
-        <h2
-          className="font-serif text-lg font-semibold mb-1"
-          style={{ color: CHARCOAL }}
-        >
-          What is your current academic stage?
-        </h2>
-        <p className="text-xs mb-5" style={{ color: MUTED }}>
-          This sets your default preparation timeline. You can edit it anytime.
-        </p>
+      <div className="rounded-2xl p-6" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <h2 className="font-serif text-lg font-semibold mb-1" style={{ color: CHARCOAL }}>What is your current academic stage?</h2>
+        <p className="text-xs mb-5" style={{ color: MUTED }}>This sets your default preparation timeline. You can edit it anytime.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-          {(
-            Object.entries(ROADMAP_TYPES) as [
-              RoadmapType,
-              (typeof ROADMAP_TYPES)[RoadmapType],
-            ][]
-          ).map(([key, cfg]) => {
+          {(Object.entries(ROADMAP_TYPES) as [RoadmapType, typeof ROADMAP_TYPES[RoadmapType]][]).map(([key, cfg]) => {
             const isSelected = selected === key;
             return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setSelected(key);
-                  setMonths(cfg.defaultMonths);
-                }}
+              <button key={key} type="button" onClick={() => { setSelected(key); setMonths(cfg.defaultMonths); }}
                 className="flex items-start gap-3 p-4 rounded-xl text-left transition-all duration-150 hover:scale-[1.01]"
-                style={{
-                  background: isSelected ? `${GOLD}15` : CREAM,
-                  border: `2px solid ${isSelected ? GOLD : BORDER}`,
-                  boxShadow: isSelected ? `0 4px 16px ${GOLD}30` : "none",
-                }}
-              >
+                style={{ background: isSelected ? `${GOLD}15` : CREAM, border: `2px solid ${isSelected ? GOLD : BORDER}`, boxShadow: isSelected ? `0 4px 16px ${GOLD}30` : "none" }}>
                 <span className="text-2xl flex-shrink-0">{cfg.emoji}</span>
                 <div>
-                  <p
-                    className="text-sm font-semibold"
-                    style={{ color: isSelected ? DARK : CHARCOAL }}
-                  >
-                    {cfg.label}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: MUTED }}>
-                    {cfg.description}
-                  </p>
+                  <p className="text-sm font-semibold" style={{ color: isSelected ? DARK : CHARCOAL }}>{cfg.label}</p>
+                  <p className="text-xs mt-0.5" style={{ color: MUTED }}>{cfg.description}</p>
                 </div>
               </button>
             );
           })}
         </div>
         {selected && (
-          <div
-            className="space-y-4 pt-4"
-            style={{ borderTop: `1px solid ${BORDER}` }}
-          >
+          <div className="space-y-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
             <div>
-              <label
-                className="text-sm font-semibold block mb-2"
-                style={{ color: CHARCOAL }}
-              >
-                Total preparation time:{" "}
-                <span style={{ color: GOLD }}>{months} months</span>
+              <label className="text-sm font-semibold block mb-2" style={{ color: CHARCOAL }}>
+                Total preparation time: <span style={{ color: GOLD }}>{months} months</span>
               </label>
               <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min={1}
-                  max={36}
-                  value={months}
-                  onChange={(e) => setMonths(parseInt(e.target.value))}
-                  className="flex-1 accent-amber-600"
-                />
-                <div
-                  className="px-4 py-2 rounded-xl flex items-center gap-1 min-w-[80px] justify-center"
-                  style={{
-                    background: `${GOLD}22`,
-                    border: `1px solid ${GOLD}44`,
-                  }}
-                >
-                  <span
-                    className="text-lg font-bold font-serif"
-                    style={{ color: DARK }}
-                  >
-                    {months}
-                  </span>
-                  <span className="text-xs" style={{ color: MUTED }}>
-                    mo
-                  </span>
+                <input type="range" min={1} max={36} value={months}
+                  onChange={e => setMonths(parseInt(e.target.value))} className="flex-1 accent-amber-600" />
+                <div className="px-4 py-2 rounded-xl flex items-center gap-1 min-w-[80px] justify-center"
+                  style={{ background: `${GOLD}22`, border: `1px solid ${GOLD}44` }}>
+                  <span className="text-lg font-bold font-serif" style={{ color: DARK }}>{months}</span>
+                  <span className="text-xs" style={{ color: MUTED }}>mo</span>
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => onSelect(selected, months)}
+            <button onClick={() => onSelect(selected, months)}
               className="w-full h-12 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
-              style={{
-                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
-                color: "#fff",
-                boxShadow: "0 4px 16px rgba(201,169,110,.35)",
-              }}
-            >
+              style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff", boxShadow: "0 4px 16px rgba(201,169,110,.35)" }}>
               Create My Roadmap →
             </button>
           </div>
@@ -3016,30 +1729,20 @@ function RoadmapSelector({
 }
 
 /* ─── Main Roadmap View ────────────────── */
-function RoadmapView({
-  roadmap,
-  userId,
-  onReset,
-}: {
-  roadmap: Roadmap;
-  userId: string;
-  onReset: () => void;
-}) {
-  const [rm, setRm] = useState(roadmap);
-  const [editMonths, setEditMonths] = useState(false);
-  const [newMonths, setNewMonths] = useState(rm.totalMonths);
+function RoadmapView({ roadmap, userId, onReset }: { roadmap: Roadmap; userId: string; onReset: () => void }) {
+  const [rm,          setRm]          = useState(roadmap);
+  const [editMonths,  setEditMonths]  = useState(false);
+  const [newMonths,   setNewMonths]   = useState(rm.totalMonths);
 
   const [expandPhase, setExpandPhase] = useState<Record<string, boolean>>({});
-  const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "progress" | "schedule"
-  >("overview");
+  const [saved,       setSaved]       = useState(false);
+  const [activeTab,   setActiveTab]   = useState<"overview" | "progress" | "schedule">("overview");
 
   const syllabusProgress = loadSyllabusProgress(userId);
-  const examType = rm.examType;
-  const calc = runAIEngine(rm);
-  const statusCfg = STATUS_CFG[calc.status];
-  const StatusIcon = statusCfg.icon;
+  const examType         = rm.examType;
+  const calc             = runAIEngine(rm);
+  const statusCfg        = STATUS_CFG[calc.status];
+  const StatusIcon       = statusCfg.icon;
 
   function persist(next: Roadmap) {
     const updated = { ...next, lastUpdated: new Date().toISOString() };
@@ -3051,13 +1754,12 @@ function RoadmapView({
 
   function applyNewMonths() {
     const newPhases = generatePhases(rm.examType, newMonths);
-    const merged = newPhases.map((p, i) => ({
-      ...p,
-      status: rm.phases[i]?.status ?? "not_started",
-    }));
+    const merged    = newPhases.map((p, i) => ({ ...p, status: rm.phases[i]?.status ?? "not_started" }));
     persist({ ...rm, totalMonths: newMonths, phases: merged });
     setEditMonths(false);
   }
+
+
 
   function saveSchedule(schedule: SmartSchedule) {
     persist({ ...rm, smartSchedule: schedule });
@@ -3065,10 +1767,7 @@ function RoadmapView({
   }
 
   function updatePhaseStatus(phaseId: string, status: PhaseStatus) {
-    persist({
-      ...rm,
-      phases: rm.phases.map((p) => (p.id === phaseId ? { ...p, status } : p)),
-    });
+    persist({ ...rm, phases: rm.phases.map(p => p.id === phaseId ? { ...p, status } : p) });
   }
 
   const examLabel = rm.examType === "JAM" ? "IIT JAM" : "CSIR NET / GATE";
@@ -3077,44 +1776,25 @@ function RoadmapView({
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1
-            className="text-3xl font-serif font-bold"
-            style={{ color: CHARCOAL }}
-          >
-            My Roadmap
-          </h1>
+          <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>My Roadmap</h1>
           <p className="mt-1 text-sm" style={{ color: MUTED }}>
-            {ROADMAP_TYPES[rm.type].emoji} {ROADMAP_TYPES[rm.type].label} ·{" "}
-            {examLabel} · {rm.totalMonths} months
+            {ROADMAP_TYPES[rm.type].emoji} {ROADMAP_TYPES[rm.type].label} · {examLabel} · {rm.totalMonths} months
           </p>
         </div>
-        <button
-          onClick={onReset}
+        <button onClick={onReset}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
-          style={{ background: BORDER, color: MUTED }}
-        >
+          style={{ background: BORDER, color: MUTED }}>
           <RotateCcw className="w-3 h-3" /> Change type
         </button>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
-        {(["overview", "progress", "schedule"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+        {(["overview", "progress", "schedule"] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
             className="px-5 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={
-              activeTab === tab
-                ? { background: DARK, color: CREAM }
-                : { background: `${BORDER}88`, color: MUTED }
-            }
-          >
-            {tab === "overview"
-              ? "📋 Overview"
-              : tab === "progress"
-                ? "📊 My Progress"
-                : "📅 Schedule"}
+            style={activeTab === tab ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
+            {tab === "overview" ? "📋 Overview" : tab === "progress" ? "📊 My Progress" : "📅 Schedule"}
           </button>
         ))}
       </div>
@@ -3122,133 +1802,52 @@ function RoadmapView({
       {/* OVERVIEW TAB */}
       {activeTab === "overview" && (
         <div className="space-y-6">
-          <div
-            className="rounded-2xl p-5"
-            style={{
-              background: statusCfg.bg,
-              border: `1.5px solid ${statusCfg.color}44`,
-            }}
-          >
+          <div className="rounded-2xl p-5" style={{ background: statusCfg.bg, border: `1.5px solid ${statusCfg.color}44` }}>
             <div className="flex items-start gap-3 mb-4">
-              <StatusIcon
-                className="w-5 h-5 flex-shrink-0 mt-0.5"
-                style={{ color: statusCfg.color }}
-              />
+              <StatusIcon className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: statusCfg.color }} />
               <div className="flex-1">
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mb-1"
-                  style={{
-                    background: `${statusCfg.color}22`,
-                    color: statusCfg.color,
-                  }}
-                >
-                  {statusCfg.label}
-                </span>
-                <p
-                  className="text-sm font-semibold"
-                  style={{ color: CHARCOAL }}
-                >
-                  {calc.statusMessage}
-                </p>
-                <p className="text-xs mt-1" style={{ color: MUTED }}>
-                  {calc.recommendation}
-                </p>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mb-1"
+                  style={{ background: `${statusCfg.color}22`, color: statusCfg.color }}>{statusCfg.label}</span>
+                <p className="text-sm font-semibold" style={{ color: CHARCOAL }}>{calc.statusMessage}</p>
+                <p className="text-xs mt-1" style={{ color: MUTED }}>{calc.recommendation}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                {
-                  label: "Completed",
-                  value: `${calc.completedPercent}%`,
-                  color: OLIVE,
-                },
-                {
-                  label: "Est. Finish",
-                  value: calc.estimatedEndDate,
-                  color: DARK,
-                },
-                {
-                  label: "Weekly Target",
-                  value: `${calc.weeklyTargetPercent}% / wk`,
-                  color: GOLD,
-                },
-                {
-                  label: "Paused",
-                  value: `${calc.unavailableWeeks} wk(s)`,
-                  color: MUTED,
-                },
+                { label: "Completed",     value: `${calc.completedPercent}%`,         color: OLIVE },
+                { label: "Est. Finish",   value: calc.estimatedEndDate,               color: DARK  },
+                { label: "Weekly Target", value: `${calc.weeklyTargetPercent}% / wk`, color: GOLD  },
+                { label: "Paused",        value: `${calc.unavailableWeeks} wk(s)`,    color: MUTED },
               ].map(({ label, value, color }) => (
-                <div
-                  key={label}
-                  className="rounded-xl p-3 text-center"
-                  style={{ background: "rgba(255,255,255,0.7)" }}
-                >
-                  <div
-                    className="text-sm font-bold font-serif"
-                    style={{ color }}
-                  >
-                    {value}
-                  </div>
-                  <div className="text-[10px] mt-0.5" style={{ color: MUTED }}>
-                    {label}
-                  </div>
+                <div key={label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.7)" }}>
+                  <div className="text-sm font-bold font-serif" style={{ color }}>{value}</div>
+                  <div className="text-[10px] mt-0.5" style={{ color: MUTED }}>{label}</div>
                 </div>
               ))}
             </div>
             <div className="mt-4">
-              <div
-                className="flex justify-between text-xs mb-1"
-                style={{ color: MUTED }}
-              >
-                <span>Overall Progress</span>
-                <span>{calc.completedPercent}%</span>
+              <div className="flex justify-between text-xs mb-1" style={{ color: MUTED }}>
+                <span>Overall Progress</span><span>{calc.completedPercent}%</span>
               </div>
-              <div
-                className="h-2 rounded-full overflow-hidden"
-                style={{ background: BORDER }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${calc.completedPercent}%`,
-                    background:
-                      calc.status === "critical"
-                        ? "#C0392B"
-                        : calc.status === "behind"
-                          ? "#B8860B"
-                          : calc.status === "ahead"
-                            ? "#2D7A2D"
-                            : OLIVE,
-                  }}
-                />
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${calc.completedPercent}%`,
+                    background: calc.status === "critical" ? "#C0392B" : calc.status === "behind" ? "#B8860B" : calc.status === "ahead" ? "#2D7A2D" : OLIVE }} />
               </div>
             </div>
           </div>
 
           {/* Timeline */}
-          <div
-            className="rounded-2xl p-5"
-            style={{ background: CARD, border: `1px solid ${BORDER}` }}
-          >
+          <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" style={{ color: GOLD }} />
-                <h3
-                  className="font-semibold text-sm"
-                  style={{ color: CHARCOAL }}
-                >
-                  Timeline
-                </h3>
+                <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>Timeline</h3>
               </div>
               {!editMonths && (
-                <button
-                  onClick={() => {
-                    setNewMonths(rm.totalMonths);
-                    setEditMonths(true);
-                  }}
+                <button onClick={() => { setNewMonths(rm.totalMonths); setEditMonths(true); }}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                  style={{ background: `${GOLD}22`, color: DARK }}
-                >
+                  style={{ background: `${GOLD}22`, color: DARK }}>
                   <Edit3 className="w-3 h-3" /> Edit
                 </button>
               )}
@@ -3256,180 +1855,79 @@ function RoadmapView({
             {editMonths ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min={1}
-                    max={36}
-                    value={newMonths}
-                    onChange={(e) => setNewMonths(parseInt(e.target.value))}
-                    className="flex-1 accent-amber-600"
-                  />
-                  <div
-                    className="px-4 py-2 rounded-xl flex items-center gap-1"
-                    style={{
-                      background: `${GOLD}22`,
-                      border: `1px solid ${GOLD}44`,
-                    }}
-                  >
-                    <span
-                      className="text-lg font-bold font-serif"
-                      style={{ color: DARK }}
-                    >
-                      {newMonths}
-                    </span>
-                    <span className="text-xs" style={{ color: MUTED }}>
-                      months
-                    </span>
+                  <input type="range" min={1} max={36} value={newMonths}
+                    onChange={e => setNewMonths(parseInt(e.target.value))} className="flex-1 accent-amber-600" />
+                  <div className="px-4 py-2 rounded-xl flex items-center gap-1"
+                    style={{ background: `${GOLD}22`, border: `1px solid ${GOLD}44` }}>
+                    <span className="text-lg font-bold font-serif" style={{ color: DARK }}>{newMonths}</span>
+                    <span className="text-xs" style={{ color: MUTED }}>months</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={applyNewMonths}
+                  <button onClick={applyNewMonths}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
-                    style={{
-                      background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
-                      color: "#fff",
-                    }}
-                  >
+                    style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
                     <Save className="w-3 h-3" /> Apply & Recalculate
                   </button>
-                  <button
-                    onClick={() => setEditMonths(false)}
+                  <button onClick={() => setEditMonths(false)}
                     className="px-4 py-2 rounded-xl text-xs font-semibold"
-                    style={{ background: BORDER, color: MUTED }}
-                  >
-                    Cancel
-                  </button>
+                    style={{ background: BORDER, color: MUTED }}>Cancel</button>
                 </div>
               </div>
             ) : (
-              <div
-                className="flex flex-wrap items-center gap-4 text-sm"
-                style={{ color: CHARCOAL }}
-              >
-                <span>
-                  Started:{" "}
-                  <strong>
-                    {format(parseISO(rm.startDate), "MMM d, yyyy")}
-                  </strong>
-                </span>
+              <div className="flex flex-wrap items-center gap-4 text-sm" style={{ color: CHARCOAL }}>
+                <span>Started: <strong>{format(parseISO(rm.startDate), "MMM d, yyyy")}</strong></span>
                 <span style={{ color: BORDER }}>·</span>
-                <span>
-                  Duration: <strong>{rm.totalMonths} months</strong>
-                </span>
+                <span>Duration: <strong>{rm.totalMonths} months</strong></span>
                 <span style={{ color: BORDER }}>·</span>
-                <span>
-                  Est. End: <strong>{calc.estimatedEndDate}</strong>
-                </span>
+                <span>Est. End: <strong>{calc.estimatedEndDate}</strong></span>
               </div>
             )}
           </div>
 
           {/* Phases */}
           <div>
-            <h2
-              className="font-serif text-lg font-semibold mb-3"
-              style={{ color: CHARCOAL }}
-            >
-              Preparation Phases
-            </h2>
+            <h2 className="font-serif text-lg font-semibold mb-3" style={{ color: CHARCOAL }}>Preparation Phases</h2>
             <div className="space-y-3">
               {calc.adjustedPhases.map((phase, idx) => {
-                const isOpen = expandPhase[phase.id] ?? false;
-                const weekStart = calc.adjustedPhases
-                  .slice(0, idx)
-                  .reduce((s, p) => s + p.durationWeeks, 0);
+                const isOpen     = expandPhase[phase.id] ?? false;
+                const weekStart  = calc.adjustedPhases.slice(0, idx).reduce((s, p) => s + p.durationWeeks, 0);
                 const phaseStart = addWeeks(parseISO(rm.startDate), weekStart);
-                const phaseEnd = addWeeks(phaseStart, phase.durationWeeks);
+                const phaseEnd   = addWeeks(phaseStart, phase.durationWeeks);
 
                 return (
-                  <div
-                    key={phase.id}
-                    className="rounded-2xl overflow-hidden"
-                    style={{ background: CARD, border: `1px solid ${BORDER}` }}
-                  >
+                  <div key={phase.id} className="rounded-2xl overflow-hidden"
+                    style={{ background: CARD, border: `1px solid ${BORDER}` }}>
                     <div className="flex items-center gap-3 px-5 py-4">
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                        style={{
-                          background:
-                            phase.status === "done"
-                              ? `${OLIVE}22`
-                              : `${GOLD}22`,
-                          color: phase.status === "done" ? OLIVE : DARK,
-                        }}
-                      >
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                        style={{ background: phase.status === "done" ? `${OLIVE}22` : `${GOLD}22`, color: phase.status === "done" ? OLIVE : DARK }}>
                         {idx + 1}
                       </div>
-                      <button
-                        onClick={() =>
-                          setExpandPhase((p) => ({
-                            ...p,
-                            [phase.id]: !p[phase.id],
-                          }))
-                        }
-                        className="flex-1 text-left"
-                      >
+                      <button onClick={() => setExpandPhase(p => ({ ...p, [phase.id]: !p[phase.id] }))} className="flex-1 text-left">
                         <div className="flex items-center gap-2">
-                          <span
-                            className="text-sm font-semibold"
-                            style={{ color: CHARCOAL }}
-                          >
-                            {phase.title}
-                          </span>
-                          {isOpen ? (
-                            <ChevronDown
-                              className="w-3.5 h-3.5"
-                              style={{ color: MUTED }}
-                            />
-                          ) : (
-                            <ChevronRight
-                              className="w-3.5 h-3.5"
-                              style={{ color: MUTED }}
-                            />
-                          )}
+                          <span className="text-sm font-semibold" style={{ color: CHARCOAL }}>{phase.title}</span>
+                          {isOpen ? <ChevronDown className="w-3.5 h-3.5" style={{ color: MUTED }} />
+                                  : <ChevronRight className="w-3.5 h-3.5" style={{ color: MUTED }} />}
                         </div>
                         <div className="flex flex-wrap items-center gap-2 mt-0.5">
                           <span className="text-xs" style={{ color: MUTED }}>
-                            {phase.durationWeeks} weeks ·{" "}
-                            {format(phaseStart, "MMM d")} →{" "}
-                            {format(phaseEnd, "MMM d")}
+                            {phase.durationWeeks} weeks · {format(phaseStart, "MMM d")} → {format(phaseEnd, "MMM d")}
                           </span>
                           {(phase as any).marks && (
-                            <span
-                              className="text-[10px] px-1.5 py-0.5 rounded-full"
-                              style={{ background: `${GOLD}15`, color: DARK }}
-                            >
-                              {(phase as any).marks}
-                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                              style={{ background: `${GOLD}15`, color: DARK }}>{(phase as any).marks}</span>
                           )}
                         </div>
                       </button>
                       <div className="flex gap-1 flex-shrink-0">
-                        {(
-                          [
-                            "not_started",
-                            "in_progress",
-                            "done",
-                          ] as PhaseStatus[]
-                        ).map((s) => {
-                          const cfg = PHASE_STATUS[s];
+                        {(["not_started", "in_progress", "done"] as PhaseStatus[]).map(s => {
+                          const cfg    = PHASE_STATUS[s];
                           const active = phase.status === s;
                           return (
-                            <button
-                              key={s}
-                              onClick={() => updatePhaseStatus(phase.id, s)}
+                            <button key={s} onClick={() => updatePhaseStatus(phase.id, s)}
                               className="w-8 h-8 rounded-lg text-xs font-bold transition-all"
-                              style={
-                                active
-                                  ? {
-                                      background:
-                                        cfg.color === MUTED ? DARK : cfg.color,
-                                      color: "#fff",
-                                    }
-                                  : { background: `${BORDER}88`, color: MUTED }
-                              }
-                            >
+                              style={active ? { background: cfg.color === MUTED ? DARK : cfg.color, color: "#fff" }
+                                           : { background: `${BORDER}88`, color: MUTED }}>
                               {cfg.label}
                             </button>
                           );
@@ -3437,36 +1935,14 @@ function RoadmapView({
                       </div>
                     </div>
                     {isOpen && (
-                      <div
-                        className="px-5 pb-4"
-                        style={{ borderTop: `1px solid ${BORDER}` }}
-                      >
-                        <p
-                          className="text-xs mt-3 mb-3"
-                          style={{ color: MUTED }}
-                        >
-                          {phase.description}
-                        </p>
+                      <div className="px-5 pb-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+                        <p className="text-xs mt-3 mb-3" style={{ color: MUTED }}>{phase.description}</p>
                         <div className="space-y-2">
                           {phase.topics.map((t, ti) => (
-                            <div
-                              key={ti}
-                              className="flex items-start gap-2 px-3 py-2 rounded-xl"
-                              style={{
-                                background: CREAM,
-                                border: `1px solid ${BORDER}`,
-                              }}
-                            >
-                              <div
-                                className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
-                                style={{ background: GOLD }}
-                              />
-                              <span
-                                className="text-xs leading-relaxed"
-                                style={{ color: CHARCOAL }}
-                              >
-                                {t}
-                              </span>
+                            <div key={ti} className="flex items-start gap-2 px-3 py-2 rounded-xl"
+                              style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: GOLD }} />
+                              <span className="text-xs leading-relaxed" style={{ color: CHARCOAL }}>{t}</span>
                             </div>
                           ))}
                         </div>
@@ -3501,10 +1977,8 @@ function RoadmapView({
       )}
 
       {saved && (
-        <div
-          className="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg z-50"
-          style={{ background: OLIVE, color: "#fff" }}
-        >
+        <div className="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg z-50"
+          style={{ background: OLIVE, color: "#fff" }}>
           ✓ Roadmap saved
         </div>
       )}
@@ -3514,24 +1988,19 @@ function RoadmapView({
 
 /* ─── Main Component ───────────────────── */
 export default function Roadmap() {
-  const { user } = useAuth();
-  const userId = String(user?.id ?? "guest");
-  const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
-  const space = (user as any)?.space as string | null;
-  const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
-    loadRoadmap(userId),
-  );
+  const { user }  = useAuth();
+  const userId    = String(user?.id ?? "guest");
+  const examType  = (user as any)?.exam_type as string | null ?? "JAM";
+  const space     = (user as any)?.space as string | null;
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(() => loadRoadmap(userId));
 
   function handleSelect(type: RoadmapType, months: number) {
     const phases = generatePhases(examType ?? "JAM", months);
     const rm: Roadmap = {
-      type,
-      examType: examType ?? "JAM",
-      totalMonths: months,
-      startDate: new Date().toISOString().split("T")[0],
-      phases,
-      unavailablePeriods: [],
-      createdAt: new Date().toISOString(),
+      type, examType: examType ?? "JAM", totalMonths: months,
+      startDate:   new Date().toISOString().split("T")[0],
+      phases,      unavailablePeriods: [],
+      createdAt:   new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
     };
     setRoadmap(rm);
@@ -3547,36 +2016,2063 @@ export default function Roadmap() {
   if (space === "heartspace") {
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
-        <h1
-          className="text-3xl font-serif font-bold"
-          style={{ color: CHARCOAL }}
-        >
-          Roadmap
-        </h1>
-        <div
-          className="text-center py-20 rounded-2xl"
-          style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
-        >
-          <Map
-            className="w-10 h-10 mx-auto mb-3 opacity-30"
-            style={{ color: GOLD }}
-          />
-          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-            Roadmap not available for HeartSpace
-          </p>
-          <p className="text-xs mt-1" style={{ color: MUTED }}>
-            This feature is for academic preparation students.
-          </p>
+        <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>Roadmap</h1>
+        <div className="text-center py-20 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+          <Map className="w-10 h-10 mx-auto mb-3 opacity-30" style={{ color: GOLD }} />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>Roadmap not available for HeartSpace</p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>This feature is for academic preparation students.</p>
         </div>
       </div>
     );
   }
 
-  if (!roadmap)
-    return (
-      <RoadmapSelector examType={examType ?? "JAM"} onSelect={handleSelect} />
-    );
+  if (!roadmap) return <RoadmapSelector examType={examType ?? "JAM"} onSelect={handleSelect} />;
+  return <RoadmapView roadmap={roadmap} userId={userId} onReset={handleReset} />;
+}  const subjectsWithAdjusted = allSubjects.map((s) => {
+    const pct        = syllabusPercs[s.syllabusId] ?? 0;
+    const remaining  = Math.max(0, 1 - pct / 100);
+    const baseWeeks  = baseWeeksOverride[s.id] ?? s.studyWeeks;
+    const speedKey   = (topicSpeed[s.id] ?? "first_normal") as TopicSpeedKey;
+    const speedMult  = SPEED_MULTIPLIERS[speedKey] ?? 1.0;
+    const adjStudy   = Math.max(0, Math.ceil(baseWeeks * remaining * speedMult));
+    const adjAssign  = pct >= 100 ? 0 : s.assignmentWeeks;
+    const baseRev    = adjStudy > 0 ? adjStudy * (revisionPercent / 100) : 0;
+    const qpAdj      = getQPRevisionAdjustment(s.syllabusId, practiceProgress);
+    const adjRevision = adjStudy > 0 ? Math.max(0, Math.ceil(baseRev + qpAdj)) : 0;
+    return {
+      ...s, baseWeeks, speedKey, speedMult,
+      syllabusPercent: pct,
+      adjustedWeeks: adjStudy + adjAssign + adjRevision,
+      adjStudy, adjAssign, adjRevision, qpAdj,
+    };
+  });port { useState } from "react";
+import { useAuth } from "../lib/auth";
+import {
+  Calendar, ChevronDown, ChevronRight, Plus, Trash2,
+  Save, Edit3, AlertCircle, CheckCircle2, Clock, TrendingUp,
+  TrendingDown, RotateCcw, Map, Brain, BookOpen, Zap, Target,
+  BarChart2, Circle, PlayCircle,
+} from "lucide-react";
+import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
+import { loadSyllabusProgress, SYLLABUS, type SyllabusProgress } from "./syllabus";
+
+/* ─── Brand tokens ─────────────────────── */
+const CREAM    = "#FAF7F2";
+const CHARCOAL = "#2C1810";
+const GOLD     = "#C9A96E";
+const DARK     = "#3D2314";
+const CARD     = "#FFFFFF";
+const MUTED    = "#8C7B70";
+const BORDER   = "#E8DDD0";
+const OLIVE    = "#6E8B6B";
+const ROSE     = "#D4A5A5";
+
+/* ─── Types ────────────────────────────── */
+type RoadmapType =
+  | "bsc_1st" | "bsc_2nd" | "bsc_3rd"
+  | "dropper" | "msc_1st" | "msc_2nd"
+  | "working_professional";
+
+type PhaseStatus = "not_started" | "in_progress" | "done";
+type WeekType    = "study" | "assignment" | "revision" | "buffer";
+
+interface UnavailablePeriod { id: string; label: string; startDate: string; endDate: string; }
+
+interface RoadmapPhase {
+  id: string; title: string; description: string;
+  durationWeeks: number; status: PhaseStatus;
+  topics: string[]; marks?: string;
+}
+
+interface ScheduleWeek {
+  weekNumber: number; subject: string; focus: string;
+  type: WeekType; hoursRequired: number; hoursAvailable: number; startDate: string;
+}
+
+interface SubjectForecast {
+  name: string; syllabusId: string;
+  weeksNeeded: number; weeksAvailable: number;
+  canComplete: boolean; percentCompletable: number;
+  syllabusPercent: number; adjustedWeeks: number;
+}
+
+interface SmartSchedule {
+  hoursPerDay: number; daysPerWeek: number;
+  targetMonths: number; revisionPercent: number;
+  totalHoursAvailable: number; totalHoursRequired: number;
+  totalWeeksRequired: number; isAchievable: boolean;
+  minimumMonthsNeeded: number; weeks: ScheduleWeek[];
+  subjectForecasts: SubjectForecast[];
+  subjectsFullyCompletable: number; totalSubjects: number;
+  completedSubjectsSkipped: number; generatedAt: string;
+}
+
+interface VariableWeek {
+  id: string;
+  label: string;       /* e.g. "Holiday week" */
+  startDate: string;   /* ISO date */
+  endDate: string;     /* ISO date */
+  multiplier?: number; /* e.g. 2.0 = double hours */
+  customHours?: number;/* e.g. 5 = 5 hrs/day that week */
+}
+
+/* ─── Topic speed types ─────────────────── */
+type TopicSpeedKey = "first_slow"|"first_normal"|"first_fast"|"second_slow"|"second_normal"|"second_fast";
+type TopicSpeedMap = Record<string, TopicSpeedKey>;
+
+const SPEED_MULTIPLIERS: Record<TopicSpeedKey, number> = {
+  first_slow: 1.3, first_normal: 1.0, first_fast: 0.8,
+  second_slow: 1.0, second_normal: 0.67, second_fast: 0.5,
+};
+
+const SPEED_CFG: Record<TopicSpeedKey, { emoji: string; label: string; color: string }> = {
+  first_slow:    { emoji: "🐢", label: "Slow (1st)",   color: "#C0392B" },
+  first_normal:  { emoji: "🚶", label: "Normal (1st)", color: GOLD      },
+  first_fast:    { emoji: "⚡", label: "Fast (1st)",   color: OLIVE     },
+  second_slow:   { emoji: "🐢", label: "Slow (2nd)",   color: "#C0392B" },
+  second_normal: { emoji: "🚶", label: "Normal (2nd)", color: GOLD      },
+  second_fast:   { emoji: "⚡", label: "Fast (2nd)",   color: OLIVE     },
+};
+
+type BaseWeeksMap = Record<string, number>;
+
+interface Roadmap {
+  type: RoadmapType; examType: string; totalMonths: number;
+  startDate: string; phases: RoadmapPhase[];
+  unavailablePeriods: UnavailablePeriod[];
+  variableWeeks?: VariableWeek[];
+  smartSchedule?: SmartSchedule;
+  createdAt: string; lastUpdated: string;
+}
+
+/* ─── Speed + base weeks localStorage ───── */
+function lsSpeedKey(uid: string)     { return `hs_topic_speed_${uid}`; }
+function lsBaseKey(uid: string)      { return `hs_base_weeks_${uid}`;  }
+
+function loadTopicSpeed(uid: string): TopicSpeedMap {
+  try { const r = localStorage.getItem(lsSpeedKey(uid)); return r ? JSON.parse(r) : {}; }
+  catch { return {}; }
+}
+function saveTopicSpeed(uid: string, m: TopicSpeedMap) {
+  try { localStorage.setItem(lsSpeedKey(uid), JSON.stringify(m)); } catch {}
+}
+function loadBaseWeeks(uid: string): BaseWeeksMap {
+  try { const r = localStorage.getItem(lsBaseKey(uid)); return r ? JSON.parse(r) : {}; }
+  catch { return {}; }
+}
+function saveBaseWeeks(uid: string, m: BaseWeeksMap) {
+  try { localStorage.setItem(lsBaseKey(uid), JSON.stringify(m)); } catch {}
+}
+
+/* ─── Practice integration helpers ──────── */
+function loadPracticeProgress(uid: string): Record<string, { attempts: { accuracy: number; concept: string; date: string }[] }> {
+  try { const r = localStorage.getItem(`hs_practice_${uid}`); return r ? JSON.parse(r) : {}; }
+  catch { return {}; }
+}
+
+function getWeightedAccuracy(attempts: { accuracy: number }[]): number | null {
+  if (!attempts.length) return null;
+  if (attempts.length === 1) return attempts[0].accuracy;
+  const latest  = attempts[attempts.length - 1].accuracy;
+  const restAvg = attempts.slice(0, -1).reduce((s, a) => s + a.accuracy, 0) / (attempts.length - 1);
+  return Math.round(latest * 0.6 + restAvg * 0.4);
+}
+
+function getWeightedConcept(attempts: { concept: string }[]): string | null {
+  if (!attempts.length) return null;
+  const order = ["weak", "developing", "strong"];
+  if (attempts.length === 1) return attempts[0].concept;
+  const latest  = order.indexOf(attempts[attempts.length - 1].concept);
+  const restAvg = attempts.slice(0, -1).reduce((s, a) => s + order.indexOf(a.concept), 0) / (attempts.length - 1);
+  return order[Math.round(latest * 0.6 + restAvg * 0.4)] ?? "developing";
+}
+
+function getQPRevisionAdjustment(syllabusId: string, pp: ReturnType<typeof loadPracticeProgress>): number {
+  const subject = SYLLABUS.find(s => s.id === syllabusId);
+  if (!subject) return 0;
+  const subtopics = subject.topics.flatMap(t => t.subtopics);
+  const entries   = subtopics.map(st => pp[st.id]).filter(Boolean);
+  if (!entries.length) return 0;
+  let adj = 0; let count = 0;
+  entries.forEach(entry => {
+    if (!entry?.attempts?.length) return;
+    const acc  = getWeightedAccuracy(entry.attempts);
+    const conc = getWeightedConcept(entry.attempts);
+    if (acc === null) return;
+    count++;
+    if (acc > 85)   adj -= 0.5;
+    else if (acc < 50) adj += 1.0;
+    if (conc === "weak")       adj += 1.0;
+    else if (conc === "developing") adj += 0.5;
+    else if (conc === "strong") adj -= 0.5;
+  });
+  return count > 0 ? adj / count : 0;
+}
+
+
+/* ─── Subject data ─────────────────────── */
+const JAM_SUBJECTS = [
+  { id: "la",  syllabusId: "linear_algebra",        name: "Linear Algebra",             studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "ra",  syllabusId: "real_analysis",          name: "Real Analysis",              studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "dc",  syllabusId: "differential_calculus",  name: "Functions of One Variable",  studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "gt",  syllabusId: "abstract_algebra",       name: "Group Theory",               studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "ode", syllabusId: "ode",                    name: "ODE",                        studyWeeks: 3, assignmentWeeks: 0.5 },
+  { id: "mvc", syllabusId: "real_analysis",          name: "Functions of Two Variables", studyWeeks: 2, assignmentWeeks: 0.5 },
+  { id: "mi",  syllabusId: "integration",            name: "Multiple Integration",       studyWeeks: 2, assignmentWeeks: 0.5 },
+];
+
+const NET_SUBJECTS = [
+  { id: "ra",  syllabusId: "real_analysis",          name: "Real Analysis",                         studyWeeks: 4, assignmentWeeks: 0.5  },
+  { id: "la",  syllabusId: "linear_algebra",         name: "Linear Algebra",                        studyWeeks: 4, assignmentWeeks: 0.5  },
+  { id: "ca",  syllabusId: "complex_analysis",       name: "Complex Analysis",                      studyWeeks: 3, assignmentWeeks: 0.5  },
+  { id: "ma",  syllabusId: "abstract_algebra",       name: "Modern Algebra (Group + Ring + Field)", studyWeeks: 5, assignmentWeeks: 1.0  },
+  { id: "top", syllabusId: "topology",               name: "Topology",                              studyWeeks: 3, assignmentWeeks: 0.5  },
+  { id: "fa",  syllabusId: "functional_analysis",    name: "Functional Analysis",                   studyWeeks: 2, assignmentWeeks: 0.5  },
+  { id: "ode", syllabusId: "ode",                    name: "ODE",                                   studyWeeks: 3, assignmentWeeks: 0.5  },
+  { id: "pde", syllabusId: "pde",                    name: "PDE",                                   studyWeeks: 2, assignmentWeeks: 0.5  },
+  { id: "na",  syllabusId: "numerical_analysis",     name: "Numerical Analysis",                    studyWeeks: 1, assignmentWeeks: 0.25 },
+  { id: "ie",  syllabusId: "calculus_of_variations", name: "Integral Equations",                    studyWeeks: 1, assignmentWeeks: 0.25 },
+  { id: "cov", syllabusId: "calculus_of_variations", name: "Calculus of Variations",                studyWeeks: 1, assignmentWeeks: 0.25 },
+];
+
+const JAM_WEEK_BREAKDOWN: Record<string, string[]> = {
+  la:  ["System of Linear Equations, Vector Spaces basics", "Linear Transformations, Kernel & Image", "Eigenvalues, Eigenvectors, Cayley-Hamilton", "Matrices, Diagonalisation + Assignment"],
+  ra:  ["Set Theory, Real Numbers, Sequences", "Series, Limits & Continuity", "Differentiability, MVT, Taylor's Theorem", "Riemann Integration, Functions of Several Variables + Assignment"],
+  dc:  ["Limits, Continuity, Uniform Continuity", "Differentiability, Chain Rule, MVT", "Taylor's Theorem, Maxima-Minima, Curve Sketching", "Power Series, Sequences & Series + Assignment"],
+  gt:  ["Groups basics, Subgroups, Cyclic groups, Lagrange", "Normal Subgroups, Quotient Groups, Homomorphisms", "Isomorphism Theorems, Permutation Groups, Cayley", "Consolidation + Assignment"],
+  ode: ["First Order ODEs — Separable, Exact, Bernoulli", "Higher Order ODEs — Undetermined Coefficients, Variation of Parameters", "Cauchy-Euler + Assignment"],
+  mvc: ["Limits in ℝⁿ, Partial Derivatives, Directional Derivatives", "Chain Rule, MVT, Taylor, Lagrange Multipliers + Assignment"],
+  mi:  ["Double Integrals (Cartesian & Polar), Change of Order", "Triple Integrals (Spherical & Cylindrical), Surface Area, Solids + Assignment"],
+};
+
+const NET_WEEK_BREAKDOWN: Record<string, string[]> = {
+  ra:  ["Set Theory, Real Numbers, Sequences", "Series, Limits & Continuity", "Differentiability, Riemann Integration", "Functions of Several Variables + Assignment"],
+  la:  ["Vector Spaces, Linear Transformations", "Eigenvalues, Inner Product Spaces, Jordan CF", "Dual Spaces, Diagonalisation + Assignment"],
+  ca:  ["Complex Numbers, Analytic Functions, C-R Equations", "Complex Integration, Cauchy's Theorem, Residues", "Laurent Series, Singularities, Möbius + Assignment"],
+  ma:  ["Group Theory basics + Intermediate", "Sylow Theorems, Group Actions", "Ring Theory (Basics + PID, UFD)", "Field Theory, Galois Theory", "Consolidation + Assignment"],
+  top: ["Topological Spaces, Continuity, Separation Axioms", "Compactness, Connectedness", "Quotient Topology + Assignment"],
+  fa:  ["Normed Spaces, Banach Spaces, Hilbert Spaces", "Bounded Operators, Hahn-Banach, Open Mapping + Assignment"],
+  ode: ["First Order ODEs", "Higher Order ODEs, Cauchy-Euler", "Power Series, Frobenius + Assignment"],
+  pde: ["First Order PDEs, Classification", "Wave, Heat, Laplace Equations + Fourier + Assignment"],
+  na:  ["Root Finding, Interpolation, Numerical Integration, Numerical ODEs + Assignment"],
+  ie:  ["Integral Equations — Fredholm & Volterra + Assignment"],
+  cov: ["Euler-Lagrange, Brachistochrone, Geodesics + Assignment"],
+};
+
+/* ─── Syllabus % per subject ─────────────── */
+function getSyllabusPercents(syllabusProgress: SyllabusProgress, examType: string): Record<string, number> {
+  const isJAM = examType === "JAM";
+  const result: Record<string, number> = {};
+  SYLLABUS.forEach(subject => {
+    if (subject.netOnly && isJAM) return;
+    if (subject.jamOnly && !isJAM) return;
+    const subtopics = subject.topics
+      .filter(t => !(t.netOnly && isJAM))
+      .flatMap(t => t.subtopics.filter((st: any) => !(st.netOnly && isJAM)));
+    const total = subtopics.length;
+    const done  = subtopics.filter(st => syllabusProgress[st.id]?.status === "done").length;
+    result[subject.id] = total ? Math.round((done / total) * 100) : 0;
+  });
+  return result;
+}
+
+/* ─── Roadmap types ────────────────────── */
+const ROADMAP_TYPES: Record<RoadmapType, { label: string; emoji: string; defaultMonths: number; description: string }> = {
+  bsc_1st:              { label: "BSc 1st Year",         emoji: "🌱", defaultMonths: 36, description: "3-year preparation plan"   },
+  bsc_2nd:              { label: "BSc 2nd Year",         emoji: "📚", defaultMonths: 24, description: "2-year preparation plan"   },
+  bsc_3rd:              { label: "BSc 3rd Year",         emoji: "🎯", defaultMonths: 8,  description: "6–8 month intensive plan"  },
+  dropper:              { label: "Dropper",              emoji: "💪", defaultMonths: 12, description: "12-month focused plan"     },
+  msc_1st:             { label: "MSc 1st Year",         emoji: "🔬", defaultMonths: 18, description: "18-month preparation plan" },
+  msc_2nd:             { label: "MSc 2nd Year",         emoji: "🏆", defaultMonths: 6,  description: "6-month final push"        },
+  working_professional: { label: "Working Professional", emoji: "💼", defaultMonths: 15, description: "12–18 month flexible plan" },
+};
+
+const JAM_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
+  { id: "jam_p1", title: "Phase 1 — Foundation", description: "Linear Algebra and Real Analysis.", marks: "28–31 marks", topics: ["Linear Algebra — System of Equations, Vector Spaces, Linear Transformations, Eigenvalues, Matrices", "Real Analysis — Set Theory, Real Numbers, Sequences, Series, Limits, Differentiability, Riemann Integration, FSV"] },
+  { id: "jam_p2", title: "Phase 2 — Calculus & Algebra", description: "Differential Calculus and Group Theory.", marks: "24–26 marks", topics: ["Differential Calculus — Limits, Continuity, Differentiability, MVT, Taylor, Maxima-Minima", "Group Theory — Basics, Normal Subgroups, Quotient Groups, Isomorphism Theorems"] },
+  { id: "jam_p3", title: "Phase 3 — ODEs, MVC & Integration", description: "ODE, Multivariable Calculus, and Multiple Integration.", marks: "~30 marks", topics: ["ODE — First Order, Higher Order, Cauchy-Euler", "Functions of Two Variables — Partial Derivatives, Chain Rule, Lagrange Multipliers", "Multiple Integration — Double & Triple Integrals, Surface Area, Solids"] },
+  { id: "jam_p4", title: "Phase 4 — Full Revision & Mock Tests", description: "Complete syllabus revision and mock tests.", marks: "All topics", topics: ["Phase 1 full revision — LA + RA", "Phase 2 full revision — DC + GT", "Phase 3 full revision — ODE + MVC + MI", "Full-length mock tests", "Error analysis", "Formula sheets + exam strategy"] },
+];
+
+const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
+  { id: "net_p1", title: "Phase 1 — Analysis & Algebra", description: "Real Analysis and Linear Algebra.", topics: ["Real Analysis — complete", "Linear Algebra — complete including Inner Product Spaces, Jordan CF, Dual Spaces"] },
+  { id: "net_p2", title: "Phase 2 — Complex Analysis & Modern Algebra", description: "Complex Analysis, Modern Algebra, Topology, Functional Analysis.", topics: ["Complex Analysis", "Modern Algebra — Group Theory (Sylow), Ring Theory, Field Theory", "Topology", "Functional Analysis"] },
+  { id: "net_p3", title: "Phase 3 — Applied Topics", description: "ODE, PDE, and optional topics.", topics: ["ODE", "PDE", "Numerical Analysis", "Integral Equations", "Calculus of Variations"] },
+  { id: "net_p4", title: "Phase 4 — Full Revision & Mock Tests", description: "Complete revision and full-length mocks.", topics: ["Phase 1 revision", "Phase 2 revision", "Phase 3 revision", "Full-length mock tests", "Weak area targeting", "Formula sheets"] },
+];
+
+function generatePhases(examType: string, totalMonths: number): RoadmapPhase[] {
+  const totalWeeks = totalMonths * 4;
+  const template   = examType === "JAM" ? JAM_PHASES : NET_PHASES;
+  const weights    = [0.30, 0.28, 0.27, 0.15];
+  return template.map((p, i) => ({
+    ...p, durationWeeks: Math.max(1, Math.round(totalWeeks * weights[i])),
+    status: "not_started" as PhaseStatus,
+  }));
+}
+
+/* ─── Smart Schedule Engine ─────────────── */
+function generateSmartSchedule(
+  examType: string, hoursPerDay: number, daysPerWeek: number,
+  targetMonths: number, revisionPercent: number, startDate: string,
+  syllabusProgress: SyllabusProgress,
+  unavailablePeriods: UnavailablePeriod[] = [],
+  variableWeeks: VariableWeek[] = [],
+  topicSpeed: TopicSpeedMap = {},
+  baseWeeksOverride: BaseWeeksMap = {},
+  practiceProgress: ReturnType<typeof loadPracticeProgress> = {},
+): SmartSchedule {
+  const allSubjects   = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const weekBreakdown = examType === "JAM" ? JAM_WEEK_BREAKDOWN : NET_WEEK_BREAKDOWN;
+  const baseHoursPerWeek = hoursPerDay * daysPerWeek;
+
+  /* Build a map of week-number → effective hours for that week */
+  /* Week 1 starts on startDate */
+  const start = parseISO(startDate);
+
+  /* For each calendar week offset, check if it's unavailable or variable */
+  function getEffectiveHoursForWeekOffset(weekOffset: number): { hours: number; isUnavailable: boolean; label?: string } {
+    const weekStart = addWeeks(start, weekOffset);
+    const weekStartStr = format(weekStart, "yyyy-MM-dd");
+
+    /* Check unavailable periods first */
+    for (const up of unavailablePeriods) {
+      if (!up.startDate || !up.endDate) continue;
+      const upStart = parseISO(up.startDate);
+      const upEnd   = parseISO(up.endDate);
+      if (weekStart >= upStart && weekStart < upEnd) {
+        return { hours: 0, isUnavailable: true, label: up.label };
+      }
+    }
+
+    /* Check variable weeks */
+    for (const vw of variableWeeks) {
+      if (!vw.startDate || !vw.endDate) continue;
+      const vwStart = parseISO(vw.startDate);
+      const vwEnd   = parseISO(vw.endDate);
+      if (weekStart >= vwStart && weekStart < vwEnd) {
+        const effectiveHoursPerDay = vw.customHours !== undefined
+          ? vw.customHours
+          : baseHoursPerWeek / daysPerWeek * (vw.multiplier ?? 1);
+        return { hours: effectiveHoursPerDay * daysPerWeek, isUnavailable: false, label: vw.label };
+      }
+    }
+
+    return { hours: baseHoursPerWeek, isUnavailable: false };
+  }
+
+  const hoursPerWeek  = baseHoursPerWeek;
+  const targetWeeks   = targetMonths * 4;
+  const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
+
+  const subjectsWithAdjusted = allSubjects.map(s => {
+    const pct       = syllabusPercs[s.syllabusId] ?? 0;
+    const remaining = Math.max(0, 1 - pct / 100);
+    const adjStudy  = Math.ceil(s.studyWeeks * remaining);
+    const adjAssign = pct >= 100 ? 0 : s.assignmentWeeks;
+    const adjRevision = adjStudy > 0 ? Math.ceil(adjStudy * (revisionPercent / 100)) : 0;
+    return { ...s, syllabusPercent: pct, adjustedWeeks: adjStudy + adjAssign + adjRevision, adjStudy, adjAssign, adjRevision };
+  });
+
+  const bufferWeeks        = examType === "JAM" ? 2 : 3;
+  const totalWeeksRequired = Math.ceil(subjectsWithAdjusted.reduce((s, x) => s + x.adjustedWeeks, 0) + bufferWeeks);
+  const totalHoursRequired = totalWeeksRequired * hoursPerWeek;
+  const isAchievable       = targetWeeks >= totalWeeksRequired;
+  const minimumMonthsNeeded = Math.ceil(totalWeeksRequired / 4);
+
+  let weeksUsed = 0;
+  const subjectForecasts: SubjectForecast[] = subjectsWithAdjusted.map(s => {
+    const weeksNeeded = s.adjustedWeeks;
+    const remaining   = Math.max(0, targetWeeks - weeksUsed);
+    const canComplete = remaining >= weeksNeeded;
+    const pct         = weeksNeeded === 0 ? 100 : canComplete ? 100 : Math.round((remaining / weeksNeeded) * 100);
+    weeksUsed += weeksNeeded;
+    return { name: s.name, syllabusId: s.syllabusId, weeksNeeded, weeksAvailable: Math.min(remaining, weeksNeeded), canComplete, percentCompletable: pct, syllabusPercent: s.syllabusPercent, adjustedWeeks: s.adjustedWeeks };
+  });
+
+  const weeks: ScheduleWeek[] = [];
+  let weekNumber = 1;
+  /* start is already declared above */
+
+  subjectsWithAdjusted.forEach(subject => {
+    if (subject.adjustedWeeks === 0) return;
+    const breakdown    = weekBreakdown[subject.id] ?? [];
+    const partialLabel = subject.syllabusPercent > 0 && subject.syllabusPercent < 100 ? ` (continuing from ${subject.syllabusPercent}% done)` : "";
+
+    for (let w = 0; w < subject.adjStudy; w++) {
+      weeks.push({ weekNumber, subject: subject.name, focus: (breakdown[w] ?? `${subject.name} — Part ${w + 1}`) + (w === 0 ? partialLabel : ""), type: "study", hoursRequired: hoursPerWeek, hoursAvailable: hoursPerWeek, startDate: format(addWeeks(start, weekNumber - 1), "MMM d") });
+      weekNumber++;
+    }
+    if (subject.adjAssign > 0) {
+      weeks.push({ weekNumber, subject: subject.name, focus: `${subject.name} — Assignments & Problem Practice`, type: "assignment", hoursRequired: hoursPerWeek, hoursAvailable: hoursPerWeek, startDate: format(addWeeks(start, weekNumber - 1), "MMM d") });
+      weekNumber++;
+    }
+    for (let r = 0; r < subject.adjRevision; r++) {
+      weeks.push({ weekNumber, subject: subject.name, focus: r === 0 ? `${subject.name} — Revision Pass 1 (key theorems, formulas)` : `${subject.name} — Revision Pass ${r + 1} (weak areas, problem drill)`, type: "revision", hoursRequired: hoursPerWeek, hoursAvailable: hoursPerWeek, startDate: format(addWeeks(start, weekNumber - 1), "MMM d") });
+      weekNumber++;
+    }
+  });
+
+  /* Interleave unavailable + variable weeks into the schedule */
+  /* Re-sequence: insert unavailable weeks as "pause" entries, adjust dates */
+  const finalWeeks: ScheduleWeek[] = [];
+  let calendarOffset = 0; /* tracks real calendar weeks from start */
+
+  for (const week of weeks) {
+    /* Skip any unavailable calendar weeks before placing this study week */
+    let placed = false;
+    while (!placed) {
+      const eff = getEffectiveHoursForWeekOffset(calendarOffset);
+      if (eff.isUnavailable) {
+        /* Insert unavailable week into schedule as a pause entry */
+        finalWeeks.push({
+          weekNumber: finalWeeks.length + 1,
+          subject: "Unavailable",
+          focus: `⏸ ${eff.label ?? "Unavailable"} — No study this week`,
+          type: "buffer",
+          hoursRequired: 0,
+          hoursAvailable: 0,
+          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+        });
+        calendarOffset++;
+      } else {
+        /* Place the study week at this calendar position */
+        finalWeeks.push({
+          ...week,
+          weekNumber: finalWeeks.length + 1,
+          hoursAvailable: eff.hours,
+          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+          focus: eff.label && eff.hours !== baseHoursPerWeek
+            ? `${week.focus} (${eff.label}: ${eff.hours} hrs this week)`
+            : week.focus,
+        });
+        calendarOffset++;
+        placed = true;
+      }
+    }
+  }
+
+  /* Buffer weeks — also respect unavailable/variable */
+  for (let b = 0; b < bufferWeeks; b++) {
+    let placed = false;
+    while (!placed) {
+      const eff = getEffectiveHoursForWeekOffset(calendarOffset);
+      if (eff.isUnavailable) {
+        finalWeeks.push({
+          weekNumber: finalWeeks.length + 1,
+          subject: "Unavailable",
+          focus: `⏸ ${eff.label ?? "Unavailable"} — No study this week`,
+          type: "buffer",
+          hoursRequired: 0,
+          hoursAvailable: 0,
+          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+        });
+        calendarOffset++;
+      } else {
+        finalWeeks.push({
+          weekNumber: finalWeeks.length + 1,
+          subject: "Full Syllabus",
+          focus: b === 0 ? "Mock Tests — Full length, time management practice" : "Final Revision — Formula sheets, exam strategy, weak spots",
+          type: "revision",
+          hoursRequired: hoursPerWeek,
+          hoursAvailable: eff.hours,
+          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+        });
+        calendarOffset++;
+        placed = true;
+      }
+    }
+  }
+
+  return {
+    hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
+    totalHoursAvailable: targetWeeks * hoursPerWeek,
+    totalHoursRequired, totalWeeksRequired, isAchievable, minimumMonthsNeeded,
+    weeks: finalWeeks, subjectForecasts,
+    subjectsFullyCompletable: subjectForecasts.filter(s => s.canComplete).length,
+    totalSubjects: allSubjects.length,
+    completedSubjectsSkipped: subjectsWithAdjusted.filter(s => s.adjustedWeeks === 0).length,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/* ─── Week type config ─────────────────── */
+const WEEK_TYPE_CFG = {
+  study:      { label: "Study",      color: DARK,     bg: `${GOLD}15`,   icon: BookOpen },
+  assignment: { label: "Assignment", color: "#7A5A10", bg: "#FFF3D0",    icon: Zap      },
+  revision:   { label: "Revision",   color: OLIVE,    bg: `${OLIVE}15`, icon: Brain    },
+  buffer:     { label: "Buffer",     color: MUTED,    bg: `${BORDER}88`, icon: Calendar },
+};
+
+/* ─── localStorage ─────────────────────── */
+function lsKey(userId: string) { return `hs_roadmap_${userId}`; }
+function loadRoadmap(userId: string): Roadmap | null {
+  try { const r = localStorage.getItem(lsKey(userId)); return r ? JSON.parse(r) : null; }
+  catch { return null; }
+}
+function saveRoadmap(userId: string, rm: Roadmap) {
+  localStorage.setItem(lsKey(userId), JSON.stringify(rm));
+}
+
+/* ─── Progress engine ──────────────────── */
+interface AICalc {
+  effectiveWeeks: number; unavailableWeeks: number; estimatedEndDate: string;
+  weeklyTargetPercent: number; completedPercent: number;
+  status: "on_track" | "ahead" | "behind" | "critical";
+  statusMessage: string; recommendation: string; adjustedPhases: RoadmapPhase[];
+}
+
+const STATUS_CFG = {
+  on_track: { label: "On Track",  color: OLIVE,    bg: `${OLIVE}22`, icon: CheckCircle2 },
+  ahead:    { label: "Ahead",     color: "#2D7A2D", bg: "#DFF0DA",   icon: TrendingUp   },
+  behind:   { label: "Behind",    color: "#B8860B", bg: "#FFF8DC",   icon: TrendingDown },
+  critical: { label: "Critical",  color: "#C0392B", bg: "#FDE8E8",   icon: AlertCircle  },
+};
+
+const PHASE_STATUS = {
+  not_started: { label: "—",  color: MUTED },
+  in_progress: { label: "▶", color: GOLD  },
+  done:        { label: "✓",  color: OLIVE },
+};
+
+function runAIEngine(roadmap: Roadmap): AICalc {
+  const totalWeeks       = roadmap.totalMonths * 4;
+  const unavailableWeeks = roadmap.unavailablePeriods.reduce((s, p) => {
+    if (!p.startDate || !p.endDate) return s;
+    const diff = Math.max(0, Math.round((parseISO(p.endDate).getTime() - parseISO(p.startDate).getTime()) / (7 * 24 * 60 * 60 * 1000)));
+    return s + diff;
+  }, 0);
+  const effectiveWeeks   = totalWeeks + unavailableWeeks;
+  const startDate        = parseISO(roadmap.startDate);
+  const estimatedEnd     = addWeeks(startDate, effectiveWeeks);
+  const now              = new Date();
+  const weeksElapsed     = Math.max(0, differenceInWeeks(now, startDate));
+  const weeksLeft        = Math.max(0, effectiveWeeks - weeksElapsed);
+  const donePhasesWeeks  = roadmap.phases.filter(p => p.status === "done").reduce((s, p) => s + p.durationWeeks, 0);
+  const completedPercent = totalWeeks > 0 ? Math.min(100, Math.round((donePhasesWeeks / totalWeeks) * 100)) : 0;
+  const expectedPercent  = effectiveWeeks > 0 ? Math.min(100, Math.round((weeksElapsed / effectiveWeeks) * 100)) : 0;
+  const diff             = completedPercent - expectedPercent;
+
+  let status: AICalc["status"], statusMessage: string, recommendation: string;
+  if (weeksElapsed === 0) { status = "on_track"; statusMessage = "Roadmap created — ready to begin! 🌱"; recommendation = "Start Phase 1 with consistent daily study."; }
+  else if (diff >= 10) { status = "ahead"; statusMessage = "Excellent! Ahead of schedule. 🎉"; recommendation = "Use extra time for deeper practice and mock tests."; }
+  else if (diff >= -5) { status = "on_track"; statusMessage = "Right on track! Keep going. 💪"; recommendation = "Maintain your current pace. Don't skip sessions."; }
+  else if (diff >= -15) { status = "behind"; statusMessage = "Slightly behind — adjustable."; recommendation = `Add ${Math.ceil(Math.abs(diff) / 10)} extra sessions per week to catch up.`; }
+  else { status = "critical"; statusMessage = "Significantly behind. Plan adjustment needed."; recommendation = "Focus intensely on high-weightage topics."; }
+
+  const remaining      = roadmap.phases.filter(p => p.status !== "done");
+  const remainingTotal = remaining.reduce((s, p) => s + p.durationWeeks, 0);
+  const adjustedPhases = roadmap.phases.map(p => {
+    if (p.status === "done") return p;
+    const prop = remainingTotal > 0 ? p.durationWeeks / remainingTotal : 0;
+    return { ...p, durationWeeks: p.durationWeeks + Math.round(unavailableWeeks * prop) };
+  });
+
+  return {
+    effectiveWeeks, unavailableWeeks,
+    estimatedEndDate: format(estimatedEnd, "MMMM d, yyyy"),
+    weeklyTargetPercent: weeksLeft > 0 ? Math.ceil((100 - completedPercent) / weeksLeft) : 0,
+    completedPercent, status, statusMessage, recommendation, adjustedPhases,
+  };
+}
+
+
+/* ─── Tick Button ──────────────────────── */
+function TickButton({ allDone, anyDone, onClick, size = "sm" }: {
+  allDone: boolean; anyDone: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  size?: "sm" | "lg";
+}) {
+  const dim = size === "lg" ? "w-7 h-7" : "w-6 h-6";
   return (
-    <RoadmapView roadmap={roadmap} userId={userId} onReset={handleReset} />
+    <button type="button" onClick={onClick}
+      title={allDone ? "Unmark all" : "Mark all as done"}
+      className={`flex-shrink-0 ${dim} rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110`}
+      style={{
+        borderColor: allDone ? OLIVE : anyDone ? GOLD : BORDER,
+        background:  allDone ? OLIVE : "transparent",
+        boxShadow:   allDone ? `0 0 0 3px ${OLIVE}22` : "none",
+      }}>
+      {allDone ? (
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : anyDone ? (
+        <div className="w-2 h-2 rounded-full" style={{ background: GOLD }} />
+      ) : null}
+    </button>
   );
+}
+
+/* ─── My Progress Tab ──────────────────── */
+function MyProgressTab({ userId, examType }: { userId: string; examType: string }) {
+  const isJAM = examType === "JAM";
+  const [progress,      setProgress]      = useState<SyllabusProgress>(() => loadSyllabusProgress(userId));
+  const [expandedSubj,  setExpandedSubj]  = useState<Record<string, boolean>>({});
+  const [expandedTopic, setExpandedTopic] = useState<Record<string, boolean>>({});
+
+  const filteredSyllabus = SYLLABUS
+    .filter(s => !(s.netOnly && isJAM) && !(s.jamOnly && !isJAM))
+    .map(s => ({
+      ...s,
+      topics: s.topics
+        .filter(t => !(t.netOnly && isJAM) && !(t.jamOnly && !isJAM))
+        .map(t => ({ ...t, subtopics: t.subtopics.filter((st: any) => !(st.netOnly && isJAM)) })),
+    }));
+
+  const totalSubs  = filteredSyllabus.reduce((a, s) => a + s.topics.reduce((b, t) => b + t.subtopics.length, 0), 0);
+  const doneSubs   = Object.values(progress).filter(v => v.status === "done").length;
+  const inProgSubs = Object.values(progress).filter(v => v.status === "in_progress").length;
+  const overallPct = totalSubs ? Math.round((doneSubs / totalSubs) * 100) : 0;
+
+  /* Save to localStorage and update state */
+  function persistProgress(next: SyllabusProgress) {
+    setProgress(next);
+    try { localStorage.setItem(`hs_syllabus_${userId}`, JSON.stringify(next)); } catch { /* ignore */ }
+  }
+
+  /* Cycle a single subtopic */
+  function cycleSubtopic(stId: string) {
+    const prev      = progress[stId] ?? { status: "not_started" as const };
+    const now       = new Date().toISOString();
+    const nextStatus: Record<string, "not_started" | "in_progress" | "done"> = {
+      not_started: "in_progress", in_progress: "done", done: "not_started",
+    };
+    const newStatus = nextStatus[prev.status] as "not_started" | "in_progress" | "done";
+    persistProgress({
+      ...progress,
+      [stId]: { status: newStatus, doneAt: newStatus === "done" ? (prev.doneAt ?? now) : undefined },
+    });
+  }
+
+  /* Toggle all subtopics in a topic */
+  function toggleSubtopics(subtopics: { id: string }[]) {
+    const allDone = subtopics.every(st => progress[st.id]?.status === "done");
+    const now     = new Date().toISOString();
+    const updated = { ...progress };
+    subtopics.forEach(st => {
+      const prev = updated[st.id];
+      updated[st.id] = allDone
+        ? { status: "not_started", doneAt: undefined }
+        : { status: "done", doneAt: prev?.doneAt ?? now };
+    });
+    persistProgress(updated);
+  }
+
+  /* Recent completions */
+  const recentDone = Object.entries(progress)
+    .filter(([, v]) => v.status === "done" && v.doneAt)
+    .sort(([, a], [, b]) => (b.doneAt ?? "").localeCompare(a.doneAt ?? ""))
+    .slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      {/* Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Overall",     value: `${overallPct}%`,              color: OLIVE, sub: "complete"     },
+          { label: "Done",        value: doneSubs,                       color: OLIVE, sub: "subtopics"    },
+          { label: "In Progress", value: inProgSubs,                     color: GOLD,  sub: "subtopics"    },
+          { label: "Remaining",   value: totalSubs - doneSubs - inProgSubs, color: MUTED, sub: "not started" },
+        ].map(({ label, value, color, sub }) => (
+          <div key={label} className="rounded-2xl p-5 text-center"
+            style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+            <div className="text-2xl font-bold font-serif" style={{ color }}>{value}</div>
+            <div className="text-xs font-semibold mt-1" style={{ color: CHARCOAL }}>{label}</div>
+            <div className="text-[10px]" style={{ color: MUTED }}>{sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <div className="flex justify-between text-sm mb-2">
+          <span className="font-semibold" style={{ color: CHARCOAL }}>Syllabus Progress</span>
+          <span className="font-bold" style={{ color: OLIVE }}>{overallPct}%</span>
+        </div>
+        <div className="h-3 rounded-full overflow-hidden" style={{ background: BORDER }}>
+          <div className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${overallPct}%`, background: `linear-gradient(90deg, ${OLIVE} 0%, ${GOLD} 100%)` }} />
+        </div>
+        <p className="text-xs mt-2" style={{ color: MUTED }}>
+          {doneSubs} of {totalSubs} subtopics completed ·
+          Click ○ on a topic to mark all done · Click any subtopic to cycle status
+        </p>
+      </div>
+
+      {/* Recent completions */}
+      {recentDone.length > 0 && (
+        <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          <h3 className="font-semibold text-sm mb-3" style={{ color: CHARCOAL }}>Recently Completed</h3>
+          <div className="space-y-2">
+            {recentDone.map(([id, entry]) => {
+              let subtopicName = id;
+              SYLLABUS.forEach(subj => subj.topics.forEach(t => t.subtopics.forEach(st => {
+                if (st.id === id) subtopicName = st.name;
+              })));
+              return (
+                <div key={id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                  style={{ background: `${OLIVE}10`, border: `1px solid ${OLIVE}33` }}>
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: OLIVE }} />
+                  <span className="flex-1 text-sm" style={{ color: CHARCOAL }}>{subtopicName}</span>
+                  {entry.doneAt && (
+                    <span className="text-[10px] flex-shrink-0" style={{ color: OLIVE }}>
+                      {format(new Date(entry.doneAt), "MMM d, yyyy")}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Subject breakdown */}
+      <div>
+        <h3 className="font-serif text-lg font-semibold mb-3" style={{ color: CHARCOAL }}>Subject Breakdown</h3>
+        <div className="space-y-3">
+          {filteredSyllabus.map(subject => {
+            const allSubtopics = subject.topics.flatMap(t => t.subtopics);
+            const total  = allSubtopics.length;
+            const done   = allSubtopics.filter(st => progress[st.id]?.status === "done").length;
+            const inProg = allSubtopics.filter(st => progress[st.id]?.status === "in_progress").length;
+            const pct    = total ? Math.round((done / total) * 100) : 0;
+            const isOpen = expandedSubj[subject.id] ?? false;
+
+            return (
+              <div key={subject.id} className="rounded-2xl overflow-hidden"
+                style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+
+                {/* Subject header */}
+                <div className="flex items-center gap-3 px-4"
+                  style={{ background: isOpen ? `${GOLD}08` : CARD }}>
+                  <TickButton
+                    allDone={allSubtopics.every(st => progress[st.id]?.status === "done")}
+                    anyDone={allSubtopics.some(st => progress[st.id]?.status === "done" || progress[st.id]?.status === "in_progress")}
+                    size="lg"
+                    onClick={e => { e.stopPropagation(); toggleSubtopics(allSubtopics); }}
+                  />
+                  <button onClick={() => setExpandedSubj(p => ({ ...p, [subject.id]: !p[subject.id] }))}
+                    className="flex-1 flex items-center gap-4 py-4 text-left">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-semibold text-sm" style={{ color: CHARCOAL }}>{subject.name}</span>
+                      {pct === 100 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                          style={{ background: `${OLIVE}22`, color: OLIVE }}>✓ Complete</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct === 100 ? OLIVE : GOLD }} />
+                      </div>
+                      <span className="text-xs flex-shrink-0" style={{ color: pct === 100 ? OLIVE : MUTED }}>
+                        {pct}% · {done}/{total}{inProg > 0 && ` · ${inProg} in progress`}
+                      </span>
+                    </div>
+                  </div>
+                  {isOpen ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
+                           : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
+                  </button>
+                </div>
+
+                {/* Topics */}
+                {isOpen && (
+                  <div style={{ borderTop: `1px solid ${BORDER}` }}>
+                    {subject.topics.map((topic, tIdx) => {
+                      const topicDone   = topic.subtopics.filter(st => progress[st.id]?.status === "done").length;
+                      const topicAllDone = topicDone === topic.subtopics.length;
+                      const topicInProg  = topic.subtopics.some(st => progress[st.id]?.status === "in_progress" || progress[st.id]?.status === "done");
+                      const isTopicOpen  = expandedTopic[topic.id] ?? false;
+
+                      return (
+                        <div key={topic.id}
+                          style={{ borderBottom: tIdx < subject.topics.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+
+                          {/* Topic row */}
+                          <div className="flex items-center gap-2 px-4"
+                            style={{ background: isTopicOpen ? `${GOLD}06` : CREAM }}>
+
+                            {/* Topic tick button */}
+                            <TickButton
+                              allDone={topicAllDone}
+                              anyDone={topicInProg}
+                              onClick={e => { e.stopPropagation(); toggleSubtopics(topic.subtopics); }}
+                            />
+
+                            {/* Topic expand button */}
+                            <button onClick={() => setExpandedTopic(p => ({ ...p, [topic.id]: !p[topic.id] }))}
+                              className="flex flex-1 items-center gap-2 py-3 text-left">
+                              <div className="w-4 flex-shrink-0 flex items-center justify-center">
+                                {isTopicOpen
+                                  ? <ChevronDown className="w-3.5 h-3.5" style={{ color: MUTED }} />
+                                  : <ChevronRight className="w-3.5 h-3.5" style={{ color: MUTED }} />}
+                              </div>
+                              <span className="flex-1 text-sm font-semibold" style={{
+                                color: topicAllDone ? OLIVE : CHARCOAL,
+                                textDecoration: topicAllDone ? "line-through" : "none",
+                                textDecorationColor: MUTED,
+                              }}>
+                                {topic.name}
+                              </span>
+                              <span className="text-xs mr-1" style={{ color: topicAllDone ? OLIVE : MUTED }}>
+                                {topicDone}/{topic.subtopics.length}
+                              </span>
+                            </button>
+                          </div>
+
+                          {/* Subtopics — clickable */}
+                          {isTopicOpen && (
+                            <div className="px-5 pb-3 space-y-1.5" style={{ background: "#FDFBF8" }}>
+                              {topic.subtopics.map(st => {
+                                const entry  = progress[st.id] ?? { status: "not_started" as const };
+                                const status = entry.status;
+                                const Icon   = status === "done" ? CheckCircle2 : status === "in_progress" ? PlayCircle : Circle;
+                                const color  = status === "done" ? OLIVE : status === "in_progress" ? GOLD : MUTED;
+                                const bg     = status === "done" ? `${OLIVE}12` : status === "in_progress" ? `${GOLD}12` : `${BORDER}55`;
+
+                                return (
+                                  <button key={st.id} type="button"
+                                    onClick={() => cycleSubtopic(st.id)}
+                                    className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 hover:scale-[1.01]"
+                                    style={{ background: bg, border: `1px solid ${color}33` }}>
+                                    <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color }} />
+                                    <div className="flex-1">
+                                      <span className="text-sm" style={{
+                                        color: status === "done" ? OLIVE : CHARCOAL,
+                                        textDecoration: status === "done" ? "line-through" : "none",
+                                        textDecorationColor: MUTED,
+                                      }}>
+                                        {st.name}
+                                      </span>
+                                      {status === "done" && entry.doneAt && (
+                                        <p className="text-[10px] mt-0.5" style={{ color: OLIVE }}>
+                                          Completed on {format(new Date(entry.doneAt), "MMMM d, yyyy")}
+                                        </p>
+                                      )}
+                                      {status === "in_progress" && (
+                                        <p className="text-[10px] mt-0.5" style={{ color: GOLD }}>In Progress</p>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                                      style={{ background: `${color}22`, color }}>
+                                      {status === "done" ? "Done" : status === "in_progress" ? "In Progress" : "Not Started"}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {doneSubs === 0 && (
+        <div className="text-center py-12 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+          <BarChart2 className="w-10 h-10 mx-auto mb-3 opacity-30" style={{ color: GOLD }} />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No topics completed yet</p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>
+            Click the circle next to any topic to mark it done, or click any subtopic to cycle its status.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Completion Forecast ──────────────── */
+function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const fullCount    = schedule.subjectForecasts.filter(s => s.canComplete && s.syllabusPercent < 100).length;
+  const partialCount = schedule.subjectForecasts.filter(s => !s.canComplete && s.percentCompletable > 0 && s.syllabusPercent < 100).length;
+  const zeroCount    = schedule.subjectForecasts.filter(s => !s.canComplete && s.percentCompletable === 0 && s.syllabusPercent < 100).length;
+  const doneCount    = schedule.subjectForecasts.filter(s => s.syllabusPercent === 100).length;
+
+  return (
+    <div className="rounded-2xl p-5 space-y-4" style={{ background: `${GOLD}08`, border: `1.5px solid ${GOLD}44` }}>
+      <div className="flex items-center gap-2">
+        <Target className="w-4 h-4" style={{ color: GOLD }} />
+        <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>What You Can Complete</h3>
+      </div>
+      <p className="text-xs" style={{ color: MUTED }}>
+        With <strong style={{ color: DARK }}>{schedule.hoursPerDay} hrs/day × {schedule.daysPerWeek} days/week</strong> for{" "}
+        <strong style={{ color: DARK }}>{schedule.targetMonths} months</strong>, factoring in your syllabus progress:
+      </p>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {doneCount > 0 && (
+          <div className="rounded-xl p-3 text-center" style={{ background: `${OLIVE}22`, border: `1px solid ${OLIVE}44` }}>
+            <div className="text-xl font-bold font-serif" style={{ color: OLIVE }}>{doneCount}</div>
+            <div className="text-[10px] mt-0.5" style={{ color: OLIVE }}>Already Done ✓</div>
+          </div>
+        )}
+        <div className="rounded-xl p-3 text-center" style={{ background: `${OLIVE}15`, border: `1px solid ${OLIVE}33` }}>
+          <div className="text-xl font-bold font-serif" style={{ color: OLIVE }}>{fullCount}</div>
+          <div className="text-[10px] mt-0.5" style={{ color: OLIVE }}>Fully Complete</div>
+        </div>
+        {partialCount > 0 && (
+          <div className="rounded-xl p-3 text-center" style={{ background: "#FFF8DC", border: "1px solid #B8860B33" }}>
+            <div className="text-xl font-bold font-serif" style={{ color: "#B8860B" }}>{partialCount}</div>
+            <div className="text-[10px] mt-0.5" style={{ color: "#B8860B" }}>Partially Done</div>
+          </div>
+        )}
+        {zeroCount > 0 && (
+          <div className="rounded-xl p-3 text-center" style={{ background: "#FDE8E8", border: "1px solid #C0392B33" }}>
+            <div className="text-xl font-bold font-serif" style={{ color: "#C0392B" }}>{zeroCount}</div>
+            <div className="text-[10px] mt-0.5" style={{ color: "#C0392B" }}>Not Reachable</div>
+          </div>
+        )}
+        <div className="rounded-xl p-3 text-center" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+          <div className="text-xl font-bold font-serif" style={{ color: DARK }}>{schedule.minimumMonthsNeeded} mo</div>
+          <div className="text-[10px] mt-0.5" style={{ color: MUTED }}>Minimum Needed</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl px-4 py-3" style={{
+        background: schedule.isAchievable ? `${OLIVE}15` : "#FDE8E8",
+        border: `1px solid ${schedule.isAchievable ? OLIVE : "#C0392B"}33`,
+      }}>
+        {schedule.isAchievable ? (
+          <p className="text-sm font-semibold" style={{ color: OLIVE }}>
+            ✅ You can complete the remaining syllabus in {schedule.targetMonths} months at this pace!
+          </p>
+        ) : (
+          <p className="text-sm font-semibold" style={{ color: "#C0392B" }}>
+            ⚠️ At this pace you can fully cover {fullCount + doneCount} of {schedule.totalSubjects} subjects.
+            You need at least {schedule.minimumMonthsNeeded} months for the full syllabus.
+          </p>
+        )}
+        {schedule.completedSubjectsSkipped > 0 && (
+          <p className="text-xs mt-1" style={{ color: MUTED }}>
+            {schedule.completedSubjectsSkipped} subject(s) are 100% done in your syllabus tracker — skipped from schedule.
+          </p>
+        )}
+      </div>
+
+      <button onClick={() => setShowBreakdown(!showBreakdown)}
+        className="flex items-center gap-2 text-xs font-semibold" style={{ color: GOLD }}>
+        {showBreakdown ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+        {showBreakdown ? "Hide" : "Show"} subject-by-subject breakdown
+      </button>
+
+      {showBreakdown && (
+        <div className="space-y-2">
+          {schedule.subjectForecasts.map(sf => (
+            <div key={sf.name} className="flex items-center gap-3 px-4 py-3 rounded-xl"
+              style={{
+                background: sf.syllabusPercent === 100 ? `${OLIVE}10` : sf.canComplete ? `${OLIVE}08` : sf.percentCompletable > 0 ? "#FFF8DC" : "#FDE8E8",
+                border: `1px solid ${sf.syllabusPercent === 100 ? `${OLIVE}44` : sf.canComplete ? `${OLIVE}33` : sf.percentCompletable > 0 ? "#B8860B33" : "#C0392B33"}`,
+              }}>
+              <span className="text-base flex-shrink-0">
+                {sf.syllabusPercent === 100 ? "✅" : sf.canComplete ? "✅" : sf.percentCompletable > 0 ? "⚠️" : "❌"}
+              </span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold" style={{ color: CHARCOAL }}>{sf.name}</span>
+                  {sf.syllabusPercent > 0 && sf.syllabusPercent < 100 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: `${GOLD}22`, color: DARK }}>{sf.syllabusPercent}% done in syllabus</span>
+                  )}
+                  {sf.syllabusPercent === 100 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: `${OLIVE}22`, color: OLIVE }}>100% in syllabus</span>
+                  )}
+                </div>
+                {sf.syllabusPercent < 100 && (
+                  <>
+                    <div className="h-1 rounded-full mt-1.5 overflow-hidden" style={{ background: BORDER }}>
+                      <div className="h-full rounded-full" style={{
+                        width: `${sf.percentCompletable}%`,
+                        background: sf.canComplete ? OLIVE : sf.percentCompletable > 0 ? "#B8860B" : "#C0392B",
+                      }} />
+                    </div>
+                    <p className="text-[10px] mt-1" style={{ color: MUTED }}>
+                      {sf.adjustedWeeks === 0 ? "Fully covered in syllabus — skipped"
+                        : sf.canComplete ? `${sf.weeksNeeded} weeks needed — completable`
+                        : sf.percentCompletable > 0 ? `~${sf.percentCompletable}% completable (${sf.weeksAvailable}/${sf.weeksNeeded} wks)`
+                        : "Not reachable in target timeframe"}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Schedule inputs localStorage ─────── */
+function loadScheduleInputs(userId: string) {
+  try {
+    const r = localStorage.getItem(`hs_schedule_inputs_${userId}`);
+    return r ? JSON.parse(r) : { hoursPerDay: 2, daysPerWeek: 5, targetMonths: 6, revisionPercent: 30 };
+  } catch { return { hoursPerDay: 2, daysPerWeek: 5, targetMonths: 6, revisionPercent: 30 }; }
+}
+function saveScheduleInputs(userId: string, inputs: { hoursPerDay: number; daysPerWeek: number; targetMonths: number; revisionPercent: number }) {
+  try { localStorage.setItem(`hs_schedule_inputs_${userId}`, JSON.stringify(inputs)); } catch { /* ignore */ }
+}
+
+/* ─── Variable Weeks Panel ──────────────── */
+function VariableWeeksPanel({ variableWeeks, unavailablePeriods, baseHoursPerDay, daysPerWeek }: {
+  variableWeeks: VariableWeek[];
+  unavailablePeriods: UnavailablePeriod[];
+  baseHoursPerDay: number;
+  daysPerWeek: number;
+}) {
+  if (variableWeeks.length === 0 && unavailablePeriods.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl p-4 space-y-2" style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}33` }}>
+      <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>Special Weeks in Schedule</p>
+      {unavailablePeriods.map(up => (
+        <div key={up.id} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+          style={{ background: `${ROSE}15`, border: `1px solid ${ROSE}44` }}>
+          <span className="text-sm">⏸</span>
+          <span className="flex-1 text-xs font-medium" style={{ color: CHARCOAL }}>{up.label}</span>
+          <span className="text-[10px]" style={{ color: MUTED }}>
+            {up.startDate ? format(parseISO(up.startDate), "MMM d") : ""} · {up.weeks} week{up.weeks > 1 ? "s" : ""} · 0 hrs
+          </span>
+        </div>
+      ))}
+      {variableWeeks.map(vw => {
+        const effectiveHrs = vw.customHours !== undefined
+          ? vw.customHours * daysPerWeek
+          : baseHoursPerDay * daysPerWeek * (vw.multiplier ?? 1);
+        const baseHrs = baseHoursPerDay * daysPerWeek;
+        const isMore = effectiveHrs > baseHrs;
+        return (
+          <div key={vw.id} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+            style={{ background: isMore ? `${OLIVE}12` : "#FFF8DC", border: `1px solid ${isMore ? OLIVE : "#B8860B"}33` }}>
+            <span className="text-sm">{isMore ? "⚡" : "🐌"}</span>
+            <span className="flex-1 text-xs font-medium" style={{ color: CHARCOAL }}>{vw.label}</span>
+            <span className="text-[10px]" style={{ color: isMore ? OLIVE : "#B8860B" }}>
+              {vw.startDate ? format(parseISO(vw.startDate), "MMM d") : ""} ·
+              {vw.customHours !== undefined ? ` ${vw.customHours} hrs/day` : ` ${vw.multiplier}x`} ·
+              {effectiveHrs} hrs/week
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+/* ─── Unavailable Periods Manager ───────── */
+function UnavailablePeriodsManager({ rm, persist }: { rm: Roadmap; persist: (next: Roadmap) => void }) {
+  const [show,     setShow]     = useState(false);
+  const [label,    setLabel]    = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate,  setEndDate]  = useState("");
+
+  function add() {
+    if (!label || !startDate || !endDate) return;
+    if (new Date(endDate) <= new Date(startDate)) return;
+    persist({ ...rm, unavailablePeriods: [...rm.unavailablePeriods, { id: `${Date.now()}`, label, startDate, endDate }] });
+    setLabel(""); setStartDate(""); setEndDate("");
+    setShow(false);
+  }
+
+  return (
+    <div className="rounded-2xl p-5 space-y-3" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4" style={{ color: ROSE }} />
+          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>Unavailable Periods</h3>
+        </div>
+        {!show && (
+          <button onClick={() => setShow(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
+            style={{ background: `${ROSE}33`, color: "#8B3A3A" }}>
+            <Plus className="w-3 h-3" /> Add
+          </button>
+        )}
+      </div>
+      <p className="text-xs" style={{ color: MUTED }}>
+        Add periods when you cannot study. These appear in your schedule as paused weeks and push your end date forward.
+      </p>
+
+      {show && (
+        <div className="rounded-xl p-4 space-y-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+          <div>
+            <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Reason</label>
+            <input value={label} onChange={e => setLabel(e.target.value)}
+              placeholder="e.g. College exams, Family trip…"
+              className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+              style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Start date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>End date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                min={startDate}
+                className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+            </div>
+          </div>
+          {startDate && endDate && new Date(endDate) <= new Date(startDate) && (
+            <p className="text-xs" style={{ color: "#C0392B" }}>End date must be after start date.</p>
+          )}
+          <div className="flex gap-2">
+            <button onClick={add}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
+              <Save className="w-3 h-3" /> Add Period
+            </button>
+            <button onClick={() => setShow(false)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: BORDER, color: MUTED }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {rm.unavailablePeriods.length === 0 && !show && (
+        <p className="text-xs" style={{ color: MUTED }}>No unavailable periods added.</p>
+      )}
+
+      <div className="space-y-2">
+        {rm.unavailablePeriods.map(p => {
+          const days = p.startDate && p.endDate
+            ? Math.max(0, Math.round((new Date(p.endDate).getTime() - new Date(p.startDate).getTime()) / (24 * 60 * 60 * 1000)))
+            : 0;
+          return (
+            <div key={p.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+              style={{ background: `${ROSE}15`, border: `1px solid ${ROSE}44` }}>
+              <div>
+                <span className="text-sm font-medium" style={{ color: CHARCOAL }}>{p.label}</span>
+                <span className="text-xs ml-2" style={{ color: MUTED }}>
+                  {p.startDate ? format(parseISO(p.startDate), "MMM d") : ""} → {p.endDate ? format(parseISO(p.endDate), "MMM d") : ""} · {days} day{days !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <button onClick={() => persist({ ...rm, unavailablePeriods: rm.unavailablePeriods.filter(x => x.id !== p.id) })}
+                className="p-1 rounded-lg" style={{ color: "#C0392B" }}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Variable Intensity Weeks Manager ─── */
+function VariableWeeksManager({ rm, persist }: { rm: Roadmap; persist: (next: Roadmap) => void }) {
+  const [show,          setShow]          = useState(false);
+  const [label,         setLabel]         = useState("");
+  const [startDate,     setStartDate]     = useState("");
+  const [endDate,       setEndDate]       = useState("");
+  const [useMultiplier, setUseMultiplier] = useState(true);
+  const [multiplier,    setMultiplier]    = useState(2);
+  const [customHours,   setCustomHours]   = useState(4);
+
+  function add() {
+    if (!label || !startDate || !endDate) return;
+    if (new Date(endDate) <= new Date(startDate)) return;
+    const newVW: VariableWeek = {
+      id: `${Date.now()}`, label, startDate, endDate,
+      ...(useMultiplier ? { multiplier } : { customHours }),
+    };
+    persist({ ...rm, variableWeeks: [...(rm.variableWeeks ?? []), newVW] });
+    setLabel(""); setStartDate(""); setEndDate("");
+    setShow(false);
+  }
+
+  return (
+    <div className="rounded-2xl p-5 space-y-3" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4" style={{ color: GOLD }} />
+          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>Variable Intensity Periods</h3>
+        </div>
+        {!show && (
+          <button onClick={() => setShow(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
+            style={{ background: `${GOLD}22`, color: DARK }}>
+            <Plus className="w-3 h-3" /> Add
+          </button>
+        )}
+      </div>
+      <p className="text-xs" style={{ color: MUTED }}>
+        Add periods when you can study more or less than usual — e.g. a holiday with double hours, or exam week with half hours.
+      </p>
+
+      {show && (
+        <div className="rounded-xl p-4 space-y-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+          <div>
+            <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Label</label>
+            <input value={label} onChange={e => setLabel(e.target.value)}
+              placeholder="e.g. Summer holiday, Exam prep week…"
+              className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+              style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Start date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>End date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                min={startDate}
+                className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+            </div>
+          </div>
+          {startDate && endDate && new Date(endDate) <= new Date(startDate) && (
+            <p className="text-xs" style={{ color: "#C0392B" }}>End date must be after start date.</p>
+          )}
+
+          {/* Toggle multiplier vs custom hours */}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setUseMultiplier(true)}
+              className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
+              style={useMultiplier ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
+              Multiplier (e.g. 2×)
+            </button>
+            <button type="button" onClick={() => setUseMultiplier(false)}
+              className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
+              style={!useMultiplier ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
+              Custom hrs/day
+            </button>
+          </div>
+
+          {useMultiplier ? (
+            <div>
+              <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>
+                Multiplier: <span style={{ color: GOLD }}>{multiplier}× normal hours</span>
+                <span className="ml-2 text-[10px]" style={{ color: MUTED }}>
+                  (0.5× = half, 1× = same, 2× = double)
+                </span>
+              </label>
+              <input type="range" min={0.1} max={4} step={0.1} value={multiplier}
+                onChange={e => setMultiplier(parseFloat(e.target.value))}
+                className="w-full accent-amber-600" />
+              <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}>
+                <span>0.1× (very little)</span><span>4× (intensive)</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>
+                Custom hours per day: <span style={{ color: GOLD }}>{customHours} hrs/day</span>
+              </label>
+              <input type="range" min={0.5} max={16} step={0.5} value={customHours}
+                onChange={e => setCustomHours(parseFloat(e.target.value))}
+                className="w-full accent-amber-600" />
+              <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}>
+                <span>0.5 hrs</span><span>16 hrs</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button onClick={add}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
+              <Save className="w-3 h-3" /> Add Period
+            </button>
+            <button onClick={() => setShow(false)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: BORDER, color: MUTED }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {(rm.variableWeeks ?? []).length === 0 && !show && (
+        <p className="text-xs" style={{ color: MUTED }}>No variable intensity periods added.</p>
+      )}
+
+      <div className="space-y-2">
+        {(rm.variableWeeks ?? []).map(vw => {
+          const days = vw.startDate && vw.endDate
+            ? Math.max(0, Math.round((new Date(vw.endDate).getTime() - new Date(vw.startDate).getTime()) / (24 * 60 * 60 * 1000)))
+            : 0;
+          const isMore = (vw.multiplier !== undefined && vw.multiplier > 1) || (vw.customHours !== undefined);
+          return (
+            <div key={vw.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+              style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}33` }}>
+              <div>
+                <span className="text-sm font-medium" style={{ color: CHARCOAL }}>
+                  {isMore ? "⚡" : "🐌"} {vw.label}
+                </span>
+                <span className="text-xs ml-2" style={{ color: MUTED }}>
+                  {vw.startDate ? format(parseISO(vw.startDate), "MMM d") : ""} → {vw.endDate ? format(parseISO(vw.endDate), "MMM d") : ""} · {days} day{days !== 1 ? "s" : ""} ·
+                  {vw.customHours !== undefined ? ` ${vw.customHours} hrs/day` : ` ${vw.multiplier}×`}
+                </span>
+              </div>
+              <button onClick={() => persist({ ...rm, variableWeeks: (rm.variableWeeks ?? []).filter(x => x.id !== vw.id) })}
+                className="p-1 rounded-lg" style={{ color: "#C0392B" }}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Live Schedule Tab ─────────────────── */
+function LiveScheduleTab({ examType, startDate, syllabusProgress, userId, onSave, unavailablePeriods, variableWeeks, rm, persist }: {
+  examType: string; startDate: string; syllabusProgress: SyllabusProgress;
+  userId: string; onSave: (schedule: SmartSchedule) => void;
+  unavailablePeriods: UnavailablePeriod[];
+  variableWeeks: VariableWeek[];
+  rm: Roadmap;
+  persist: (next: Roadmap) => void;
+}) {
+  const saved = loadScheduleInputs(userId);
+  const [hoursPerDay,     setHoursPerDay]     = useState(saved.hoursPerDay);
+  const [daysPerWeek,     setDaysPerWeek]      = useState(saved.daysPerWeek);
+  const [targetMonths,    setTargetMonths]     = useState(saved.targetMonths);
+  const [revisionPercent, setRevisionPercent]  = useState(saved.revisionPercent);
+  const [filter,          setFilter]           = useState<WeekType | "all">("all");
+  const [expanded,        setExpanded]         = useState<Record<string, boolean>>({});
+  const [showSpeedPanel,  setShowSpeedPanel]   = useState(false);
+  const [showBasePanel,   setShowBasePanel]    = useState(false);
+
+  /* Live loads — always fresh */
+  const topicSpeed       = loadTopicSpeed(userId);
+  const baseWeeksOverride = loadBaseWeeks(userId);
+  const practiceProgress  = loadPracticeProgress(userId);
+
+  const hoursPerWeek  = hoursPerDay * daysPerWeek;
+  const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
+  const skipped       = Object.values(syllabusPercs).filter(p => p === 100).length;
+  const allSubjects   = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+
+  /* Live schedule — always recalculated with ALL factors */
+  const schedule = generateSmartSchedule(
+    examType, hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
+    startDate, syllabusProgress,
+    rm.unavailablePeriods, rm.variableWeeks ?? [],
+    topicSpeed, baseWeeksOverride, practiceProgress
+  );
+
+  /* Save inputs + notify parent whenever anything changes */
+  function update(patch: Partial<{ hoursPerDay: number; daysPerWeek: number; targetMonths: number; revisionPercent: number }>) {
+    const next = { hoursPerDay, daysPerWeek, targetMonths, revisionPercent, ...patch };
+    if (patch.hoursPerDay     !== undefined) setHoursPerDay(patch.hoursPerDay);
+    if (patch.daysPerWeek     !== undefined) setDaysPerWeek(patch.daysPerWeek);
+    if (patch.targetMonths    !== undefined) setTargetMonths(patch.targetMonths);
+    if (patch.revisionPercent !== undefined) setRevisionPercent(patch.revisionPercent);
+    saveScheduleInputs(userId, next);
+    onSave(generateSmartSchedule(examType, next.hoursPerDay, next.daysPerWeek, next.targetMonths, next.revisionPercent,
+      startDate, syllabusProgress, rm.unavailablePeriods, rm.variableWeeks ?? [],
+      topicSpeed, baseWeeksOverride, practiceProgress));
+  }
+
+  function updateSpeed(subjectId: string, key: TopicSpeedKey) {
+    const next = { ...topicSpeed, [subjectId]: key };
+    saveTopicSpeed(userId, next);
+    onSave(generateSmartSchedule(examType, hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
+      startDate, syllabusProgress, rm.unavailablePeriods, rm.variableWeeks ?? [],
+      next, baseWeeksOverride, practiceProgress));
+  }
+
+  function updateBaseWeeks(subjectId: string, weeks: number) {
+    const next = { ...baseWeeksOverride, [subjectId]: Math.max(0.5, weeks) };
+    saveBaseWeeks(userId, next);
+    onSave(generateSmartSchedule(examType, hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
+      startDate, syllabusProgress, rm.unavailablePeriods, rm.variableWeeks ?? [],
+      topicSpeed, next, practiceProgress));
+  }
+
+  const filtered = filter === "all" ? schedule.weeks : schedule.weeks.filter(w => w.type === filter);
+  const subjects = [...new Set(schedule.weeks.map(w => w.subject))];
+
+  return (
+    <div className="space-y-6">
+
+      {/* Unavailable + Variable periods — live in schedule tab */}
+      <UnavailablePeriodsManager rm={rm} persist={persist} />
+      <VariableWeeksManager rm={rm} persist={persist} />
+
+      {/* Topic Learning Speed */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <button onClick={() => setShowSpeedPanel(!showSpeedPanel)}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left"
+          style={{ background: showSpeedPanel ? `${GOLD}08` : CARD }}>
+          <Brain className="w-4 h-4" style={{ color: GOLD }} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>Topic Learning Speed</p>
+            <p className="text-xs mt-0.5" style={{ color: MUTED }}>Set your pace per subject — adjusts study weeks automatically</p>
+          </div>
+          {showSpeedPanel ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
+        </button>
+        {showSpeedPanel && (
+          <div className="px-5 pb-5 space-y-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+            <div className="grid grid-cols-2 gap-3 pt-4">
+              {[
+                { key: "first", label: "First Time Learner", options: [
+                  { k: "first_slow" as TopicSpeedKey,   e: "🐢", l: "Slow ×1.3"   },
+                  { k: "first_normal" as TopicSpeedKey, e: "🚶", l: "Normal ×1.0" },
+                  { k: "first_fast" as TopicSpeedKey,   e: "⚡", l: "Fast ×0.8"   },
+                ]},
+                { key: "second", label: "Second Time Learner", options: [
+                  { k: "second_slow" as TopicSpeedKey,   e: "🐢", l: "Slow ×1.0"  },
+                  { k: "second_normal" as TopicSpeedKey, e: "🚶", l: "Normal ×1.5" },
+                  { k: "second_fast" as TopicSpeedKey,   e: "⚡", l: "Fast ×2.0"   },
+                ]},
+              ].map(group => (
+                <div key={group.key} className="rounded-xl p-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>{group.label}</p>
+                  <div className="flex gap-1">
+                    {group.options.map(opt => (
+                      <span key={opt.k} className="text-[10px] px-2 py-1 rounded-lg font-semibold"
+                        style={{ background: `${GOLD}22`, color: DARK }}>
+                        {opt.e} {opt.l}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              {allSubjects.map(s => {
+                const current = (topicSpeed[s.id] ?? "first_normal") as TopicSpeedKey;
+                const cfg     = SPEED_CFG[current];
+                const baseW   = baseWeeksOverride[s.id] ?? s.studyWeeks;
+                const mult    = SPEED_MULTIPLIERS[current];
+                const effectW = Math.ceil(baseW * mult);
+                return (
+                  <div key={s.id} className="rounded-xl p-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold flex-1" style={{ color: CHARCOAL }}>{s.name}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: `${cfg.color}22`, color: cfg.color }}>
+                        {cfg.emoji} {cfg.label} → {effectW} wks
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(["first_slow","first_normal","first_fast","second_slow","second_normal","second_fast"] as TopicSpeedKey[]).map(key => (
+                        <button key={key} type="button"
+                          onClick={() => updateSpeed(s.id, key)}
+                          className="text-[10px] px-2 py-1 rounded-lg font-semibold transition-all"
+                          style={current === key
+                            ? { background: SPEED_CFG[key].color, color: "#fff" }
+                            : { background: `${BORDER}88`, color: MUTED }}>
+                          {SPEED_CFG[key].emoji} {SPEED_CFG[key].label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Base Timeline (editable) */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <button onClick={() => setShowBasePanel(!showBasePanel)}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left"
+          style={{ background: showBasePanel ? `${GOLD}08` : CARD }}>
+          <Edit3 className="w-4 h-4" style={{ color: GOLD }} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>Base Timeline Per Subject</p>
+            <p className="text-xs mt-0.5" style={{ color: MUTED }}>Override default study weeks — speed multiplier applies on top</p>
+          </div>
+          {showBasePanel ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
+        </button>
+        {showBasePanel && (
+          <div className="px-5 pb-5 space-y-3 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+            <p className="text-xs" style={{ color: MUTED }}>
+              Defaults are based on typical IIT JAM / CSIR NET timelines. Increase if a subject needs more depth, decrease if you know it well.
+            </p>
+            {allSubjects.map(s => {
+              const base = baseWeeksOverride[s.id] ?? s.studyWeeks;
+              return (
+                <div key={s.id} className="flex items-center gap-4 px-4 py-3 rounded-xl"
+                  style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                  <span className="flex-1 text-sm font-semibold" style={{ color: CHARCOAL }}>{s.name}</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button"
+                      onClick={() => updateBaseWeeks(s.id, base - 0.5)}
+                      className="w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center"
+                      style={{ background: `${BORDER}`, color: CHARCOAL }}>−</button>
+                    <span className="text-sm font-bold w-16 text-center font-serif" style={{ color: DARK }}>
+                      {base} wk{base !== 1 ? "s" : ""}
+                    </span>
+                    <button type="button"
+                      onClick={() => updateBaseWeeks(s.id, base + 0.5)}
+                      className="w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center"
+                      style={{ background: `${GOLD}22`, color: DARK }}>+</button>
+                    {baseWeeksOverride[s.id] !== undefined && baseWeeksOverride[s.id] !== s.studyWeeks && (
+                      <button type="button"
+                        onClick={() => updateBaseWeeks(s.id, s.studyWeeks)}
+                        className="text-[10px] px-1.5 py-0.5 rounded-lg"
+                        style={{ background: `${BORDER}`, color: MUTED }}>reset</button>
+                    )}
+                  </div>
+                  {baseWeeksOverride[s.id] !== undefined && baseWeeksOverride[s.id] !== s.studyWeeks && (
+                    <span className="text-[10px]" style={{ color: MUTED }}>default: {s.studyWeeks}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* QP Integration indicator */}
+      {Object.keys(practiceProgress).length > 0 && (
+        <div className="rounded-2xl px-5 py-4" style={{ background: `${OLIVE}10`, border: `1px solid ${OLIVE}33` }}>
+          <p className="text-xs font-semibold" style={{ color: OLIVE }}>
+            📊 Question Practice data is active — revision weeks are adjusted based on your accuracy and concept strength.
+          </p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>
+            Weak concepts (+1 week) · Low accuracy &lt;50% (+1 week) · Strong &gt;85% (−0.5 weeks) · Weighted 60% latest / 40% history
+          </p>
+        </div>
+      )}
+
+      {/* Inputs */}
+      <div className="rounded-2xl p-6 space-y-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Calendar className="w-5 h-5" style={{ color: GOLD }} />
+          <h3 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>Study Schedule Planner</h3>
+          <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: `${OLIVE}22`, color: OLIVE }}>⚡ Auto-updates with syllabus</span>
+        </div>
+        <p className="text-xs" style={{ color: MUTED }}>
+          Set your availability once. Schedule auto-recalculates whenever your syllabus progress changes or you adjust these inputs.
+        </p>
+
+        {skipped > 0 && (
+          <div className="rounded-xl px-4 py-3" style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}>
+            <p className="text-xs font-semibold" style={{ color: OLIVE }}>
+              ✅ {skipped} subject(s) 100% complete in syllabus — automatically skipped from schedule.
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Study hours per day: <span style={{ color: GOLD }}>{hoursPerDay} hrs</span>
+            </label>
+            <input type="range" min={0.5} max={12} step={0.5} value={hoursPerDay}
+              onChange={e => update({ hoursPerDay: parseFloat(e.target.value) })} className="w-full accent-amber-600" />
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}><span>0.5 hrs</span><span>12 hrs</span></div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Study days per week: <span style={{ color: GOLD }}>{daysPerWeek} days</span>
+            </label>
+            <input type="range" min={1} max={7} step={1} value={daysPerWeek}
+              onChange={e => update({ daysPerWeek: parseInt(e.target.value) })} className="w-full accent-amber-600" />
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}><span>1 day</span><span>7 days</span></div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Target completion: <span style={{ color: GOLD }}>{targetMonths} months</span>
+            </label>
+            <input type="range" min={1} max={36} step={1} value={targetMonths}
+              onChange={e => update({ targetMonths: parseInt(e.target.value) })} className="w-full accent-amber-600" />
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}><span>1 month</span><span>36 months</span></div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Revision intensity: <span style={{ color: GOLD }}>{revisionPercent}% of study time</span>
+            </label>
+            <input type="range" min={25} max={100} step={5} value={revisionPercent}
+              onChange={e => update({ revisionPercent: parseInt(e.target.value) })} className="w-full accent-amber-600" />
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}><span>25% (min)</span><span>100% (intensive)</span></div>
+          </div>
+        </div>
+
+        <div className="rounded-xl p-4" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: CHARCOAL }}>Your availability:</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Per Week",  value: `${hoursPerWeek} hrs`                         },
+              { label: "Per Month", value: `${hoursPerWeek * 4} hrs`                     },
+              { label: "In Target", value: `${hoursPerWeek * targetMonths * 4} hrs total` },
+            ].map(({ label, value }) => (
+              <div key={label} className="text-center">
+                <div className="text-sm font-bold font-serif" style={{ color: DARK }}>{value}</div>
+                <div className="text-[10px]" style={{ color: MUTED }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Completion forecast — always live */}
+      <CompletionForecast schedule={schedule} />
+
+      {/* Variable Weeks panel */}
+      <VariableWeeksPanel
+        variableWeeks={variableWeeks}
+        unavailablePeriods={unavailablePeriods}
+        baseHoursPerDay={hoursPerDay}
+        daysPerWeek={daysPerWeek}
+      />
+
+      {/* Filter pills */}
+      <div className="flex gap-2 flex-wrap">
+        {(["all", "study", "assignment", "revision"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+            style={filter === f ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
+            {f === "all" ? "All weeks" : WEEK_TYPE_CFG[f].label}
+          </button>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div className="flex gap-3 flex-wrap">
+        {(Object.entries(WEEK_TYPE_CFG) as [WeekType, typeof WEEK_TYPE_CFG[WeekType]][]).map(([type, cfg]) => (
+          <div key={type} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: cfg.color }} />
+            <span className="text-[11px]" style={{ color: MUTED }}>{cfg.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Week-by-week */}
+      {subjects.map(subject => {
+        const subjectWeeks = filtered.filter(w => w.subject === subject);
+        if (subjectWeeks.length === 0) return null;
+        const allWeeks   = schedule.weeks.filter(w => w.subject === subject);
+        const isExpanded = expanded[subject] ?? false;
+        return (
+          <div key={subject} className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+            <button onClick={() => setExpanded(p => ({ ...p, [subject]: !p[subject] }))}
+              className="w-full flex items-center gap-3 px-5 py-4 text-left"
+              style={{ background: isExpanded ? `${GOLD}08` : CARD }}>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm" style={{ color: CHARCOAL }}>{subject}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${GOLD}22`, color: DARK }}>{allWeeks.length} week(s)</span>
+                </div>
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  {(["study", "assignment", "revision"] as WeekType[]).map(t => {
+                    const count = allWeeks.filter(w => w.type === t).length;
+                    if (count === 0) return null;
+                    const cfg = WEEK_TYPE_CFG[t];
+                    return <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: cfg.bg, color: cfg.color }}>{count} {cfg.label}</span>;
+                  })}
+                </div>
+              </div>
+              {isExpanded ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
+            </button>
+            {isExpanded && (
+              <div className="divide-y" style={{ borderTop: `1px solid ${BORDER}` }}>
+                {subjectWeeks.map(week => {
+                  const cfg  = WEEK_TYPE_CFG[week.type];
+                  const Icon = cfg.icon;
+                  return (
+                    <div key={week.weekNumber} className="flex items-start gap-3 px-5 py-3" style={{ background: cfg.bg }}>
+                      <div className="flex-shrink-0 w-16 text-center">
+                        <div className="text-[10px] font-bold" style={{ color: cfg.color }}>Week {week.weekNumber}</div>
+                        <div className="text-[10px]" style={{ color: MUTED }}>{week.startDate}</div>
+                      </div>
+                      <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: cfg.color }} />
+                      <div className="flex-1">
+                        <p className="text-sm" style={{ color: CHARCOAL }}>{week.focus}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: MUTED }}>~{week.hoursAvailable} hrs available</p>
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{ background: `${cfg.color}22`, color: cfg.color }}>{cfg.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {schedule.weeks.length === 0 && (
+        <div className="text-center py-12 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+          <CheckCircle2 className="w-10 h-10 mx-auto mb-3" style={{ color: OLIVE }} />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>All subjects complete! 🎉</p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>Your syllabus tracker shows everything is done.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Roadmap Selector ─────────────────── */
+function RoadmapSelector({ examType, onSelect }: { examType: string; onSelect: (type: RoadmapType, months: number) => void }) {
+  const [selected, setSelected] = useState<RoadmapType | null>(null);
+  const [months,   setMonths]   = useState(12);
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div>
+        <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>My Roadmap</h1>
+        <p className="mt-1 text-sm" style={{ color: MUTED }}>
+          Set up your {examType === "JAM" ? "IIT JAM" : "CSIR NET / GATE"} preparation roadmap.
+        </p>
+      </div>
+      <div className="rounded-2xl p-6" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <h2 className="font-serif text-lg font-semibold mb-1" style={{ color: CHARCOAL }}>What is your current academic stage?</h2>
+        <p className="text-xs mb-5" style={{ color: MUTED }}>This sets your default preparation timeline. You can edit it anytime.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+          {(Object.entries(ROADMAP_TYPES) as [RoadmapType, typeof ROADMAP_TYPES[RoadmapType]][]).map(([key, cfg]) => {
+            const isSelected = selected === key;
+            return (
+              <button key={key} type="button" onClick={() => { setSelected(key); setMonths(cfg.defaultMonths); }}
+                className="flex items-start gap-3 p-4 rounded-xl text-left transition-all duration-150 hover:scale-[1.01]"
+                style={{ background: isSelected ? `${GOLD}15` : CREAM, border: `2px solid ${isSelected ? GOLD : BORDER}`, boxShadow: isSelected ? `0 4px 16px ${GOLD}30` : "none" }}>
+                <span className="text-2xl flex-shrink-0">{cfg.emoji}</span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: isSelected ? DARK : CHARCOAL }}>{cfg.label}</p>
+                  <p className="text-xs mt-0.5" style={{ color: MUTED }}>{cfg.description}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {selected && (
+          <div className="space-y-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+            <div>
+              <label className="text-sm font-semibold block mb-2" style={{ color: CHARCOAL }}>
+                Total preparation time: <span style={{ color: GOLD }}>{months} months</span>
+              </label>
+              <div className="flex items-center gap-4">
+                <input type="range" min={1} max={36} value={months}
+                  onChange={e => setMonths(parseInt(e.target.value))} className="flex-1 accent-amber-600" />
+                <div className="px-4 py-2 rounded-xl flex items-center gap-1 min-w-[80px] justify-center"
+                  style={{ background: `${GOLD}22`, border: `1px solid ${GOLD}44` }}>
+                  <span className="text-lg font-bold font-serif" style={{ color: DARK }}>{months}</span>
+                  <span className="text-xs" style={{ color: MUTED }}>mo</span>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => onSelect(selected, months)}
+              className="w-full h-12 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
+              style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff", boxShadow: "0 4px 16px rgba(201,169,110,.35)" }}>
+              Create My Roadmap →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Roadmap View ────────────────── */
+function RoadmapView({ roadmap, userId, onReset }: { roadmap: Roadmap; userId: string; onReset: () => void }) {
+  const [rm,          setRm]          = useState(roadmap);
+  const [editMonths,  setEditMonths]  = useState(false);
+  const [newMonths,   setNewMonths]   = useState(rm.totalMonths);
+
+  const [expandPhase, setExpandPhase] = useState<Record<string, boolean>>({});
+  const [saved,       setSaved]       = useState(false);
+  const [activeTab,   setActiveTab]   = useState<"overview" | "progress" | "schedule">("overview");
+
+  const syllabusProgress = loadSyllabusProgress(userId);
+  const examType         = rm.examType;
+  const calc             = runAIEngine(rm);
+  const statusCfg        = STATUS_CFG[calc.status];
+  const StatusIcon       = statusCfg.icon;
+
+  function persist(next: Roadmap) {
+    const updated = { ...next, lastUpdated: new Date().toISOString() };
+    setRm(updated);
+    saveRoadmap(userId, updated);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  function applyNewMonths() {
+    const newPhases = generatePhases(rm.examType, newMonths);
+    const merged    = newPhases.map((p, i) => ({ ...p, status: rm.phases[i]?.status ?? "not_started" }));
+    persist({ ...rm, totalMonths: newMonths, phases: merged });
+    setEditMonths(false);
+  }
+
+
+
+  function saveSchedule(schedule: SmartSchedule) {
+    persist({ ...rm, smartSchedule: schedule });
+    setActiveTab("schedule");
+  }
+
+  function updatePhaseStatus(phaseId: string, status: PhaseStatus) {
+    persist({ ...rm, phases: rm.phases.map(p => p.id === phaseId ? { ...p, status } : p) });
+  }
+
+  const examLabel = rm.examType === "JAM" ? "IIT JAM" : "CSIR NET / GATE";
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>My Roadmap</h1>
+          <p className="mt-1 text-sm" style={{ color: MUTED }}>
+            {ROADMAP_TYPES[rm.type].emoji} {ROADMAP_TYPES[rm.type].label} · {examLabel} · {rm.totalMonths} months
+          </p>
+        </div>
+        <button onClick={onReset}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+          style={{ background: BORDER, color: MUTED }}>
+          <RotateCcw className="w-3 h-3" /> Change type
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {(["overview", "progress", "schedule"] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className="px-5 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={activeTab === tab ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
+            {tab === "overview" ? "📋 Overview" : tab === "progress" ? "📊 My Progress" : "📅 Schedule"}
+          </button>
+        ))}
+      </div>
+
+      {/* OVERVIEW TAB */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          <div className="rounded-2xl p-5" style={{ background: statusCfg.bg, border: `1.5px solid ${statusCfg.color}44` }}>
+            <div className="flex items-start gap-3 mb-4">
+              <StatusIcon className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: statusCfg.color }} />
+              <div className="flex-1">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mb-1"
+                  style={{ background: `${statusCfg.color}22`, color: statusCfg.color }}>{statusCfg.label}</span>
+                <p className="text-sm font-semibold" style={{ color: CHARCOAL }}>{calc.statusMessage}</p>
+                <p className="text-xs mt-1" style={{ color: MUTED }}>{calc.recommendation}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: "Completed",     value: `${calc.completedPercent}%`,         color: OLIVE },
+                { label: "Est. Finish",   value: calc.estimatedEndDate,               color: DARK  },
+                { label: "Weekly Target", value: `${calc.weeklyTargetPercent}% / wk`, color: GOLD  },
+                { label: "Paused",        value: `${calc.unavailableWeeks} wk(s)`,    color: MUTED },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.7)" }}>
+                  <div className="text-sm font-bold font-serif" style={{ color }}>{value}</div>
+                  <div className="text-[10px] mt-0.5" style={{ color: MUTED }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4">
+              <div className="flex justify-between text-xs mb-1" style={{ color: MUTED }}>
+                <span>Overall Progress</span><span>{calc.completedPercent}%</span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${calc.completedPercent}%`,
+                    background: calc.status === "critical" ? "#C0392B" : calc.status === "behind" ? "#B8860B" : calc.status === "ahead" ? "#2D7A2D" : OLIVE }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" style={{ color: GOLD }} />
+                <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>Timeline</h3>
+              </div>
+              {!editMonths && (
+                <button onClick={() => { setNewMonths(rm.totalMonths); setEditMonths(true); }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
+                  style={{ background: `${GOLD}22`, color: DARK }}>
+                  <Edit3 className="w-3 h-3" /> Edit
+                </button>
+              )}
+            </div>
+            {editMonths ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <input type="range" min={1} max={36} value={newMonths}
+                    onChange={e => setNewMonths(parseInt(e.target.value))} className="flex-1 accent-amber-600" />
+                  <div className="px-4 py-2 rounded-xl flex items-center gap-1"
+                    style={{ background: `${GOLD}22`, border: `1px solid ${GOLD}44` }}>
+                    <span className="text-lg font-bold font-serif" style={{ color: DARK }}>{newMonths}</span>
+                    <span className="text-xs" style={{ color: MUTED }}>months</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={applyNewMonths}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+                    style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
+                    <Save className="w-3 h-3" /> Apply & Recalculate
+                  </button>
+                  <button onClick={() => setEditMonths(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold"
+                    style={{ background: BORDER, color: MUTED }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-4 text-sm" style={{ color: CHARCOAL }}>
+                <span>Started: <strong>{format(parseISO(rm.startDate), "MMM d, yyyy")}</strong></span>
+                <span style={{ color: BORDER }}>·</span>
+                <span>Duration: <strong>{rm.totalMonths} months</strong></span>
+                <span style={{ color: BORDER }}>·</span>
+                <span>Est. End: <strong>{calc.estimatedEndDate}</strong></span>
+              </div>
+            )}
+          </div>
+
+          {/* Phases */}
+          <div>
+            <h2 className="font-serif text-lg font-semibold mb-3" style={{ color: CHARCOAL }}>Preparation Phases</h2>
+            <div className="space-y-3">
+              {calc.adjustedPhases.map((phase, idx) => {
+                const isOpen     = expandPhase[phase.id] ?? false;
+                const weekStart  = calc.adjustedPhases.slice(0, idx).reduce((s, p) => s + p.durationWeeks, 0);
+                const phaseStart = addWeeks(parseISO(rm.startDate), weekStart);
+                const phaseEnd   = addWeeks(phaseStart, phase.durationWeeks);
+
+                return (
+                  <div key={phase.id} className="rounded-2xl overflow-hidden"
+                    style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+                    <div className="flex items-center gap-3 px-5 py-4">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                        style={{ background: phase.status === "done" ? `${OLIVE}22` : `${GOLD}22`, color: phase.status === "done" ? OLIVE : DARK }}>
+                        {idx + 1}
+                      </div>
+                      <button onClick={() => setExpandPhase(p => ({ ...p, [phase.id]: !p[phase.id] }))} className="flex-1 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold" style={{ color: CHARCOAL }}>{phase.title}</span>
+                          {isOpen ? <ChevronDown className="w-3.5 h-3.5" style={{ color: MUTED }} />
+                                  : <ChevronRight className="w-3.5 h-3.5" style={{ color: MUTED }} />}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                          <span className="text-xs" style={{ color: MUTED }}>
+                            {phase.durationWeeks} weeks · {format(phaseStart, "MMM d")} → {format(phaseEnd, "MMM d")}
+                          </span>
+                          {(phase as any).marks && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                              style={{ background: `${GOLD}15`, color: DARK }}>{(phase as any).marks}</span>
+                          )}
+                        </div>
+                      </button>
+                      <div className="flex gap-1 flex-shrink-0">
+                        {(["not_started", "in_progress", "done"] as PhaseStatus[]).map(s => {
+                          const cfg    = PHASE_STATUS[s];
+                          const active = phase.status === s;
+                          return (
+                            <button key={s} onClick={() => updatePhaseStatus(phase.id, s)}
+                              className="w-8 h-8 rounded-lg text-xs font-bold transition-all"
+                              style={active ? { background: cfg.color === MUTED ? DARK : cfg.color, color: "#fff" }
+                                           : { background: `${BORDER}88`, color: MUTED }}>
+                              {cfg.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {isOpen && (
+                      <div className="px-5 pb-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+                        <p className="text-xs mt-3 mb-3" style={{ color: MUTED }}>{phase.description}</p>
+                        <div className="space-y-2">
+                          {phase.topics.map((t, ti) => (
+                            <div key={ti} className="flex items-start gap-2 px-3 py-2 rounded-xl"
+                              style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: GOLD }} />
+                              <span className="text-xs leading-relaxed" style={{ color: CHARCOAL }}>{t}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MY PROGRESS TAB */}
+      {activeTab === "progress" && (
+        <MyProgressTab userId={userId} examType={examType} />
+      )}
+
+      {/* SCHEDULE TAB — live, auto-updates */}
+      {activeTab === "schedule" && (
+        <LiveScheduleTab
+          examType={rm.examType}
+          startDate={rm.startDate}
+          syllabusProgress={syllabusProgress}
+          userId={userId}
+          onSave={saveSchedule}
+          unavailablePeriods={rm.unavailablePeriods}
+          variableWeeks={rm.variableWeeks ?? []}
+          rm={rm}
+          persist={persist}
+        />
+      )}
+
+      {saved && (
+        <div className="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg z-50"
+          style={{ background: OLIVE, color: "#fff" }}>
+          ✓ Roadmap saved
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Component ───────────────────── */
+export default function Roadmap() {
+  const { user }  = useAuth();
+  const userId    = String(user?.id ?? "guest");
+  const examType  = (user as any)?.exam_type as string | null ?? "JAM";
+  const space     = (user as any)?.space as string | null;
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(() => loadRoadmap(userId));
+
+  function handleSelect(type: RoadmapType, months: number) {
+    const phases = generatePhases(examType ?? "JAM", months);
+    const rm: Roadmap = {
+      type, examType: examType ?? "JAM", totalMonths: months,
+      startDate:   new Date().toISOString().split("T")[0],
+      phases,      unavailablePeriods: [],
+      createdAt:   new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+    };
+    setRoadmap(rm);
+    saveRoadmap(userId, rm);
+  }
+
+  function handleReset() {
+    if (!confirm("Reset your roadmap? Progress will be lost.")) return;
+    localStorage.removeItem(lsKey(userId));
+    setRoadmap(null);
+  }
+
+  if (space === "heartspace") {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>Roadmap</h1>
+        <div className="text-center py-20 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+          <Map className="w-10 h-10 mx-auto mb-3 opacity-30" style={{ color: GOLD }} />
+          <p className="text-sm font-medium" style={{ color: CHARCOAL }}>Roadmap not available for HeartSpace</p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>This feature is for academic preparation students.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roadmap) return <RoadmapSelector examType={examType ?? "JAM"} onSelect={handleSelect} />;
+  return <RoadmapView roadmap={roadmap} userId={userId} onReset={handleReset} />;
 }
