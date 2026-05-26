@@ -2816,6 +2816,7 @@ function LiveScheduleTab({
         practiceProgress,
         newOrder,
         parallelCfg,
+        simSlots,
       ),
     );
   }
@@ -2908,6 +2909,7 @@ function LiveScheduleTab({
         practiceProgress,
         subjectOrder,
         parallelCfg,
+        simSlots,
       ),
     );
   }
@@ -2931,6 +2933,7 @@ function LiveScheduleTab({
         practiceProgress,
         subjectOrder,
         parallelCfg,
+        simSlots,
       ),
     );
   }
