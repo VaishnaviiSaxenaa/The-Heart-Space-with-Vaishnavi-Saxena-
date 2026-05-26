@@ -905,37 +905,44 @@ function generateSmartSchedule(
     }
   });
 
-  /* Walk calendar filling tasks using ACTUAL effective hours (variable intensity compresses!) */
+  /* Walk calendar — one week can complete MULTIPLE tasks if hours allow (variable intensity truly compresses!) */
   const weeks: ScheduleWeek[] = [];
   let calOffset2 = 0;
   let tIdx = 0;
   let tHoursLeft = tasks.length > 0 ? tasks[0].hoursNeeded : 0;
   while (tIdx < tasks.length && calOffset2 < 300) {
     const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
-    if (eff2.isUnavailable || eff2.hours <= 0.5) {
-      calOffset2++;
-      continue;
+    if (eff2.isUnavailable || eff2.hours <= 0.5) { calOffset2++; continue; }
+    let hoursLeftThisWeek = eff2.hours;
+    const focusParts: string[] = [];
+    const weekType: "study"|"assignment"|"revision" = tasks[tIdx]?.type ?? "study";
+    const weekSubject = tasks[tIdx]?.name ?? "";
+    while (tIdx < tasks.length && hoursLeftThisWeek > 0.5) {
+      const task = tasks[tIdx];
+      if (tHoursLeft <= hoursLeftThisWeek) {
+        hoursLeftThisWeek -= tHoursLeft;
+        focusParts.push(task.focus);
+        tIdx++;
+        tHoursLeft = tIdx < tasks.length ? tasks[tIdx].hoursNeeded : 0;
+      } else {
+        tHoursLeft -= hoursLeftThisWeek;
+        focusParts.push(task.focus + " (cont.)");
+        hoursLeftThisWeek = 0;
+      }
     }
-    const task = tasks[tIdx];
-    const suffix =
-      eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
-        ? ` (${eff2.label}: ${Math.round(eff2.hours * 10) / 10} hrs)`
-        : "";
+    const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
+      ? ` — ${eff2.label}: ${Math.round(eff2.hours * 10) / 10} hrs` : "";
     weeks.push({
       weekNumber: weeks.length + 1,
-      subject: task.name,
-      focus: task.focus + suffix,
-      type: task.type,
-      hoursRequired: task.hoursNeeded,
+      subject: weekSubject,
+      focus: focusParts.join(" + ") + vSuffix,
+      type: weekType,
+      hoursRequired: eff2.hours,
       hoursAvailable: eff2.hours,
       startDate: format(addWeeks(start, calOffset2), "MMM d"),
     });
-    tHoursLeft -= eff2.hours;
-    if (tHoursLeft <= 0.5) {
-      tIdx++;
-      tHoursLeft = tIdx < tasks.length ? tasks[tIdx].hoursNeeded : 0;
-    }
     calOffset2++;
+  }
   }
 
   /* Reset calendarOffset for finalWeeks phase (picks up from where task walk left off) */
