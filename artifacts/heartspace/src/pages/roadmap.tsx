@@ -3240,8 +3240,8 @@ function LiveScheduleTab({
             </p>
             <p className="text-xs mt-0.5" style={{ color: MUTED }}>
               {parallelCfg.mode === "sequential"
-                ? "Sequential — one subject at a time"
-                : `Parallel — ${parallelCfg.parallelCount} subject(s) simultaneously`}
+                ? "Sequential — one topic at a time"
+                : `Parallel — ${parallelCfg.parallelCount} topic(s) simultaneously`}
             </p>
           </div>
           {showParallelPanel ? (
@@ -3267,13 +3267,13 @@ function LiveScheduleTab({
                   [
                     {
                       key: "sequential",
-                      label: "📖 One subject at a time",
-                      desc: "Finish each subject before starting next",
+                      label: "📖 One topic at a time",
+                      desc: "Finish each topic before starting the next",
                     },
                     {
                       key: "parallel",
-                      label: "📚 Multiple simultaneously",
-                      desc: "Study 2-3 subjects in parallel",
+                      label: "📚 Multiple topics simultaneously",
+                      desc: "Study 2+ topics in parallel",
                     },
                   ] as const
                 ).map((opt) => (
@@ -3312,7 +3312,7 @@ function LiveScheduleTab({
                     className="text-xs font-semibold mb-2 block"
                     style={{ color: CHARCOAL }}
                   >
-                    How many subjects simultaneously:{" "}
+                    How many topics simultaneously:{" "}
                     <span style={{ color: GOLD }}>
                       {parallelCfg.parallelCount}
                     </span>
@@ -3345,7 +3345,7 @@ function LiveScheduleTab({
                     className="text-xs font-semibold mb-2"
                     style={{ color: CHARCOAL }}
                   >
-                    Hours per day per subject:
+                    Hours per day per topic:
                   </p>
                   <p className="text-xs mb-3" style={{ color: MUTED }}>
                     Your total is {hoursPerDay} hrs/day. Set how much goes to
