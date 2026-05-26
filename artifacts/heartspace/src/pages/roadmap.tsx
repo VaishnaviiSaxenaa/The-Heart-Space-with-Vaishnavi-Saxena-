@@ -4882,6 +4882,8 @@ function RoadmapView({
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
+          rm={rm}
+          persist={persist}
         />
       )}
 
