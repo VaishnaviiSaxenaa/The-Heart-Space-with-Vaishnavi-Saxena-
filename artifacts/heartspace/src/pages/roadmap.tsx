@@ -165,6 +165,53 @@ interface Roadmap {
   lastUpdated: string;
 }
 
+/* ─── Subject order + parallel config ───── */
+function lsOrderKey(uid: string) {
+  return `hs_subject_order_${uid}`;
+}
+function lsParallelKey(uid: string) {
+  return `hs_parallel_${uid}`;
+}
+
+function loadSubjectOrder(uid: string, defaultIds: string[]): string[] {
+  try {
+    const r = localStorage.getItem(lsOrderKey(uid));
+    if (!r) return defaultIds;
+    const saved = JSON.parse(r) as string[];
+    const extra = defaultIds.filter((id) => !saved.includes(id));
+    return [...saved.filter((id: string) => defaultIds.includes(id)), ...extra];
+  } catch {
+    return defaultIds;
+  }
+}
+function saveSubjectOrder(uid: string, ids: string[]) {
+  try {
+    localStorage.setItem(lsOrderKey(uid), JSON.stringify(ids));
+  } catch {}
+}
+
+interface ParallelConfig {
+  mode: "sequential" | "parallel";
+  parallelCount: number;
+  hoursPerSubject: Record<string, number>;
+}
+
+function loadParallelConfig(uid: string): ParallelConfig {
+  try {
+    const r = localStorage.getItem(lsParallelKey(uid));
+    return r
+      ? JSON.parse(r)
+      : { mode: "sequential", parallelCount: 1, hoursPerSubject: {} };
+  } catch {
+    return { mode: "sequential", parallelCount: 1, hoursPerSubject: {} };
+  }
+}
+function saveParallelConfig(uid: string, cfg: ParallelConfig) {
+  try {
+    localStorage.setItem(lsParallelKey(uid), JSON.stringify(cfg));
+  } catch {}
+}
+
 /* ─── Speed + base weeks localStorage ───── */
 function lsSpeedKey(uid: string) {
   return `hs_topic_speed_${uid}`;
@@ -677,8 +724,26 @@ function generateSmartSchedule(
   topicSpeed: TopicSpeedMap = {},
   baseWeeksOverride: BaseWeeksMap = {},
   practiceProgress: ReturnType<typeof loadPracticeProgress> = {},
+  subjectOrder: string[] = [],
+  parallelConfig: ParallelConfig = {
+    mode: "sequential",
+    parallelCount: 1,
+    hoursPerSubject: {},
+  },
 ): SmartSchedule {
-  const allSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const rawSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  /* Apply custom subject order */
+  const allSubjects =
+    subjectOrder.length > 0
+      ? [...rawSubjects].sort((a, b) => {
+          const ai = subjectOrder.indexOf(a.id);
+          const bi = subjectOrder.indexOf(b.id);
+          if (ai === -1 && bi === -1) return 0;
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        })
+      : rawSubjects;
   const weekBreakdown =
     examType === "JAM" ? JAM_WEEK_BREAKDOWN : NET_WEEK_BREAKDOWN;
   const baseHoursPerWeek = hoursPerDay * daysPerWeek;
@@ -789,134 +854,152 @@ function generateSmartSchedule(
     };
   });
 
-  const weeks: ScheduleWeek[] = [];
-  let weekNumber = 1;
-  /* start is already declared above */
-
+  /* ── Hours-based schedule engine ─────────────────────────────────────── */
+  /* Each task = 1 week-block of hours. Variable intensity compresses real calendar. */
+  interface SubjectTask {
+    name: string;
+    id: string;
+    type: "study" | "assignment" | "revision";
+    hoursNeeded: number;
+    focus: string;
+  }
+  const tasks: SubjectTask[] = [];
   subjectsWithAdjusted.forEach((subject) => {
     if (subject.adjustedWeeks === 0) return;
-    const breakdown = weekBreakdown[subject.id] ?? [];
+    const bd = weekBreakdown[subject.id] ?? [];
     const partialLabel =
       subject.syllabusPercent > 0 && subject.syllabusPercent < 100
         ? ` (continuing from ${subject.syllabusPercent}% done)`
         : "";
-
     for (let w = 0; w < subject.adjStudy; w++) {
-      weeks.push({
-        weekNumber,
-        subject: subject.name,
-        focus:
-          (breakdown[w] ?? `${subject.name} — Part ${w + 1}`) +
-          (w === 0 ? partialLabel : ""),
+      tasks.push({
+        name: subject.name,
+        id: subject.id,
         type: "study",
-        hoursRequired: hoursPerWeek,
-        hoursAvailable: hoursPerWeek,
-        startDate: format(addWeeks(start, weekNumber - 1), "MMM d"),
+        hoursNeeded: hoursPerWeek,
+        focus:
+          (bd[w] ?? `${subject.name} — Part ${w + 1}`) +
+          (w === 0 ? partialLabel : ""),
       });
-      weekNumber++;
     }
     if (subject.adjAssign > 0) {
-      weeks.push({
-        weekNumber,
-        subject: subject.name,
-        focus: `${subject.name} — Assignments & Problem Practice`,
+      tasks.push({
+        name: subject.name,
+        id: subject.id,
         type: "assignment",
-        hoursRequired: hoursPerWeek,
-        hoursAvailable: hoursPerWeek,
-        startDate: format(addWeeks(start, weekNumber - 1), "MMM d"),
+        hoursNeeded: hoursPerWeek * subject.adjAssign,
+        focus: `${subject.name} — Assignments & Problem Practice`,
       });
-      weekNumber++;
     }
     for (let r = 0; r < subject.adjRevision; r++) {
-      weeks.push({
-        weekNumber,
-        subject: subject.name,
+      tasks.push({
+        name: subject.name,
+        id: subject.id,
+        type: "revision",
+        hoursNeeded: hoursPerWeek,
         focus:
           r === 0
             ? `${subject.name} — Revision Pass 1 (key theorems, formulas)`
             : `${subject.name} — Revision Pass ${r + 1} (weak areas, problem drill)`,
-        type: "revision",
-        hoursRequired: hoursPerWeek,
-        hoursAvailable: hoursPerWeek,
-        startDate: format(addWeeks(start, weekNumber - 1), "MMM d"),
       });
-      weekNumber++;
     }
   });
 
-  /* Interleave unavailable + variable weeks into the schedule */
-  /* Re-sequence: insert unavailable weeks as "pause" entries, adjust dates */
-  const finalWeeks: ScheduleWeek[] = [];
-  let calendarOffset = 0; /* tracks real calendar weeks from start */
-
-  for (const week of weeks) {
-    /* Skip any unavailable calendar weeks before placing this study week */
-    let placed = false;
-    while (!placed) {
-      const eff = getEffectiveHoursForWeekOffset(calendarOffset);
-      if (eff.isUnavailable) {
-        /* Insert unavailable week into schedule as a pause entry */
-        finalWeeks.push({
-          weekNumber: finalWeeks.length + 1,
-          subject: "Unavailable",
-          focus: `⏸ ${eff.label ?? "Unavailable"} — No study this week`,
-          type: "buffer",
-          hoursRequired: 0,
-          hoursAvailable: 0,
-          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
-        });
-        calendarOffset++;
-      } else {
-        /* Place the study week at this calendar position */
-        finalWeeks.push({
-          ...week,
-          weekNumber: finalWeeks.length + 1,
-          hoursAvailable: eff.hours,
-          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
-          focus:
-            eff.label && eff.hours !== baseHoursPerWeek
-              ? `${week.focus} (${eff.label}: ${eff.hours} hrs this week)`
-              : week.focus,
-        });
-        calendarOffset++;
-        placed = true;
-      }
+  /* Walk calendar filling tasks using ACTUAL effective hours (variable intensity compresses!) */
+  const weeks: ScheduleWeek[] = [];
+  let calOffset2 = 0;
+  let tIdx = 0;
+  let tHoursLeft = tasks.length > 0 ? tasks[0].hoursNeeded : 0;
+  while (tIdx < tasks.length && calOffset2 < 300) {
+    const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
+    if (eff2.isUnavailable || eff2.hours <= 0.5) {
+      calOffset2++;
+      continue;
     }
+    const task = tasks[tIdx];
+    const suffix =
+      eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
+        ? ` (${eff2.label}: ${Math.round(eff2.hours * 10) / 10} hrs)`
+        : "";
+    weeks.push({
+      weekNumber: weeks.length + 1,
+      subject: task.name,
+      focus: task.focus + suffix,
+      type: task.type,
+      hoursRequired: task.hoursNeeded,
+      hoursAvailable: eff2.hours,
+      startDate: format(addWeeks(start, calOffset2), "MMM d"),
+    });
+    tHoursLeft -= eff2.hours;
+    if (tHoursLeft <= 0.5) {
+      tIdx++;
+      tHoursLeft = tIdx < tasks.length ? tasks[tIdx].hoursNeeded : 0;
+    }
+    calOffset2++;
   }
 
-  /* Buffer weeks — also respect unavailable/variable */
-  for (let b = 0; b < bufferWeeks; b++) {
-    let placed = false;
-    while (!placed) {
-      const eff = getEffectiveHoursForWeekOffset(calendarOffset);
-      if (eff.isUnavailable) {
-        finalWeeks.push({
-          weekNumber: finalWeeks.length + 1,
-          subject: "Unavailable",
-          focus: `⏸ ${eff.label ?? "Unavailable"} — No study this week`,
-          type: "buffer",
-          hoursRequired: 0,
-          hoursAvailable: 0,
-          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
-        });
-        calendarOffset++;
-      } else {
-        finalWeeks.push({
-          weekNumber: finalWeeks.length + 1,
-          subject: "Full Syllabus",
-          focus:
-            b === 0
-              ? "Mock Tests — Full length, time management practice"
-              : "Final Revision — Formula sheets, exam strategy, weak spots",
-          type: "revision",
-          hoursRequired: hoursPerWeek,
-          hoursAvailable: eff.hours,
-          startDate: format(addWeeks(start, calendarOffset), "MMM d"),
-        });
-        calendarOffset++;
-        placed = true;
-      }
+  /* Reset calendarOffset for finalWeeks phase (picks up from where task walk left off) */
+  let calendarOffset = calOffset2;
+
+  /* ── Build finalWeeks: merge study weeks with unavailable pause weeks ── */
+  /* weeks[] already has correct hours-based positions. Now insert pause weeks. */
+  const finalWeeks: ScheduleWeek[] = [];
+  let studyIdx = 0;
+  /* Walk all calendar weeks up to the last study week's calendar position */
+  const totalCalWeeks = calendarOffset + bufferWeeks + 10;
+  let calendarOffset = 0;
+  while (calendarOffset < totalCalWeeks || studyIdx < weeks.length) {
+    const eff = getEffectiveHoursForWeekOffset(calendarOffset);
+    /* Check if there's a study week starting at this calendar offset */
+    const studyWeek = studyIdx < weeks.length ? weeks[studyIdx] : null;
+    const studyWeekCalPos = studyWeek
+      ? (() => {
+          /* Find which calendar offset this study week corresponds to */
+          /* The study week's startDate tells us */
+          const swDate = studyWeek.startDate;
+          const expectedDate = format(addWeeks(start, calendarOffset), "MMM d");
+          return swDate === expectedDate;
+        })()
+      : false;
+
+    if (eff.isUnavailable) {
+      finalWeeks.push({
+        weekNumber: finalWeeks.length + 1,
+        subject: "Unavailable",
+        focus: `⏸ ${eff.label ?? "Unavailable"} — No study this week`,
+        type: "buffer",
+        hoursRequired: 0,
+        hoursAvailable: 0,
+        startDate: format(addWeeks(start, calendarOffset), "MMM d"),
+      });
+      calendarOffset++;
+    } else if (studyWeekCalPos && studyWeek) {
+      finalWeeks.push({ ...studyWeek, weekNumber: finalWeeks.length + 1 });
+      studyIdx++;
+      calendarOffset++;
+    } else if (studyIdx < weeks.length) {
+      /* Gap week (variable intensity week already absorbed into study week) */
+      calendarOffset++;
+    } else {
+      break;
     }
+    if (finalWeeks.length > 400) break; /* safety */
+  }
+
+  /* Buffer weeks */
+  for (let b = 0; b < bufferWeeks; b++) {
+    finalWeeks.push({
+      weekNumber: finalWeeks.length + 1,
+      subject: "Full Syllabus",
+      focus:
+        b === 0
+          ? "Mock Tests — Full length, time management practice"
+          : "Final Revision — Formula sheets, exam strategy, weak spots",
+      type: "revision",
+      hoursRequired: hoursPerWeek,
+      hoursAvailable: hoursPerWeek,
+      startDate: format(addWeeks(start, finalWeeks.length), "MMM d"),
+    });
   }
 
   return {
@@ -2587,16 +2670,72 @@ function LiveScheduleTab({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showBasePanel, setShowBasePanel] = useState(false);
+  const [showOrderPanel, setShowOrderPanel] = useState(false);
+  const [showParallelPanel, setShowParallelPanel] = useState(false);
 
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(userId);
   const baseWeeksOverride = loadBaseWeeks(userId);
   const practiceProgress = loadPracticeProgress(userId);
+  const rawSubjectsList = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const defaultOrder = rawSubjectsList.map((s) => s.id);
+  const [subjectOrder, setSubjectOrderState] = useState<string[]>(() =>
+    loadSubjectOrder(userId, defaultOrder),
+  );
+  const [parallelCfg, setParallelCfgState] = useState<ParallelConfig>(() =>
+    loadParallelConfig(userId),
+  );
 
   const hoursPerWeek = hoursPerDay * daysPerWeek;
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
   const skipped = Object.values(syllabusPercs).filter((p) => p === 100).length;
-  const allSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const allSubjects = rawSubjectsList;
+
+  function updateSubjectOrder(newOrder: string[]) {
+    setSubjectOrderState(newOrder);
+    saveSubjectOrder(userId, newOrder);
+    onSave(
+      generateSmartSchedule(
+        examType,
+        hoursPerDay,
+        daysPerWeek,
+        targetMonths,
+        revisionPercent,
+        startDate,
+        syllabusProgress,
+        rm.unavailablePeriods,
+        rm.variableWeeks ?? [],
+        topicSpeed,
+        baseWeeksOverride,
+        practiceProgress,
+        newOrder,
+        parallelCfg,
+      ),
+    );
+  }
+
+  function updateParallelCfg(cfg: ParallelConfig) {
+    setParallelCfgState(cfg);
+    saveParallelConfig(userId, cfg);
+    onSave(
+      generateSmartSchedule(
+        examType,
+        hoursPerDay,
+        daysPerWeek,
+        targetMonths,
+        revisionPercent,
+        startDate,
+        syllabusProgress,
+        rm.unavailablePeriods,
+        rm.variableWeeks ?? [],
+        topicSpeed,
+        baseWeeksOverride,
+        practiceProgress,
+        subjectOrder,
+        cfg,
+      ),
+    );
+  }
 
   /* Live schedule — always recalculated with ALL factors */
   const schedule = generateSmartSchedule(
@@ -2612,6 +2751,8 @@ function LiveScheduleTab({
     topicSpeed,
     baseWeeksOverride,
     practiceProgress,
+    subjectOrder,
+    parallelCfg,
   );
 
   /* Save inputs + notify parent whenever anything changes */
@@ -2650,6 +2791,8 @@ function LiveScheduleTab({
         topicSpeed,
         baseWeeksOverride,
         practiceProgress,
+        subjectOrder,
+        parallelCfg,
       ),
     );
   }
@@ -2671,6 +2814,8 @@ function LiveScheduleTab({
         next,
         baseWeeksOverride,
         practiceProgress,
+        subjectOrder,
+        parallelCfg,
       ),
     );
   }
@@ -2692,6 +2837,8 @@ function LiveScheduleTab({
         topicSpeed,
         next,
         practiceProgress,
+        subjectOrder,
+        parallelCfg,
       ),
     );
   }
@@ -2969,6 +3116,291 @@ function LiveScheduleTab({
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Subject Study Order */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: CARD, border: `1px solid ${BORDER}` }}
+      >
+        <button
+          onClick={() => setShowOrderPanel(!showOrderPanel)}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left"
+          style={{ background: showOrderPanel ? `${GOLD}08` : CARD }}
+        >
+          <Target className="w-4 h-4" style={{ color: GOLD }} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>
+              Subject Study Order
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: MUTED }}>
+              Customise the order in which subjects appear in your schedule
+            </p>
+          </div>
+          {showOrderPanel ? (
+            <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
+          ) : (
+            <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />
+          )}
+        </button>
+        {showOrderPanel && (
+          <div
+            className="px-5 pb-5 pt-3 space-y-2"
+            style={{ borderTop: `1px solid ${BORDER}` }}
+          >
+            <p className="text-xs" style={{ color: MUTED }}>
+              Drag or use arrows to reorder. Schedule updates immediately.
+            </p>
+            {subjectOrder.map((id, idx) => {
+              const subject = rawSubjectsList.find((s) => s.id === id);
+              if (!subject) return null;
+              return (
+                <div
+                  key={id}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                  style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+                >
+                  <span
+                    className="text-xs font-bold w-5 text-center"
+                    style={{ color: MUTED }}
+                  >
+                    {idx + 1}
+                  </span>
+                  <span
+                    className="flex-1 text-sm font-semibold"
+                    style={{ color: CHARCOAL }}
+                  >
+                    {subject.name}
+                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => {
+                        const next = [...subjectOrder];
+                        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                        updateSubjectOrder(next);
+                      }}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold disabled:opacity-30"
+                      style={{ background: `${BORDER}`, color: CHARCOAL }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === subjectOrder.length - 1}
+                      onClick={() => {
+                        const next = [...subjectOrder];
+                        [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                        updateSubjectOrder(next);
+                      }}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold disabled:opacity-30"
+                      style={{ background: `${BORDER}`, color: CHARCOAL }}
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => updateSubjectOrder(defaultOrder)}
+              className="text-xs px-3 py-1.5 rounded-lg"
+              style={{ background: `${BORDER}`, color: MUTED }}
+            >
+              Reset to default order
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Simultaneous Topics & Hours Allocation */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: CARD, border: `1px solid ${BORDER}` }}
+      >
+        <button
+          onClick={() => setShowParallelPanel(!showParallelPanel)}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left"
+          style={{ background: showParallelPanel ? `${GOLD}08` : CARD }}
+        >
+          <BarChart2 className="w-4 h-4" style={{ color: GOLD }} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>
+              Study Mode & Hours Allocation
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: MUTED }}>
+              {parallelCfg.mode === "sequential"
+                ? "Sequential — one subject at a time"
+                : `Parallel — ${parallelCfg.parallelCount} subject(s) simultaneously`}
+            </p>
+          </div>
+          {showParallelPanel ? (
+            <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
+          ) : (
+            <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />
+          )}
+        </button>
+        {showParallelPanel && (
+          <div
+            className="px-5 pb-5 pt-4 space-y-4"
+            style={{ borderTop: `1px solid ${BORDER}` }}
+          >
+            <div>
+              <p
+                className="text-xs font-semibold mb-2"
+                style={{ color: CHARCOAL }}
+              >
+                Study mode:
+              </p>
+              <div className="flex gap-2">
+                {(
+                  [
+                    {
+                      key: "sequential",
+                      label: "📖 One subject at a time",
+                      desc: "Finish each subject before starting next",
+                    },
+                    {
+                      key: "parallel",
+                      label: "📚 Multiple simultaneously",
+                      desc: "Study 2-3 subjects in parallel",
+                    },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() =>
+                      updateParallelCfg({ ...parallelCfg, mode: opt.key })
+                    }
+                    className="flex-1 p-3 rounded-xl text-left transition-all"
+                    style={
+                      parallelCfg.mode === opt.key
+                        ? {
+                            background: `${GOLD}22`,
+                            border: `2px solid ${GOLD}`,
+                            color: DARK,
+                          }
+                        : {
+                            background: CREAM,
+                            border: `1px solid ${BORDER}`,
+                            color: MUTED,
+                          }
+                    }
+                  >
+                    <p className="text-xs font-semibold">{opt.label}</p>
+                    <p className="text-[10px] mt-0.5">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {parallelCfg.mode === "parallel" && (
+              <>
+                <div>
+                  <label
+                    className="text-xs font-semibold mb-2 block"
+                    style={{ color: CHARCOAL }}
+                  >
+                    How many subjects simultaneously:{" "}
+                    <span style={{ color: GOLD }}>
+                      {parallelCfg.parallelCount}
+                    </span>
+                  </label>
+                  <div className="flex gap-2">
+                    {[2, 3].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() =>
+                          updateParallelCfg({
+                            ...parallelCfg,
+                            parallelCount: n,
+                          })
+                        }
+                        className="flex-1 py-2 rounded-xl text-sm font-semibold"
+                        style={
+                          parallelCfg.parallelCount === n
+                            ? { background: DARK, color: CREAM }
+                            : { background: `${BORDER}88`, color: MUTED }
+                        }
+                      >
+                        {n} subjects
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p
+                    className="text-xs font-semibold mb-2"
+                    style={{ color: CHARCOAL }}
+                  >
+                    Hours per day per subject:
+                  </p>
+                  <p className="text-xs mb-3" style={{ color: MUTED }}>
+                    Your total is {hoursPerDay} hrs/day. Set how much goes to
+                    each subject. Leave blank to split evenly (
+                    {Math.round(
+                      (hoursPerDay / parallelCfg.parallelCount) * 10,
+                    ) / 10}{" "}
+                    hrs each).
+                  </p>
+                  {rawSubjectsList.map((s) => {
+                    const val = parallelCfg.hoursPerSubject[s.id] ?? "";
+                    return (
+                      <div
+                        key={s.id}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl mb-1.5"
+                        style={{
+                          background: CREAM,
+                          border: `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <span
+                          className="flex-1 text-xs font-medium"
+                          style={{ color: CHARCOAL }}
+                        >
+                          {s.name}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min={0.5}
+                            max={hoursPerDay}
+                            step={0.5}
+                            value={val}
+                            placeholder={`${Math.round((hoursPerDay / parallelCfg.parallelCount) * 10) / 10}`}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value) || 0;
+                              updateParallelCfg({
+                                ...parallelCfg,
+                                hoursPerSubject: {
+                                  ...parallelCfg.hoursPerSubject,
+                                  [s.id]: v,
+                                },
+                              });
+                            }}
+                            className="w-16 h-8 px-2 rounded-lg text-xs text-center border-2 outline-none"
+                            style={{
+                              background: CARD,
+                              borderColor: BORDER,
+                              color: CHARCOAL,
+                            }}
+                          />
+                          <span className="text-xs" style={{ color: MUTED }}>
+                            hrs/day
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -4450,8 +4882,6 @@ function RoadmapView({
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
-          rm={rm}
-          persist={persist}
         />
       )}
 
@@ -4536,3 +4966,4 @@ export default function Roadmap() {
   );
 }
 
+export default Roadmap;

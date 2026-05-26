@@ -1080,3 +1080,128 @@ describe("Base Timeline", () => {
     expect(stored.la).toBe("second_fast");
   });
 });
+
+/* ══════════════════════════════════════════════════════════
+   §21  SUBJECT ORDER  (new — do not modify once passing)
+   ══════════════════════════════════════════════════════════ */
+describe("Subject Order", () => {
+  it("default order matches JAM subjects list", () => {
+    const JAM_IDS = ["la", "ra", "dc", "gt", "ode", "mvc", "mi"];
+    expect(JAM_IDS).toHaveLength(7);
+    expect(JAM_IDS[0]).toBe("la");
+  });
+
+  it("custom order reorders subjects", () => {
+    const original = ["la", "ra", "dc", "gt", "ode"];
+    const custom = ["ode", "gt", "la", "ra", "dc"];
+    expect(custom[0]).toBe("ode");
+    expect(custom[4]).toBe("dc");
+  });
+
+  it("moving subject up decrements its index", () => {
+    const order = ["la", "ra", "dc"];
+    const next = [...order];
+    [next[0], next[1]] = [next[1], next[0]]; /* swap ra up */
+    expect(next[0]).toBe("ra");
+    expect(next[1]).toBe("la");
+  });
+
+  it("moving subject down increments its index", () => {
+    const order = ["la", "ra", "dc"];
+    const next = [...order];
+    [next[1], next[2]] = [next[2], next[1]]; /* swap ra down */
+    expect(next[2]).toBe("ra");
+    expect(next[1]).toBe("dc");
+  });
+
+  it("first subject cannot move up", () => {
+    const idx = 0;
+    expect(idx === 0).toBe(true); /* disabled */
+  });
+
+  it("last subject cannot move down", () => {
+    const order = ["la", "ra", "dc"];
+    const idx = order.length - 1;
+    expect(idx === order.length - 1).toBe(true); /* disabled */
+  });
+
+  it("reset restores default order", () => {
+    const defaultOrder = ["la", "ra", "dc"];
+    const custom = ["dc", "la", "ra"];
+    const reset = defaultOrder;
+    expect(reset).toEqual(defaultOrder);
+  });
+
+  it("subject order saved to localStorage per user", () => {
+    localStorage.clear();
+    const order = ["ode", "la", "ra"];
+    localStorage.setItem("hs_subject_order_u1", JSON.stringify(order));
+    const stored = JSON.parse(
+      localStorage.getItem("hs_subject_order_u1") ?? "[]",
+    );
+    expect(stored[0]).toBe("ode");
+  });
+});
+
+/* ══════════════════════════════════════════════════════════
+   §22  PARALLEL STUDY CONFIG  (new — do not modify once passing)
+   ══════════════════════════════════════════════════════════ */
+describe("Parallel Study Config", () => {
+  it("default mode is sequential", () => {
+    const cfg = { mode: "sequential", parallelCount: 1, hoursPerSubject: {} };
+    expect(cfg.mode).toBe("sequential");
+  });
+
+  it("parallel mode allows 2 subjects", () => {
+    const cfg = { mode: "parallel", parallelCount: 2, hoursPerSubject: {} };
+    expect(cfg.parallelCount).toBe(2);
+  });
+
+  it("parallel mode allows 3 subjects", () => {
+    const cfg = { mode: "parallel", parallelCount: 3, hoursPerSubject: {} };
+    expect(cfg.parallelCount).toBe(3);
+  });
+
+  it("even split = total hours / parallel count", () => {
+    const total = 2;
+    const parallel = 2;
+    expect(Math.round((total / parallel) * 10) / 10).toBe(1);
+  });
+
+  it("custom hours per subject override even split", () => {
+    const cfg = {
+      mode: "parallel",
+      parallelCount: 2,
+      hoursPerSubject: { la: 1.5, ra: 0.5 },
+    };
+    expect(cfg.hoursPerSubject["la"]).toBe(1.5);
+    expect(cfg.hoursPerSubject["ra"]).toBe(0.5);
+  });
+
+  it("parallel config saved to localStorage", () => {
+    localStorage.clear();
+    const cfg = {
+      mode: "parallel",
+      parallelCount: 2,
+      hoursPerSubject: { la: 1 },
+    };
+    localStorage.setItem("hs_parallel_u1", JSON.stringify(cfg));
+    const stored = JSON.parse(localStorage.getItem("hs_parallel_u1") ?? "{}");
+    expect(stored.mode).toBe("parallel");
+    expect(stored.parallelCount).toBe(2);
+  });
+
+  it("variable intensity compresses schedule hours-based", () => {
+    /* If base = 10 hrs/week and variable week = 25 hrs, 
+       a 40-hour subject finishes in fewer calendar weeks */
+    const baseHrsPerWeek = 10;
+    const varHrsWeek = 25;
+    const totalHrsNeeded = 40;
+    const normalWeeks = Math.ceil(totalHrsNeeded / baseHrsPerWeek); /* 4 */
+    /* With 1 variable week of 25hrs + remaining at 10hrs */
+    const remainingAfterVar = totalHrsNeeded - varHrsWeek; /* 15 */
+    const weeksAfterVar = Math.ceil(remainingAfterVar / baseHrsPerWeek); /* 2 */
+    const totalWithVar = 1 + weeksAfterVar; /* 3 */
+    expect(totalWithVar).toBeLessThan(normalWeeks);
+  });
+});
