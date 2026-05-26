@@ -943,7 +943,6 @@ function generateSmartSchedule(
     });
     calOffset2++;
   }
-  }
 
   /* Reset calendarOffset for finalWeeks phase (picks up from where task walk left off) */
   let calendarOffset = calOffset2;
