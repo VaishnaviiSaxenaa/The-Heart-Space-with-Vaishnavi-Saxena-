@@ -3317,27 +3317,17 @@ function LiveScheduleTab({
                       {parallelCfg.parallelCount}
                     </span>
                   </label>
-                  <div className="flex gap-2">
-                    {[2, 3].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() =>
-                          updateParallelCfg({
-                            ...parallelCfg,
-                            parallelCount: n,
-                          })
-                        }
-                        className="flex-1 py-2 rounded-xl text-sm font-semibold"
-                        style={
-                          parallelCfg.parallelCount === n
-                            ? { background: DARK, color: CREAM }
-                            : { background: `${BORDER}88`, color: MUTED }
-                        }
-                      >
-                        {n} subjects
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={parallelCfg.parallelCount}
+                      onChange={e => updateParallelCfg({ ...parallelCfg, parallelCount: parseInt(e.target.value) })}
+                      className="h-9 px-3 rounded-xl text-sm font-semibold border-2 outline-none"
+                      style={{ background: CARD, borderColor: GOLD, color: DARK }}>
+                      {[2,3,4,5,6,7,8,9].map(n => (
+                        <option key={n} value={n}>{n} topics</option>
+                      ))}
+                    </select>
+                    <span className="text-xs" style={{ color: MUTED }}>topics at once</span>
                   </div>
                 </div>
                 <div>
