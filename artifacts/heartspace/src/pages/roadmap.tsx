@@ -933,11 +933,13 @@ function generateSmartSchedule(
     }
   });
 
-  /* Walk calendar engine — sequential OR parallel with date-range study periods */
+  /* Walk calendar engine
+     Default: sequential (one subject at a time, hours-based)
+     Simultaneous Studies: only when a StudyPeriod is active for that week */
   const weeks: ScheduleWeek[] = [];
   let calOffset2 = 0;
 
-  /* Get active study period for a given calendar week */
+  /* Get active simultaneous study period for a calendar week */
   function getActivePeriod(weekOffset: number): StudyPeriod | null {
     const weekDate = addWeeks(start, weekOffset);
     for (const p of studyPeriods) {
@@ -952,30 +954,12 @@ function generateSmartSchedule(
     return null;
   }
 
-  /* Determine effective mode and count for a calendar week */
-  function getWeekMode(weekOffset: number): {
-    mode: "sequential" | "parallel";
-    n: number;
-    hoursPerSubject: Record<string, number>;
-  } {
-    const ap = getActivePeriod(weekOffset);
-    if (ap)
-      return {
-        mode: ap.mode,
-        n: ap.parallelCount,
-        hoursPerSubject: ap.hoursPerSubject,
-      };
-    return {
-      mode: parallelConfig.mode,
-      n: parallelConfig.parallelCount,
-      hoursPerSubject: parallelConfig.hoursPerSubject,
-    };
-  }
-
-  /* Build per-subject task queues */
+  /* Build per-subject task queues.
+     Each task = hoursNeeded hours of study for that subject.
+     hoursNeeded = baseHoursPerWeek (what the student studies per week on that subject).
+     In sequential mode this equals full baseHoursPerWeek.
+     In simultaneous mode it equals the allocated hours per week for that subject. */
   const subjectIds = [...new Set(tasks.map((t) => t.id))];
-
-  /* Sequential engine: processes one subject at a time, checking weekly mode */
   interface TQ {
     id: string;
     name: string;
@@ -990,14 +974,13 @@ function generateSmartSchedule(
       name: subTasks[0]?.name ?? id,
       tasks: subTasks,
       taskIdx: 0,
-      taskHrsLeft: subTasks.length > 0 ? subTasks[0].hoursNeeded : 0,
+      taskHrsLeft: subTasks[0]?.hoursNeeded ?? 0,
     };
   });
 
-  let globalSubjectIdx = 0; /* which subject we are on in sequential mode */
+  let globalSubjectIdx = 0;
 
   while (calOffset2 < 500) {
-    /* Check if all subjects done */
     const allDone = tQueues.every((q) => q.taskIdx >= q.tasks.length);
     if (allDone) break;
 
@@ -1007,15 +990,47 @@ function generateSmartSchedule(
       continue;
     }
 
-    const wm = getWeekMode(calOffset2);
     const vSuffix =
       eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
-        ? " — " + eff2.label
+        ? " (" + eff2.label + ": " + Math.round(eff2.hours * 10) / 10 + " hrs)"
         : "";
 
-    if (wm.mode === "sequential") {
-      /* Sequential: work on current subject until done, then move to next */
-      /* Find the first subject that still has tasks */
+    const activePeriod = getActivePeriod(calOffset2);
+
+    if (activePeriod) {
+      /* SIMULTANEOUS MODE: run selected topics in parallel this week */
+      const slotIds =
+        activePeriod.subjectIds ??
+        subjectIds.slice(0, activePeriod.parallelCount);
+      slotIds.forEach((sid) => {
+        const q = tQueues.find((tq) => tq.id === sid);
+        if (!q || q.taskIdx >= q.tasks.length) return;
+        const allocHrs = activePeriod.hoursPerSubject[sid]
+          ? activePeriod.hoursPerSubject[sid] * daysPerWeek
+          : eff2.hours / slotIds.length;
+        /* Advance task by one week of allocated hours */
+        q.taskHrsLeft -= allocHrs;
+        const task = q.tasks[q.taskIdx];
+        let focus = task.focus;
+        if (q.taskHrsLeft <= 0) {
+          q.taskIdx++;
+          q.taskHrsLeft =
+            q.taskIdx < q.tasks.length ? q.tasks[q.taskIdx].hoursNeeded : 0;
+        } else {
+          focus = task.focus + " (cont.)";
+        }
+        weeks.push({
+          weekNumber: calOffset2,
+          subject: q.name,
+          focus: focus + vSuffix,
+          type: task.type,
+          hoursRequired: allocHrs,
+          hoursAvailable: Math.min(allocHrs, eff2.hours),
+          startDate: format(addWeeks(start, calOffset2), "MMM d"),
+        });
+      });
+    } else {
+      /* SEQUENTIAL MODE: work on one subject at a time */
       while (
         globalSubjectIdx < tQueues.length &&
         tQueues[globalSubjectIdx].taskIdx >=
@@ -1031,16 +1046,15 @@ function generateSmartSchedule(
       const weekType = q.tasks[q.taskIdx]?.type ?? "study";
 
       while (q.taskIdx < q.tasks.length && hoursLeft > 0.5) {
-        const task = q.tasks[q.taskIdx];
         if (q.taskHrsLeft <= hoursLeft) {
           hoursLeft -= q.taskHrsLeft;
-          focusParts.push(task.focus);
+          focusParts.push(q.tasks[q.taskIdx].focus);
           q.taskIdx++;
           q.taskHrsLeft =
             q.taskIdx < q.tasks.length ? q.tasks[q.taskIdx].hoursNeeded : 0;
         } else {
           q.taskHrsLeft -= hoursLeft;
-          focusParts.push(task.focus + " (cont.)");
+          focusParts.push(q.tasks[q.taskIdx].focus + " (cont.)");
           hoursLeft = 0;
         }
       }
@@ -1055,78 +1069,14 @@ function generateSmartSchedule(
         startDate: format(addWeeks(start, calOffset2), "MMM d"),
       });
 
-      /* If subject finished, advance to next subject */
       if (q.taskIdx >= q.tasks.length) globalSubjectIdx++;
-    } else {
-      /* Parallel: run N subjects simultaneously this week */
-      const n = wm.n;
-      /* Select N subjects starting from globalSubjectIdx that still have tasks */
-      const activeSubs: TQ[] = [];
-      let scanIdx = globalSubjectIdx;
-      while (activeSubs.length < n && scanIdx < tQueues.length) {
-        if (tQueues[scanIdx].taskIdx < tQueues[scanIdx].tasks.length) {
-          activeSubs.push(tQueues[scanIdx]);
-        }
-        scanIdx++;
-      }
-      if (activeSubs.length === 0) break;
-
-      activeSubs.forEach((q) => {
-        const allocatedHrs = wm.hoursPerSubject[q.id]
-          ? wm.hoursPerSubject[q.id] * daysPerWeek
-          : eff2.hours / activeSubs.length;
-        let hrsAvail = Math.min(allocatedHrs, eff2.hours);
-        /* Normalise: task hoursNeeded should equal allocatedHrs for this subject */
-        if (q.taskHrsLeft > allocatedHrs * 8)
-          q.taskHrsLeft = allocatedHrs; /* reset if stale */
-        const focusParts: string[] = [];
-        const weekType = q.tasks[q.taskIdx]?.type ?? "study";
-
-        while (q.taskIdx < q.tasks.length && hrsAvail > 0.5) {
-          /* Each "task" unit = 1 week of allocated hours for this subject */
-          const taskHrs = allocatedHrs;
-          if (taskHrs <= hrsAvail) {
-            hrsAvail -= taskHrs;
-            focusParts.push(q.tasks[q.taskIdx].focus);
-            q.taskIdx++;
-          } else {
-            focusParts.push(q.tasks[q.taskIdx].focus + " (cont.)");
-            hrsAvail = 0;
-          }
-        }
-
-        if (focusParts.length > 0) {
-          weeks.push({
-            weekNumber: calOffset2,
-            subject: q.name,
-            focus: focusParts.join(" + ") + vSuffix,
-            type: weekType,
-            hoursRequired: allocatedHrs,
-            hoursAvailable: Math.min(allocatedHrs, eff2.hours),
-            startDate: format(addWeeks(start, calOffset2), "MMM d"),
-          });
-        }
-      });
-
-      /* Advance globalSubjectIdx past any completed subjects */
-      while (
-        globalSubjectIdx < tQueues.length &&
-        tQueues[globalSubjectIdx].taskIdx >=
-          tQueues[globalSubjectIdx].tasks.length
-      ) {
-        globalSubjectIdx++;
-      }
     }
 
     calOffset2++;
   }
 
-  /* Sort parallel weeks by calendar offset then re-number */
-  weeks.sort((a, b) => {
-    if (typeof a.weekNumber === "number" && typeof b.weekNumber === "number")
-      return a.weekNumber - b.weekNumber;
-    return 0;
-  });
+  /* Sort and renumber (parallel weeks used calOffset as weekNumber) */
+  weeks.sort((a, b) => a.weekNumber - b.weekNumber);
   weeks.forEach((w, i) => {
     w.weekNumber = i + 1;
   });
@@ -1140,7 +1090,7 @@ function generateSmartSchedule(
   let studyIdx = 0;
   /* Walk all calendar weeks up to the last study week's calendar position */
   const totalCalWeeks = calendarOffset + bufferWeeks + 10;
-  calendarOffset = 0;
+  let calendarOffset = 0;
   while (calendarOffset < totalCalWeeks || studyIdx < weeks.length) {
     const eff = getEffectiveHoursForWeekOffset(calendarOffset);
     /* Check if there's a study week starting at this calendar offset */
@@ -2459,7 +2409,7 @@ function UnavailablePeriodsManager({
                 color: "#fff",
               }}
             >
-              <Save className="w-3 h-3" /> Add Period
+              <Save className="w-3 h-3" /> Add Simultaneous Period
             </button>
             <button
               onClick={() => setShow(false)}
@@ -2753,7 +2703,7 @@ function VariableWeeksManager({
                 color: "#fff",
               }}
             >
-              <Save className="w-3 h-3" /> Add Period
+              <Save className="w-3 h-3" /> Add Simultaneous Period
             </button>
             <button
               onClick={() => setShow(false)}
@@ -2862,7 +2812,6 @@ function LiveScheduleTab({
   const [filter, setFilter] = useState<WeekType | "all">("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
-  const [showBasePanel, setShowBasePanel] = useState(false);
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showParallelPanel, setShowParallelPanel] = useState(false);
   const [studyPeriods, setStudyPeriodsState] = useState<StudyPeriod[]>(() =>
@@ -2959,7 +2908,6 @@ function LiveScheduleTab({
         baseWeeksOverride,
         practiceProgress,
         subjectOrder,
-        parallelCfg,
         periods,
       ),
     );
@@ -3020,7 +2968,6 @@ function LiveScheduleTab({
         baseWeeksOverride,
         practiceProgress,
         subjectOrder,
-        parallelCfg,
         studyPeriods,
       ),
     );
@@ -3044,7 +2991,6 @@ function LiveScheduleTab({
         baseWeeksOverride,
         practiceProgress,
         subjectOrder,
-        parallelCfg,
         studyPeriods,
       ),
     );
@@ -3068,7 +3014,6 @@ function LiveScheduleTab({
         next,
         practiceProgress,
         subjectOrder,
-        parallelCfg,
         studyPeriods,
       ),
     );
@@ -3254,103 +3199,6 @@ function LiveScheduleTab({
         )}
       </div>
 
-      {/* Base Timeline (editable) */}
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ background: CARD, border: `1px solid ${BORDER}` }}
-      >
-        <button
-          onClick={() => setShowBasePanel(!showBasePanel)}
-          className="w-full flex items-center gap-3 px-5 py-4 text-left"
-          style={{ background: showBasePanel ? `${GOLD}08` : CARD }}
-        >
-          <Edit3 className="w-4 h-4" style={{ color: GOLD }} />
-          <div className="flex-1">
-            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>
-              Base Timeline Per Subject
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: MUTED }}>
-              Override default study weeks — speed multiplier applies on top
-            </p>
-          </div>
-          {showBasePanel ? (
-            <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
-          ) : (
-            <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />
-          )}
-        </button>
-        {showBasePanel && (
-          <div
-            className="px-5 pb-5 space-y-3 pt-4"
-            style={{ borderTop: `1px solid ${BORDER}` }}
-          >
-            <p className="text-xs" style={{ color: MUTED }}>
-              Defaults are based on typical IIT JAM / CSIR NET timelines.
-              Increase if a subject needs more depth, decrease if you know it
-              well.
-            </p>
-            {allSubjects.map((s) => {
-              const base = baseWeeksOverride[s.id] ?? s.studyWeeks;
-              return (
-                <div
-                  key={s.id}
-                  className="flex items-center gap-4 px-4 py-3 rounded-xl"
-                  style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-                >
-                  <span
-                    className="flex-1 text-sm font-semibold"
-                    style={{ color: CHARCOAL }}
-                  >
-                    {s.name}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => updateBaseWeeks(s.id, base - 0.5)}
-                      className="w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center"
-                      style={{ background: `${BORDER}`, color: CHARCOAL }}
-                    >
-                      −
-                    </button>
-                    <span
-                      className="text-sm font-bold w-16 text-center font-serif"
-                      style={{ color: DARK }}
-                    >
-                      {base} wk{base !== 1 ? "s" : ""}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => updateBaseWeeks(s.id, base + 0.5)}
-                      className="w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center"
-                      style={{ background: `${GOLD}22`, color: DARK }}
-                    >
-                      +
-                    </button>
-                    {baseWeeksOverride[s.id] !== undefined &&
-                      baseWeeksOverride[s.id] !== s.studyWeeks && (
-                        <button
-                          type="button"
-                          onClick={() => updateBaseWeeks(s.id, s.studyWeeks)}
-                          className="text-[10px] px-1.5 py-0.5 rounded-lg"
-                          style={{ background: `${BORDER}`, color: MUTED }}
-                        >
-                          reset
-                        </button>
-                      )}
-                  </div>
-                  {baseWeeksOverride[s.id] !== undefined &&
-                    baseWeeksOverride[s.id] !== s.studyWeeks && (
-                      <span className="text-[10px]" style={{ color: MUTED }}>
-                        default: {s.studyWeeks}
-                      </span>
-                    )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
       {/* Subject Study Order */}
       <div
         className="rounded-2xl overflow-hidden"
@@ -3448,7 +3296,7 @@ function LiveScheduleTab({
         )}
       </div>
 
-      {/* Study Mode & Hours Allocation */}
+      {/* Simultaneous Studies */}
       <div
         className="rounded-2xl overflow-hidden"
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
@@ -3461,11 +3309,11 @@ function LiveScheduleTab({
           <BookOpen className="w-4 h-4" style={{ color: GOLD }} />
           <div className="flex-1">
             <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>
-              Study Mode & Hours Allocation
+              Simultaneous Studies
             </p>
             <p className="text-xs mt-0.5" style={{ color: MUTED }}>
               {studyPeriods.length === 0
-                ? "Sequential by default — add periods to customise"
+                ? "Sequential by default — add a period below to study topics simultaneously"
                 : `${studyPeriods.length} study period${studyPeriods.length > 1 ? "s" : ""} configured`}
             </p>
           </div>
@@ -3489,7 +3337,7 @@ function LiveScheduleTab({
               style={{ background: CREAM, border: `1px solid ${BORDER}` }}
             >
               <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>
-                Add Study Period
+                Add Simultaneous Study Period
               </p>
               <div>
                 <label
@@ -3737,12 +3585,13 @@ function LiveScheduleTab({
                   color: "#fff",
                 }}
               >
-                <Plus className="w-3 h-3" /> Add Period
+                <Plus className="w-3 h-3" /> Add Simultaneous Period
               </button>
             </div>
             {studyPeriods.length === 0 ? (
               <p className="text-xs" style={{ color: MUTED }}>
-                No periods added — sequential by default.
+                No simultaneous study periods added. Topics will be studied one
+                at a time by default.
               </p>
             ) : (
               <div className="space-y-2">
@@ -5367,3 +5216,4 @@ export default function Roadmap() {
   );
 }
 
+export default Roadmap;
