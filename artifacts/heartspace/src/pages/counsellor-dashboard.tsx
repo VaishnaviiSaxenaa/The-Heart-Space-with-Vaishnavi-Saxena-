@@ -548,7 +548,7 @@ export default function CounsellorDashboard() {
                                       {session.preferredDate && (
                                         <p className='text-xs' style={{ color: MUTED }}>
                                           📅 Preferred: {session.preferredDate as string}
-                                          {session.preferredTime ?  : ''}
+                                          {session.preferredTime ? ` at ${session.preferredTime as string}` : ''}
                                         </p>
                                       )}
                                       {session.note && (
