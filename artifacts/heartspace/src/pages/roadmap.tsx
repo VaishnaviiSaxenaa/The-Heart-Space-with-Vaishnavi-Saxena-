@@ -1482,6 +1482,8 @@ function LiveScheduleTab({ examType, startDate, syllabusProgress, userId, onSave
   const [showBasePanel,   setShowBasePanel]    = useState(false);
   const [showOrderPanel,  setShowOrderPanel]   = useState(false);
   const [showParallelPanel, setShowParallelPanel] = useState(false);
+  const [studyPeriods, setStudyPeriodsState] = useState<StudyPeriod[]>(() => loadStudyPeriods(userId));
+  const [periodForm, setPeriodForm] = useState({ label: '', startDate: '', endDate: '', mode: 'sequential' as 'sequential'|'parallel', parallelCount: 2, hoursPerSubject: {} as Record<string,number> });
 
   /* Live loads — always fresh */
   const topicSpeed        = loadTopicSpeed(userId);
