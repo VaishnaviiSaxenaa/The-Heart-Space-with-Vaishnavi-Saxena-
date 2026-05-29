@@ -2569,6 +2569,8 @@ function RoadmapView({ roadmap, userId, onReset }: { roadmap: Roadmap; userId: s
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
+          rm={rm}
+          persist={persist}
         />
       )}
 
