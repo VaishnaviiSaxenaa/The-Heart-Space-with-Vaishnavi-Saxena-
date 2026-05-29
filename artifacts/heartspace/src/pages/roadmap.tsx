@@ -2928,7 +2928,7 @@ function LiveScheduleTab({
     baseWeeksOverride,
     practiceProgress,
     subjectOrder,
-    parallelCfg,
+    studyPeriods,
   );
 
   /* Save inputs + notify parent whenever anything changes */
