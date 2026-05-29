@@ -481,7 +481,7 @@ function generateSmartSchedule(
         }
       }
       const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
-        ?  : '';
+        ?  ` — ${eff2.label}: ${Math.round(eff2.hours * 10) / 10} hrs` : '';
       weeks.push({
         weekNumber: weeks.length + 1, subject: weekSubject,
         focus: focusParts.join(' + ') + vSuffix, type: weekType,
