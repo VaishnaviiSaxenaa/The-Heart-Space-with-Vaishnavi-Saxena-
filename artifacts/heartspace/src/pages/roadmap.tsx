@@ -494,15 +494,14 @@ function generateSmartSchedule(
     /* Parallel mode or study periods defined: run N subjects simultaneously */
     const subjectIds = [...new Set(tasks.map(t => t.id))];
     interface BQ { id: string; name: string; queue: SubjectTask[]; hrsPerWeek: number; hoursLeft: number; }
-    const allQueues: BQ[] = subjectIds.map(id => ({
-      id,
-      name: tasks.find(t => t.id === id)?.name ?? id,
-      queue: tasks.filter(t => t.id === id),
-      hrsPerWeek: parallelConfig.hoursPerSubject[id]
+    const allQueues: BQ[] = subjectIds.map(id => {
+      const hrsPerWeek = parallelConfig.hoursPerSubject[id]
         ? parallelConfig.hoursPerSubject[id] * daysPerWeek
-        : baseHoursPerWeek / Math.max(1, parallelConfig.parallelCount),
-      hoursLeft: 0,
-    }));
+        : baseHoursPerWeek / Math.max(1, parallelConfig.parallelCount);
+      /* Normalise task hoursNeeded to match this subject's allocated weekly hours */
+      const queue = tasks.filter(t => t.id === id).map(t => ({ ...t, hoursNeeded: hrsPerWeek }));
+      return { id, name: tasks.find(t => t.id === id)?.name ?? id, queue, hrsPerWeek, hoursLeft: 0 };
+    });
     allQueues.forEach(bq => { bq.hoursLeft = bq.queue.length > 0 ? bq.queue[0].hoursNeeded : 0; });
 
     const n = parallelConfig.parallelCount;
