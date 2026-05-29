@@ -196,22 +196,25 @@ interface ParallelConfig {
   hoursPerSubject: Record<string, number>;
 }
 
-interface SimultaneousSlot {
+
+
+interface StudyPeriod {
   id: string;
   label: string;
   startDate: string;
-  endDate: string;
-  subjectIds: string[];           /* which subjects run in parallel */
-  hoursPerSubject: Record<string, number>; /* hrs/day per subject */
+  endDate: string | "indefinite";
+  mode: "sequential" | "parallel";
+  parallelCount: number;
+  hoursPerSubject: Record<string, number>;
 }
 
-function lsSlotsKey(uid: string) { return `hs_sim_slots_${uid}`; }
-function loadSimSlots(uid: string): SimultaneousSlot[] {
-  try { const r = localStorage.getItem(lsSlotsKey(uid)); return r ? JSON.parse(r) : []; }
+function lsStudyPeriodsKey(uid: string) { return `hs_study_periods_${uid}`; }
+function loadStudyPeriods(uid: string): StudyPeriod[] {
+  try { const r = localStorage.getItem(lsStudyPeriodsKey(uid)); return r ? JSON.parse(r) : []; }
   catch { return []; }
 }
-function saveSimSlots(uid: string, slots: SimultaneousSlot[]) {
-  try { localStorage.setItem(lsSlotsKey(uid), JSON.stringify(slots)); } catch {}
+function saveStudyPeriods(uid: string, periods: StudyPeriod[]) {
+  try { localStorage.setItem(lsStudyPeriodsKey(uid), JSON.stringify(periods)); } catch {}
 }
 
 function loadParallelConfig(uid: string): ParallelConfig {
@@ -748,7 +751,7 @@ function generateSmartSchedule(
     parallelCount: 1,
     hoursPerSubject: {},
   },
-  simSlots: SimultaneousSlot[] = [],
+  studyPeriods: StudyPeriod[] = [],
 ): SmartSchedule {
   const rawSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   /* Apply custom subject order */
@@ -928,80 +931,6 @@ function generateSmartSchedule(
   const weeks: ScheduleWeek[] = [];
   let calOffset2 = 0;
 
-  /* Helper: check if a simSlot is active for this calendar week */
-  function getActiveSimSlot(weekOffset: number): SimultaneousSlot | null {
-    const weekDate = addWeeks(start, weekOffset);
-    for (const slot of simSlots) {
-      if (!slot.startDate || !slot.endDate) continue;
-      const slotStart = parseISO(slot.startDate);
-      const slotEnd   = parseISO(slot.endDate);
-      if (weekDate >= slotStart && weekDate < slotEnd) return slot;
-    }
-    return null;
-  }
-
-  if (parallelConfig.mode === "sequential") {
-    let tIdx = 0;
-    let tHoursLeft = tasks.length > 0 ? tasks[0].hoursNeeded : 0;
-    while (tIdx < tasks.length && calOffset2 < 300) {
-      const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
-      if (eff2.isUnavailable || eff2.hours <= 0.5) { calOffset2++; continue; }
-
-      /* Check if a simSlot is active — overrides global mode completely for this week */
-      const activeSimSlot = getActiveSimSlot(calOffset2);
-      if (activeSimSlot) {
-        const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
-          ? ` — ${eff2.label}` : "";
-        const slotSubjectIds = activeSimSlot.subjectIds;
-        /* Track hours consumed per subject in this slot week */
-        const slotHoursLeft: Record<string, number> = {};
-        slotSubjectIds.forEach(id => {
-          const hrsPerWeek = activeSimSlot.hoursPerSubject[id]
-            ? activeSimSlot.hoursPerSubject[id] * daysPerWeek
-            : eff2.hours / slotSubjectIds.length;
-          slotHoursLeft[id] = hrsPerWeek;
-        });
-        /* For each slot subject, consume from its task queue */
-        slotSubjectIds.forEach(subjectId => {
-          let hrsAvail = slotHoursLeft[subjectId];
-          const focusParts: string[] = [];
-          /* Find tasks belonging to this subject */
-          while (hrsAvail > 0.5) {
-            const nextTaskIdx = tasks.findIndex((t, i) => i >= tIdx && t.id === subjectId);
-            if (nextTaskIdx === -1) break;
-            const task = tasks[nextTaskIdx];
-            const taskHrs = nextTaskIdx === tIdx ? tHoursLeft : task.hoursNeeded;
-            if (taskHrs <= hrsAvail) {
-              hrsAvail -= taskHrs;
-              focusParts.push(task.focus);
-              /* Remove this task from queue by marking it done */
-              tasks.splice(nextTaskIdx, 1);
-              if (nextTaskIdx === tIdx) {
-                tHoursLeft = tIdx < tasks.length ? tasks[tIdx].hoursNeeded : 0;
-              }
-            } else {
-              if (nextTaskIdx === tIdx) tHoursLeft -= hrsAvail;
-              focusParts.push(task.focus + " (cont.)");
-              hrsAvail = 0;
-            }
-          }
-          if (focusParts.length > 0) {
-            const subjectHrs = activeSimSlot.hoursPerSubject[subjectId]
-              ? activeSimSlot.hoursPerSubject[subjectId] * daysPerWeek
-              : eff2.hours / slotSubjectIds.length;
-            weeks.push({
-              weekNumber: calOffset2, subject: tasks.find(t => t.id === subjectId)?.name
-                ?? subjectId,
-              focus: focusParts.join(" + ") + vSuffix, type: "study",
-              hoursRequired: subjectHrs, hoursAvailable: Math.min(subjectHrs, eff2.hours),
-              startDate: format(addWeeks(start, calOffset2), "MMM d"),
-            });
-          }
-        });
-        calOffset2++;
-        continue;
-      }
-
       let hoursLeftThisWeek = eff2.hours;
       const focusParts: string[] = [];
       const weekType: "study"|"assignment"|"revision" = tasks[tIdx]?.type ?? "study";
@@ -1048,17 +977,6 @@ function generateSmartSchedule(
     }));
     allQueues.forEach(bq => { bq.hoursLeft = bq.queue.length > 0 ? bq.queue[0].hoursNeeded : 0; });
 
-    /* Check if a simSlot is active for a given calendar week */
-    function getActiveSlot(weekOffset: number): SimultaneousSlot | null {
-      const weekDate = addWeeks(start, weekOffset);
-      for (const slot of simSlots) {
-        if (!slot.startDate || !slot.endDate) continue;
-        const slotStart = parseISO(slot.startDate);
-        const slotEnd   = parseISO(slot.endDate);
-        if (weekDate >= slotStart && weekDate < slotEnd) return slot;
-      }
-      return null;
-    }
 
     /* Process in batches of n subjects at a time */
     for (let bStart = 0; bStart < allQueues.length; bStart += n) {
@@ -2846,9 +2764,8 @@ function LiveScheduleTab({
   const [showBasePanel, setShowBasePanel] = useState(false);
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showParallelPanel, setShowParallelPanel] = useState(false);
-  const [showSlotsPanel,   setShowSlotsPanel]    = useState(false);
-  const [simSlots,         setSimSlotsState]      = useState<SimultaneousSlot[]>(() => loadSimSlots(userId));
-  const [slotForm, setSlotForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string,number> });
+  const [studyPeriods, setStudyPeriodsState] = useState<StudyPeriod[]>(() => loadStudyPeriods(userId));
+  const [periodForm, setPeriodForm] = useState<{ label: string; startDate: string; endDate: string; mode: "sequential"|"parallel"; parallelCount: number; hoursPerSubject: Record<string,number> }>({ label: "", startDate: "", endDate: "", mode: "sequential", parallelCount: 2, hoursPerSubject: {} });
 
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(userId);
@@ -2887,19 +2804,10 @@ function LiveScheduleTab({
         practiceProgress,
         newOrder,
         parallelCfg,
-        simSlots,
-      ),
+          ),
     );
   }
 
-  function updateSimSlots(slots: SimultaneousSlot[]) {
-    setSimSlotsState(slots);
-    saveSimSlots(userId, slots);
-    onSave(generateSmartSchedule(
-      examType, hoursPerDay, daysPerWeek, targetMonths, revisionPercent,
-      startDate, syllabusProgress, rm.unavailablePeriods, rm.variableWeeks ?? [],
-      topicSpeed, baseWeeksOverride, practiceProgress, subjectOrder, parallelCfg, slots));
-  }
 
   function updateParallelCfg(cfg: ParallelConfig) {
     setParallelCfgState(cfg);
@@ -2922,6 +2830,11 @@ function LiveScheduleTab({
         cfg,
       ),
     );
+  }
+
+  function updateStudyPeriods(periods: StudyPeriod[]) {
+    setStudyPeriodsState(periods);
+    saveStudyPeriods(userId, periods);
   }
 
   /* Live schedule — always recalculated with ALL factors */
@@ -2980,8 +2893,7 @@ function LiveScheduleTab({
         practiceProgress,
         subjectOrder,
         parallelCfg,
-        simSlots,
-      ),
+          ),
     );
   }
 
@@ -3004,8 +2916,7 @@ function LiveScheduleTab({
         practiceProgress,
         subjectOrder,
         parallelCfg,
-        simSlots,
-      ),
+          ),
     );
   }
 
@@ -3406,7 +3317,159 @@ function LiveScheduleTab({
         )}
       </div>
 
-      {/* Simultaneous Topics & Hours Allocation */}
+      {/* Study Mode & Hours Allocation */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+        <button onClick={() => setShowParallelPanel(!showParallelPanel)}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left"
+          style={{ background: showParallelPanel ? `${GOLD}08` : CARD }}>
+          <BookOpen className="w-4 h-4" style={{ color: GOLD }} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>Study Mode & Hours Allocation</p>
+            <p className="text-xs mt-0.5" style={{ color: MUTED }}>
+              {studyPeriods.length === 0
+                ? "Sequential by default — add periods to customise"
+                : `${studyPeriods.length} study period${studyPeriods.length > 1 ? "s" : ""} configured`}
+            </p>
+          </div>
+          {showParallelPanel ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
+        </button>
+        {showParallelPanel && (
+          <div className="px-5 pb-5 pt-3 space-y-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+            <p className="text-xs" style={{ color: MUTED }}>
+              Add date-range periods with a specific study mode. Outside all periods, the schedule runs sequentially by default.
+            </p>
+
+            {/* Add period form */}
+            <div className="rounded-xl p-4 space-y-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+              <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>Add Study Period</p>
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Label</label>
+                <input value={periodForm.label} onChange={e => setPeriodForm(p => ({ ...p, label: e.target.value }))}
+                  placeholder="e.g. Exam sprint, Daily revision…"
+                  className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                  style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Start date</label>
+                  <input type="date" value={periodForm.startDate}
+                    onChange={e => setPeriodForm(p => ({ ...p, startDate: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
+                    style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>End date</label>
+                  <div className="space-y-1">
+                    <input type="date" value={periodForm.endDate === "indefinite" ? "" : periodForm.endDate}
+                      disabled={periodForm.endDate === "indefinite"}
+                      onChange={e => setPeriodForm(p => ({ ...p, endDate: e.target.value }))}
+                      className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none disabled:opacity-40"
+                      style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={periodForm.endDate === "indefinite"}
+                        onChange={e => setPeriodForm(p => ({ ...p, endDate: e.target.checked ? "indefinite" : "" }))}
+                        className="rounded" />
+                      <span className="text-xs" style={{ color: MUTED }}>Indefinitely</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>Study mode:</label>
+                <div className="flex gap-2">
+                  {([
+                    { key: "sequential", label: "📖 One topic at a time" },
+                    { key: "parallel",   label: "📚 Multiple topics" },
+                  ] as const).map(opt => (
+                    <button key={opt.key} type="button"
+                      onClick={() => setPeriodForm(p => ({ ...p, mode: opt.key }))}
+                      className="flex-1 p-2.5 rounded-xl text-xs font-semibold text-left"
+                      style={periodForm.mode === opt.key
+                        ? { background: `${GOLD}22`, border: `2px solid ${GOLD}`, color: DARK }
+                        : { background: CREAM, border: `1px solid ${BORDER}`, color: MUTED }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {periodForm.mode === "parallel" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Topics simultaneously:</label>
+                    <select value={periodForm.parallelCount}
+                      onChange={e => setPeriodForm(p => ({ ...p, parallelCount: parseInt(e.target.value) }))}
+                      className="h-9 px-3 rounded-xl text-sm font-semibold border-2 outline-none"
+                      style={{ background: CARD, borderColor: GOLD, color: DARK }}>
+                      {[2,3,4,5,6,7,8,9].map(n => <option key={n} value={n}>{n} topics</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>Hours per day per topic:</label>
+                    {rawSubjectsList.slice(0, periodForm.parallelCount).map(s => (
+                      <div key={s.id} className="flex items-center gap-3 px-3 py-2 rounded-xl mb-1.5"
+                        style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+                        <span className="flex-1 text-xs font-medium" style={{ color: CHARCOAL }}>{s.name}</span>
+                        <input type="number" min={0.5} max={12} step={0.5}
+                          value={periodForm.hoursPerSubject[s.id] ?? ""}
+                          placeholder={`${Math.round(hoursPerDay / periodForm.parallelCount * 10) / 10}`}
+                          onChange={e => setPeriodForm(p => ({ ...p, hoursPerSubject: { ...p.hoursPerSubject, [s.id]: parseFloat(e.target.value) || 0 } }))}
+                          className="w-16 h-8 px-2 rounded-lg text-xs text-center border-2 outline-none"
+                          style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }} />
+                        <span className="text-xs" style={{ color: MUTED }}>hrs/day</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button type="button"
+                onClick={() => {
+                  if (!periodForm.label || !periodForm.startDate || (!periodForm.endDate)) return;
+                  const newP: StudyPeriod = {
+                    id: `${Date.now()}`, label: periodForm.label,
+                    startDate: periodForm.startDate, endDate: periodForm.endDate,
+                    mode: periodForm.mode, parallelCount: periodForm.parallelCount,
+                    hoursPerSubject: periodForm.hoursPerSubject,
+                  };
+                  updateStudyPeriods([...studyPeriods, newP]);
+                  setPeriodForm({ label: "", startDate: "", endDate: "", mode: "sequential", parallelCount: 2, hoursPerSubject: {} });
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+                style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
+                <Plus className="w-3 h-3" /> Add Period
+              </button>
+            </div>
+
+            {/* Existing periods */}
+            {studyPeriods.length === 0
+              ? <p className="text-xs" style={{ color: MUTED }}>No periods added — schedule runs sequentially by default.</p>
+              : <div className="space-y-2">
+                {studyPeriods.map(p => (
+                  <div key={p.id} className="rounded-xl px-4 py-3"
+                    style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}33` }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold" style={{ color: CHARCOAL }}>📚 {p.label}</p>
+                        <p className="text-xs mt-0.5" style={{ color: MUTED }}>
+                          {p.startDate ? format(parseISO(p.startDate), "MMM d, yyyy") : ""} →{" "}
+                          {p.endDate === "indefinite" ? "Indefinitely" : p.endDate ? format(parseISO(p.endDate), "MMM d, yyyy") : ""}
+                        </p>
+                        <p className="text-xs mt-0.5 font-medium" style={{ color: DARK }}>
+                          {p.mode === "sequential" ? "📖 Sequential" : `📚 ${p.parallelCount} topics in parallel`}
+                        </p>
+                      </div>
+                      <button type="button"
+                        onClick={() => updateStudyPeriods(studyPeriods.filter(x => x.id !== p.id))}
+                        className="p-1 rounded-lg" style={{ color: "#C0392B" }}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            }
+          </div>
+        )}
+      </div>
       <div
         className="rounded-2xl overflow-hidden"
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
@@ -3585,152 +3648,6 @@ function LiveScheduleTab({
       </div>
 
 
-      {/* Simultaneous Study Slots */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
-        <button onClick={() => setShowSlotsPanel(!showSlotsPanel)}
-          className="w-full flex items-center gap-3 px-5 py-4 text-left"
-          style={{ background: showSlotsPanel ? `${GOLD}08` : CARD }}>
-          <Zap className="w-4 h-4" style={{ color: GOLD }} />
-          <div className="flex-1">
-            <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>Simultaneous Study Slots</p>
-            <p className="text-xs mt-0.5" style={{ color: MUTED }}>
-              Add date ranges where you study specific topics together — each with its own hours
-            </p>
-          </div>
-          {showSlotsPanel ? <ChevronDown className="w-4 h-4" style={{ color: MUTED }} /> : <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />}
-        </button>
-        {showSlotsPanel && (
-          <div className="px-5 pb-5 pt-3 space-y-4" style={{ borderTop: `1px solid ${BORDER}` }}>
-            <p className="text-xs" style={{ color: MUTED }}>
-              During these slots, selected topics run simultaneously from the same start date. Outside slots, the default study mode applies.
-            </p>
-            <div className="rounded-xl p-4 space-y-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
-              <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>Add Simultaneous Slot</p>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Label</label>
-                <input value={slotForm.label} onChange={e => setSlotForm(p => ({ ...p, label: e.target.value }))}
-                  placeholder="e.g. Daily revision block, Exam sprint…"
-                  className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                  style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>Start date</label>
-                  <input type="date" value={slotForm.startDate} onChange={e => setSlotForm(p => ({ ...p, startDate: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                    style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: MUTED }}>End date</label>
-                  <input type="date" value={slotForm.endDate} min={slotForm.startDate} onChange={e => setSlotForm(p => ({ ...p, endDate: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
-                    style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }} />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>Select topics to study simultaneously (min 2):</label>
-                <div className="flex flex-wrap gap-2">
-                  {rawSubjectsList.map(s => {
-                    const selected = slotForm.subjectIds.includes(s.id);
-                    return (
-                      <button key={s.id} type="button"
-                        onClick={() => setSlotForm(p => ({
-                          ...p,
-                          subjectIds: selected ? p.subjectIds.filter(id => id !== s.id) : [...p.subjectIds, s.id],
-                        }))}
-                        className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-                        style={selected ? { background: DARK, color: CREAM } : { background: `${BORDER}88`, color: MUTED }}>
-                        {s.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              {slotForm.subjectIds.length > 0 && (
-                <div>
-                  <label className="text-xs font-semibold mb-2 block" style={{ color: MUTED }}>Hours per day per topic:</label>
-                  <div className="space-y-2">
-                    {slotForm.subjectIds.map(id => {
-                      const s = rawSubjectsList.find(x => x.id === id);
-                      if (!s) return null;
-                      return (
-                        <div key={id} className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                          style={{ background: CARD, border: `1px solid ${BORDER}` }}>
-                          <span className="flex-1 text-xs font-medium" style={{ color: CHARCOAL }}>{s.name}</span>
-                          <input type="number" min={0.5} max={12} step={0.5}
-                            value={slotForm.hoursPerSubject[id] ?? ""}
-                            placeholder="hrs/day"
-                            onChange={e => setSlotForm(p => ({
-                              ...p,
-                              hoursPerSubject: { ...p.hoursPerSubject, [id]: parseFloat(e.target.value) || 0 }
-                            }))}
-                            className="w-20 h-8 px-2 rounded-lg text-xs text-center border-2 outline-none"
-                            style={{ background: CREAM, borderColor: BORDER, color: CHARCOAL }} />
-                          <span className="text-xs" style={{ color: MUTED }}>hrs/day</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              <button type="button"
-                onClick={() => {
-                  if (!slotForm.label || !slotForm.startDate || !slotForm.endDate || slotForm.subjectIds.length < 2) return;
-                  const newSlot: SimultaneousSlot = {
-                    id: `${Date.now()}`, label: slotForm.label,
-                    startDate: slotForm.startDate, endDate: slotForm.endDate,
-                    subjectIds: slotForm.subjectIds, hoursPerSubject: slotForm.hoursPerSubject,
-                  };
-                  updateSimSlots([...simSlots, newSlot]);
-                  setSlotForm({ label: "", startDate: "", endDate: "", subjectIds: [], hoursPerSubject: {} });
-                }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
-                style={{ background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`, color: "#fff" }}>
-                <Plus className="w-3 h-3" /> Add Slot
-              </button>
-            </div>
-            {simSlots.length === 0 && <p className="text-xs" style={{ color: MUTED }}>No simultaneous slots added yet.</p>}
-            <div className="space-y-2">
-              {simSlots.map(slot => {
-                const days = slot.startDate && slot.endDate
-                  ? Math.max(0, Math.round((new Date(slot.endDate).getTime() - new Date(slot.startDate).getTime()) / (24*60*60*1000)))
-                  : 0;
-                return (
-                  <div key={slot.id} className="rounded-xl px-4 py-3" style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}33` }}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold" style={{ color: CHARCOAL }}>⚡ {slot.label}</p>
-                        <p className="text-xs mt-0.5" style={{ color: MUTED }}>
-                          {slot.startDate ? format(parseISO(slot.startDate), "MMM d") : ""} → {slot.endDate ? format(parseISO(slot.endDate), "MMM d") : ""} · {days} days
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: DARK }}>
-                          {slot.subjectIds.map(id => rawSubjectsList.find(s => s.id === id)?.name ?? id).join(" + ")}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {slot.subjectIds.map(id => {
-                            const hrs = slot.hoursPerSubject[id];
-                            if (!hrs) return null;
-                            return (
-                              <span key={id} className="text-[10px] px-2 py-0.5 rounded-full"
-                                style={{ background: `${GOLD}22`, color: DARK }}>
-                                {rawSubjectsList.find(s => s.id === id)?.name ?? id}: {hrs} hrs/day
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <button type="button" onClick={() => updateSimSlots(simSlots.filter(s => s.id !== slot.id))}
-                        className="p-1 rounded-lg" style={{ color: "#C0392B" }}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* QP Integration indicator */}
       {Object.keys(practiceProgress).length > 0 && (
