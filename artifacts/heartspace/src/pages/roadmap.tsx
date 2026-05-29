@@ -947,27 +947,56 @@ function generateSmartSchedule(
       const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
       if (eff2.isUnavailable || eff2.hours <= 0.5) { calOffset2++; continue; }
 
-      /* Check if a simSlot is active — if so, run those subjects in parallel this week */
+      /* Check if a simSlot is active — overrides global mode completely for this week */
       const activeSimSlot = getActiveSimSlot(calOffset2);
       if (activeSimSlot) {
-        /* Run slot subjects in parallel for this week */
         const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
           ? ` — ${eff2.label}` : "";
         const slotSubjectIds = activeSimSlot.subjectIds;
-        const slotTasks = tasks.filter(t => slotSubjectIds.includes(t.id));
-        const slotSubjectsSeen = new Set<string>();
-        slotTasks.forEach(task => {
-          if (slotSubjectsSeen.has(task.id)) return;
-          const subjectHrs = activeSimSlot.hoursPerSubject[task.id]
-            ? activeSimSlot.hoursPerSubject[task.id] * daysPerWeek
+        /* Track hours consumed per subject in this slot week */
+        const slotHoursLeft: Record<string, number> = {};
+        slotSubjectIds.forEach(id => {
+          const hrsPerWeek = activeSimSlot.hoursPerSubject[id]
+            ? activeSimSlot.hoursPerSubject[id] * daysPerWeek
             : eff2.hours / slotSubjectIds.length;
-          slotSubjectsSeen.add(task.id);
-          weeks.push({
-            weekNumber: calOffset2, subject: task.name,
-            focus: task.focus + vSuffix, type: task.type,
-            hoursRequired: subjectHrs, hoursAvailable: Math.min(subjectHrs, eff2.hours),
-            startDate: format(addWeeks(start, calOffset2), "MMM d"),
-          });
+          slotHoursLeft[id] = hrsPerWeek;
+        });
+        /* For each slot subject, consume from its task queue */
+        slotSubjectIds.forEach(subjectId => {
+          let hrsAvail = slotHoursLeft[subjectId];
+          const focusParts: string[] = [];
+          /* Find tasks belonging to this subject */
+          while (hrsAvail > 0.5) {
+            const nextTaskIdx = tasks.findIndex((t, i) => i >= tIdx && t.id === subjectId);
+            if (nextTaskIdx === -1) break;
+            const task = tasks[nextTaskIdx];
+            const taskHrs = nextTaskIdx === tIdx ? tHoursLeft : task.hoursNeeded;
+            if (taskHrs <= hrsAvail) {
+              hrsAvail -= taskHrs;
+              focusParts.push(task.focus);
+              /* Remove this task from queue by marking it done */
+              tasks.splice(nextTaskIdx, 1);
+              if (nextTaskIdx === tIdx) {
+                tHoursLeft = tIdx < tasks.length ? tasks[tIdx].hoursNeeded : 0;
+              }
+            } else {
+              if (nextTaskIdx === tIdx) tHoursLeft -= hrsAvail;
+              focusParts.push(task.focus + " (cont.)");
+              hrsAvail = 0;
+            }
+          }
+          if (focusParts.length > 0) {
+            const subjectHrs = activeSimSlot.hoursPerSubject[subjectId]
+              ? activeSimSlot.hoursPerSubject[subjectId] * daysPerWeek
+              : eff2.hours / slotSubjectIds.length;
+            weeks.push({
+              weekNumber: calOffset2, subject: tasks.find(t => t.id === subjectId)?.name
+                ?? subjectId,
+              focus: focusParts.join(" + ") + vSuffix, type: "study",
+              hoursRequired: subjectHrs, hoursAvailable: Math.min(subjectHrs, eff2.hours),
+              startDate: format(addWeeks(start, calOffset2), "MMM d"),
+            });
+          }
         });
         calOffset2++;
         continue;
