@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { savePracticeToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
 import { format } from "date-fns";
 import {
@@ -82,6 +83,7 @@ function loadProgress(userId: string): PracticeProgress {
 function saveProgress(userId: string, progress: PracticeProgress) {
   try {
     localStorage.setItem(lsKey(userId), JSON.stringify(progress));
+    savePracticeToDB(userId, progress).catch(() => {});
   } catch {
     /* ignore */
   }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { saveSyllabusToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
 import { format } from "date-fns";
 import {
@@ -951,6 +952,7 @@ export function loadSyllabusProgress(userId: string): SyllabusProgress {
 function saveProgress(userId: string, progress: SyllabusProgress) {
   try {
     localStorage.setItem(getStorageKey(userId), JSON.stringify(progress));
+    saveSyllabusToDB(userId, progress).catch(() => {});
   } catch {
     /* ignore */
   }

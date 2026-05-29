@@ -170,6 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (u && t) {
         localStorage.setItem("heartspace_user", JSON.stringify(u));
         localStorage.setItem("heartspace_token", t);
+        /* Sync: push existing localStorage data then pull from DB */
+        pushAllToDB(u.id).then(() => syncAllFromDB(u.id)).catch(() => {});
       } else {
         localStorage.removeItem("heartspace_user");
         localStorage.removeItem("heartspace_token");

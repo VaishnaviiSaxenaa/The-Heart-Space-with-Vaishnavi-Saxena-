@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { saveRoadmapToDB, saveScheduleInputsToDB, saveTopicSpeedToDB, saveSubjectOrderToDB, saveStudyPeriodsToDB, saveBaseWeeksToDB, syncAllFromDB, pushAllToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
 import {
   Calendar,
@@ -187,6 +188,7 @@ function loadSubjectOrder(uid: string, defaultIds: string[]): string[] {
 function saveSubjectOrder(uid: string, ids: string[]) {
   try {
     localStorage.setItem(lsOrderKey(uid), JSON.stringify(ids));
+    saveSubjectOrderToDB(uid, ids).catch(() => {});
   } catch {}
 }
 
@@ -221,6 +223,7 @@ function loadStudyPeriods(uid: string): StudyPeriod[] {
 function saveStudyPeriods(uid: string, periods: StudyPeriod[]) {
   try {
     localStorage.setItem(lsStudyPeriodsKey(uid), JSON.stringify(periods));
+    saveStudyPeriodsToDB(uid, periods).catch(() => {});
   } catch {}
 }
 
@@ -259,6 +262,7 @@ function loadTopicSpeed(uid: string): TopicSpeedMap {
 function saveTopicSpeed(uid: string, m: TopicSpeedMap) {
   try {
     localStorage.setItem(lsSpeedKey(uid), JSON.stringify(m));
+    saveTopicSpeedToDB(uid, m).catch(() => {});
   } catch {}
 }
 function loadBaseWeeks(uid: string): BaseWeeksMap {
@@ -272,6 +276,7 @@ function loadBaseWeeks(uid: string): BaseWeeksMap {
 function saveBaseWeeks(uid: string, m: BaseWeeksMap) {
   try {
     localStorage.setItem(lsBaseKey(uid), JSON.stringify(m));
+    saveBaseWeeksToDB(uid, m).catch(() => {});
   } catch {}
 }
 
@@ -1195,6 +1200,7 @@ function loadRoadmap(userId: string): Roadmap | null {
 }
 function saveRoadmap(userId: string, rm: Roadmap) {
   localStorage.setItem(lsKey(userId), JSON.stringify(rm));
+  saveRoadmapToDB(userId, rm).catch(() => {});
 }
 
 /* ─── Progress engine ──────────────────── */
