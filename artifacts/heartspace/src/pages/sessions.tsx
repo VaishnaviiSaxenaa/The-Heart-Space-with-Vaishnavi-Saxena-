@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { saveSessionsToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
 import { format } from "date-fns";
 import {
@@ -63,6 +64,7 @@ function loadSagarSessions(userId: string): SagarSession[] {
 
 function saveSagarSessions(userId: string, list: SagarSession[]) {
   localStorage.setItem(lsKey(userId, "sagar_sessions"), JSON.stringify(list));
+  saveSessionsToDB(userId, list).catch(() => {});
 }
 
 function loadVaishnaviNote(userId: string): VaishnaviNote | null {

@@ -142,6 +142,14 @@ export async function saveBaseWeeksToDB(
   return sbSet("base_weeks", userId, data);
 }
 
+/* ── Sessions ── */
+export async function loadSessionsFromDB(userId: string): Promise<unknown | null> {
+  return sbGet("sessions_data", userId);
+}
+export async function saveSessionsToDB(userId: string, data: unknown): Promise<void> {
+  return sbSet("sessions_data", userId, data);
+}
+
 /* ── Daily Tracker ── */
 export async function loadDailyFromDB(userId: string): Promise<unknown | null> {
   return sbGet("daily_tracker", userId);
