@@ -928,12 +928,51 @@ function generateSmartSchedule(
   const weeks: ScheduleWeek[] = [];
   let calOffset2 = 0;
 
+  /* Helper: check if a simSlot is active for this calendar week */
+  function getActiveSimSlot(weekOffset: number): SimultaneousSlot | null {
+    const weekDate = addWeeks(start, weekOffset);
+    for (const slot of simSlots) {
+      if (!slot.startDate || !slot.endDate) continue;
+      const slotStart = parseISO(slot.startDate);
+      const slotEnd   = parseISO(slot.endDate);
+      if (weekDate >= slotStart && weekDate < slotEnd) return slot;
+    }
+    return null;
+  }
+
   if (parallelConfig.mode === "sequential") {
     let tIdx = 0;
     let tHoursLeft = tasks.length > 0 ? tasks[0].hoursNeeded : 0;
     while (tIdx < tasks.length && calOffset2 < 300) {
       const eff2 = getEffectiveHoursForWeekOffset(calOffset2);
       if (eff2.isUnavailable || eff2.hours <= 0.5) { calOffset2++; continue; }
+
+      /* Check if a simSlot is active — if so, run those subjects in parallel this week */
+      const activeSimSlot = getActiveSimSlot(calOffset2);
+      if (activeSimSlot) {
+        /* Run slot subjects in parallel for this week */
+        const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
+          ? ` — ${eff2.label}` : "";
+        const slotSubjectIds = activeSimSlot.subjectIds;
+        const slotTasks = tasks.filter(t => slotSubjectIds.includes(t.id));
+        const slotSubjectsSeen = new Set<string>();
+        slotTasks.forEach(task => {
+          if (slotSubjectsSeen.has(task.id)) return;
+          const subjectHrs = activeSimSlot.hoursPerSubject[task.id]
+            ? activeSimSlot.hoursPerSubject[task.id] * daysPerWeek
+            : eff2.hours / slotSubjectIds.length;
+          slotSubjectsSeen.add(task.id);
+          weeks.push({
+            weekNumber: calOffset2, subject: task.name,
+            focus: task.focus + vSuffix, type: task.type,
+            hoursRequired: subjectHrs, hoursAvailable: Math.min(subjectHrs, eff2.hours),
+            startDate: format(addWeeks(start, calOffset2), "MMM d"),
+          });
+        });
+        calOffset2++;
+        continue;
+      }
+
       let hoursLeftThisWeek = eff2.hours;
       const focusParts: string[] = [];
       const weekType: "study"|"assignment"|"revision" = tasks[tIdx]?.type ?? "study";
@@ -961,6 +1000,9 @@ function generateSmartSchedule(
       });
       calOffset2++;
     }
+    /* Re-number and sort weeks (simSlot weeks used calOffset as weekNumber) */
+    weeks.sort((a, b) => a.weekNumber - b.weekNumber);
+    weeks.forEach((w, i) => { w.weekNumber = i + 1; });
   } else {
     /* Parallel: N subjects run simultaneously from same start date */
     const n = parallelConfig.parallelCount;
