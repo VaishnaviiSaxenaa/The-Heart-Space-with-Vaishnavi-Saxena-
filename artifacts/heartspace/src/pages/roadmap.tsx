@@ -519,7 +519,7 @@ function generateSmartSchedule(
           ? allQueues.slice(bStart, bStart + effectiveN)
           : batch;
         const vSuffix = eff2.label && Math.abs(eff2.hours - baseHoursPerWeek) > 0.1
-          ?  : '';
+          ? ` — ${eff2.label}` : '';
         effectiveBatch.forEach(bq => {
           if (bq.queue.length === 0) return;
           const periodHrs = activePeriod?.hoursPerSubject[bq.id]
