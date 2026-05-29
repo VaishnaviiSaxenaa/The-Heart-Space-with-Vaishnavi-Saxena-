@@ -203,6 +203,7 @@ interface StudyPeriod {
   endDate: string | "indefinite";
   mode: "sequential" | "parallel";
   parallelCount: number;
+  subjectIds: string[];
   hoursPerSubject: Record<string, number>;
 }
 
@@ -1090,7 +1091,7 @@ function generateSmartSchedule(
   let studyIdx = 0;
   /* Walk all calendar weeks up to the last study week's calendar position */
   const totalCalWeeks = calendarOffset + bufferWeeks + 10;
-  calendarOffset = 0;
+  let calendarOffset = 0;
   while (calendarOffset < totalCalWeeks || studyIdx < weeks.length) {
     const eff = getEffectiveHoursForWeekOffset(calendarOffset);
     /* Check if there's a study week starting at this calendar offset */
@@ -2823,6 +2824,7 @@ function LiveScheduleTab({
     endDate: "",
     mode: "sequential" as "sequential" | "parallel",
     parallelCount: 2,
+    subjectIds: [] as string[],
     hoursPerSubject: {} as Record<string, number>,
   });
 
@@ -3471,84 +3473,96 @@ function LiveScheduleTab({
                 <div className="space-y-3">
                   <div>
                     <label
-                      className="text-xs font-semibold mb-1 block"
-                      style={{ color: MUTED }}
-                    >
-                      Topics simultaneously:
-                    </label>
-                    <select
-                      value={periodForm.parallelCount}
-                      onChange={(e) =>
-                        setPeriodForm((p) => ({
-                          ...p,
-                          parallelCount: parseInt(e.target.value),
-                        }))
-                      }
-                      className="h-9 px-3 rounded-xl text-sm font-semibold border-2 outline-none"
-                      style={{
-                        background: CARD,
-                        borderColor: GOLD,
-                        color: DARK,
-                      }}
-                    >
-                      {[2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                        <option key={n} value={n}>
-                          {n} topics
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label
                       className="text-xs font-semibold mb-2 block"
                       style={{ color: MUTED }}
                     >
-                      Hours per day per topic:
+                      Select topics to study simultaneously:
                     </label>
-                    {rawSubjectsList.map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl mb-1.5"
-                        style={{
-                          background: CARD,
-                          border: `1px solid ${BORDER}`,
-                        }}
-                      >
-                        <span
-                          className="flex-1 text-xs font-medium"
-                          style={{ color: CHARCOAL }}
-                        >
-                          {s.name}
-                        </span>
-                        <input
-                          type="number"
-                          min={0.5}
-                          max={12}
-                          step={0.5}
-                          value={periodForm.hoursPerSubject[s.id] ?? ""}
-                          placeholder={`${Math.round((hoursPerDay / periodForm.parallelCount) * 10) / 10}`}
-                          onChange={(e) =>
-                            setPeriodForm((p) => ({
-                              ...p,
-                              hoursPerSubject: {
-                                ...p.hoursPerSubject,
-                                [s.id]: parseFloat(e.target.value) || 0,
-                              },
-                            }))
-                          }
-                          className="w-16 h-8 px-2 rounded-lg text-xs text-center border-2 outline-none"
-                          style={{
-                            background: CREAM,
-                            borderColor: BORDER,
-                            color: CHARCOAL,
-                          }}
-                        />
-                        <span className="text-xs" style={{ color: MUTED }}>
-                          hrs/day
-                        </span>
-                      </div>
-                    ))}
+                    <div className="flex flex-wrap gap-2">
+                      {rawSubjectsList.map((s) => {
+                        const selected = periodForm.subjectIds.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() =>
+                              setPeriodForm((p) => ({
+                                ...p,
+                                subjectIds: selected
+                                  ? p.subjectIds.filter((id) => id !== s.id)
+                                  : [...p.subjectIds, s.id],
+                              }))
+                            }
+                            className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                            style={
+                              selected
+                                ? { background: DARK, color: CREAM }
+                                : { background: `${BORDER}88`, color: MUTED }
+                            }
+                          >
+                            {s.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                  {periodForm.subjectIds.length > 0 && (
+                    <div>
+                      <label
+                        className="text-xs font-semibold mb-2 block"
+                        style={{ color: MUTED }}
+                      >
+                        Hours per day per topic:
+                      </label>
+                      {periodForm.subjectIds.map((sid) => {
+                        const s = rawSubjectsList.find((x) => x.id === sid);
+                        if (!s) return null;
+                        return (
+                          <div
+                            key={sid}
+                            className="flex items-center gap-3 px-3 py-2 rounded-xl mb-1.5"
+                            style={{
+                              background: CARD,
+                              border: `1px solid ${BORDER}`,
+                            }}
+                          >
+                            <span
+                              className="flex-1 text-xs font-medium"
+                              style={{ color: CHARCOAL }}
+                            >
+                              {s.name}
+                            </span>
+                            <input
+                              type="number"
+                              min={0.5}
+                              max={12}
+                              step={0.5}
+                              value={periodForm.hoursPerSubject[sid] ?? ""}
+                              placeholder="hrs/day"
+                              onChange={(e) =>
+                                setPeriodForm((p) => ({
+                                  ...p,
+                                  hoursPerSubject: {
+                                    ...p.hoursPerSubject,
+                                    [sid]: parseFloat(e.target.value) || 0,
+                                  },
+                                }))
+                              }
+                              className="w-16 h-8 px-2 rounded-lg text-xs text-center border-2 outline-none"
+                              style={{
+                                background: CREAM,
+                                borderColor: BORDER,
+                                color: CHARCOAL,
+                              }}
+                            />
+                            <span className="text-xs" style={{ color: MUTED }}>
+                              hrs/day
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
               <button
@@ -3567,6 +3581,7 @@ function LiveScheduleTab({
                     endDate: periodForm.endDate,
                     mode: periodForm.mode,
                     parallelCount: periodForm.parallelCount,
+                    subjectIds: periodForm.subjectIds,
                     hoursPerSubject: periodForm.hoursPerSubject,
                   };
                   updateStudyPeriods([...studyPeriods, newP]);
@@ -3576,6 +3591,7 @@ function LiveScheduleTab({
                     endDate: "",
                     mode: "sequential",
                     parallelCount: 2,
+                    subjectIds: [],
                     hoursPerSubject: {},
                   });
                 }}
@@ -5216,3 +5232,4 @@ export default function Roadmap() {
   );
 }
 
+export default Roadmap;
