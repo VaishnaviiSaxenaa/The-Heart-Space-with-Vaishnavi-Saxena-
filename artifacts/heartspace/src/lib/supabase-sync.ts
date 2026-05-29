@@ -142,6 +142,14 @@ export async function saveBaseWeeksToDB(
   return sbSet("base_weeks", userId, data);
 }
 
+/* ── Daily Tracker ── */
+export async function loadDailyFromDB(userId: string): Promise<unknown | null> {
+  return sbGet("daily_tracker", userId);
+}
+export async function saveDailyToDB(userId: string, data: unknown): Promise<void> {
+  return sbSet("daily_tracker", userId, data);
+}
+
 /* ── Sync all data on login ──
    Call this once when user logs in.
    Pulls from Supabase → updates localStorage.

@@ -30,6 +30,7 @@ interface StudentData {
   subjectOrder: string[];
   studyPeriods: unknown[];
   baseWeeks: Record<string, unknown>;
+  daily: Record<string, unknown>;
 }
 
 const EMPTY_DATA: StudentData = {
@@ -41,6 +42,7 @@ const EMPTY_DATA: StudentData = {
   subjectOrder: [],
   studyPeriods: [],
   baseWeeks: {},
+  daily: {},
 };
 
 async function fetchStudentData(userId: string): Promise<StudentData> {
@@ -53,6 +55,7 @@ async function fetchStudentData(userId: string): Promise<StudentData> {
     "subject_order",
     "study_periods",
     "base_weeks",
+    "daily_tracker",
   ];
   const results = await Promise.all(
     tables.map((t) =>
@@ -73,6 +76,7 @@ async function fetchStudentData(userId: string): Promise<StudentData> {
     subjectOrder: results[5] ?? [],
     studyPeriods: results[6] ?? [],
     baseWeeks: results[7] ?? {},
+    daily: results[8] ?? {},
   };
 }
 
@@ -277,7 +281,7 @@ export default function CounsellorDashboard() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "schedule" | "syllabus" | "practice"
+    "schedule" | "syllabus" | "practice" | "daily" | "charts"
   >("schedule");
   const [search, setSearch] = useState("");
 
@@ -445,6 +449,8 @@ export default function CounsellorDashboard() {
                   { key: "schedule", label: "📅 Schedule" },
                   { key: "syllabus", label: "📚 Syllabus" },
                   { key: "practice", label: "✏️ Practice" },
+                  { key: "daily", label: "📓 Daily" },
+                  { key: "charts", label: "📊 Progress" },
                 ] as const
               ).map((tab) => (
                 <button
@@ -735,6 +741,248 @@ export default function CounsellorDashboard() {
                           border: `1px solid ${BORDER}`,
                         }}
                       >
+                        <PracticePanel
+                          data={studentData.practice as Record<string, unknown>}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === "daily" && (
+                    <div className="max-w-2xl">
+                      <h3
+                        className="text-sm font-bold mb-4"
+                        style={{ color: DARK }}
+                      >
+                        Daily Tracker History
+                      </h3>
+                      {Object.keys(studentData.daily).length === 0 ? (
+                        <p className="text-xs" style={{ color: MUTED }}>
+                          No daily entries yet.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {Object.entries(studentData.daily)
+                            .sort(([a], [b]) => b.localeCompare(a))
+                            .slice(0, 30)
+                            .map(([date, entry]) => {
+                              const e = entry as Record<string, unknown>;
+                              return (
+                                <div
+                                  key={date}
+                                  className="rounded-2xl p-4"
+                                  style={{
+                                    background: CARD,
+                                    border: `1px solid ${BORDER}`,
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p
+                                      className="text-xs font-bold"
+                                      style={{ color: DARK }}
+                                    >
+                                      {date}
+                                    </p>
+                                    <div className="flex gap-3">
+                                      {e.mood != null && (
+                                        <span
+                                          className="text-xs"
+                                          style={{ color: GOLD }}
+                                        >
+                                          Mood: {e.mood as number}/5
+                                        </span>
+                                      )}
+                                      {e.studyHours != null && (
+                                        <span
+                                          className="text-xs"
+                                          style={{ color: OLIVE }}
+                                        >
+                                          Study: {e.studyHours as number}h
+                                        </span>
+                                      )}
+                                      {e.stressLevel != null && (
+                                        <span
+                                          className="text-xs"
+                                          style={{ color: MUTED }}
+                                        >
+                                          Stress: {e.stressLevel as number}/5
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {e.note && (
+                                    <p
+                                      className="text-xs italic"
+                                      style={{ color: MUTED }}
+                                    >
+                                      &#34;{e.note as string}&#34;
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === "charts" && (
+                    <div className="max-w-2xl space-y-6">
+                      <h3
+                        className="text-sm font-bold mb-4"
+                        style={{ color: DARK }}
+                      >
+                        Progress Overview
+                      </h3>
+                      <div
+                        className="rounded-2xl p-5"
+                        style={{
+                          background: CARD,
+                          border: `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <p
+                          className="text-xs font-bold mb-3"
+                          style={{ color: DARK }}
+                        >
+                          Syllabus Completion
+                        </p>
+                        {JAM_SUBJECTS.map((subject) => {
+                          const subData =
+                            (studentData.syllabus[subject.id] as Record<
+                              string,
+                              unknown
+                            >) ?? {};
+                          const topics = Object.values(subData);
+                          const done = topics.filter(
+                            (t: unknown) =>
+                              (t as Record<string, unknown>)?.status === "done",
+                          ).length;
+                          const total = topics.length || 1;
+                          const pct = Math.round((done / total) * 100);
+                          return (
+                            <div key={subject.id} className="mb-3">
+                              <div className="flex justify-between mb-1">
+                                <span
+                                  className="text-xs"
+                                  style={{ color: CHARCOAL }}
+                                >
+                                  {subject.name}
+                                </span>
+                                <span
+                                  className="text-xs font-semibold"
+                                  style={{ color: pct === 100 ? OLIVE : GOLD }}
+                                >
+                                  {pct}%
+                                </span>
+                              </div>
+                              <div
+                                className="w-full h-2 rounded-full overflow-hidden"
+                                style={{ background: BORDER }}
+                              >
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${pct}%`,
+                                    background: pct === 100 ? OLIVE : GOLD,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div
+                        className="rounded-2xl p-5"
+                        style={{
+                          background: CARD,
+                          border: `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <p
+                          className="text-xs font-bold mb-3"
+                          style={{ color: DARK }}
+                        >
+                          Last 14 Days — Mood and Study Hours
+                        </p>
+                        {Object.keys(studentData.daily).length === 0 ? (
+                          <p className="text-xs" style={{ color: MUTED }}>
+                            No daily data yet.
+                          </p>
+                        ) : (
+                          <div className="flex items-end gap-1 h-28">
+                            {Object.entries(studentData.daily)
+                              .sort(([a], [b]) => a.localeCompare(b))
+                              .slice(-14)
+                              .map(([date, entry]) => {
+                                const e = entry as Record<string, unknown>;
+                                const mood = ((e.mood as number) ?? 0) / 5;
+                                const study = Math.min(
+                                  ((e.studyHours as number) ?? 0) / 10,
+                                  1,
+                                );
+                                return (
+                                  <div
+                                    key={date}
+                                    className="flex-1 flex flex-col items-center gap-0.5"
+                                  >
+                                    <div
+                                      className="w-full rounded-t"
+                                      style={{
+                                        height: `${study * 70}px`,
+                                        background: `${GOLD}99`,
+                                        minHeight: 2,
+                                      }}
+                                    />
+                                    <div
+                                      className="w-full rounded-t"
+                                      style={{
+                                        height: `${mood * 35}px`,
+                                        background: `${OLIVE}99`,
+                                        minHeight: 2,
+                                      }}
+                                    />
+                                    <span
+                                      className="text-[8px]"
+                                      style={{ color: MUTED }}
+                                    >
+                                      {date.slice(5)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
+                        <div className="flex gap-4 mt-2">
+                          <span className="text-[10px] flex items-center gap-1">
+                            <span
+                              className="w-3 h-2 rounded inline-block"
+                              style={{ background: `${GOLD}99` }}
+                            />{" "}
+                            Study hrs
+                          </span>
+                          <span className="text-[10px] flex items-center gap-1">
+                            <span
+                              className="w-3 h-2 rounded inline-block"
+                              style={{ background: `${OLIVE}99` }}
+                            />{" "}
+                            Mood
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className="rounded-2xl p-5"
+                        style={{
+                          background: CARD,
+                          border: `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <p
+                          className="text-xs font-bold mb-3"
+                          style={{ color: DARK }}
+                        >
+                          Practice Accuracy
+                        </p>
                         <PracticePanel
                           data={studentData.practice as Record<string, unknown>}
                         />

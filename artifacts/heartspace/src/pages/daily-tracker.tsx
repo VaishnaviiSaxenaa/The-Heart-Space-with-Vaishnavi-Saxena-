@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { saveDailyToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
 import { format } from "date-fns";
 import {
@@ -133,6 +134,7 @@ export function loadDailyAll(userId: string): Record<string, DailyEntry> {
 
 function saveAll(userId: string, data: Record<string, DailyEntry>) {
   localStorage.setItem(lsKey(userId), JSON.stringify(data));
+  saveDailyToDB(userId, data).catch(() => {});
 }
 
 function blank(date: string): DailyEntry {
