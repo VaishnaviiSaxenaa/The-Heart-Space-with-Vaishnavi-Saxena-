@@ -19,6 +19,7 @@ import QuestionPractice from "./pages/assignments";
 import DailyTracker from "./pages/daily-tracker";
 import StudentDetail from "./pages/student-detail";
 import Roadmap from "./pages/roadmap";
+import PerformanceCharts from "./pages/performance-charts";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -149,6 +150,9 @@ function Router() {
         </Route>
         <Route path="/roadmap">
           <StudentRoute component={Roadmap} />
+        </Route>
+        <Route path="/charts">
+          <StudentRoute component={PerformanceCharts} />
         </Route>
 
         <Route component={NotFound} />

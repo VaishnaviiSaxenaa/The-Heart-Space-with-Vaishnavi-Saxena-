@@ -97,7 +97,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
       { icon: Heart, label: "Health & Wellness", key: "health", soon: true },
       { icon: Brain, label: "Mood & Mind", key: "mood", soon: true },
       { icon: Zap, label: "Habits", key: "habits", soon: true },
-      { icon: BarChart2, label: "Reports", key: "reports2", soon: true },
+      { icon: BarChart2, label: "Reports", key: "reports2", href: "/charts" },
       { icon: Library, label: "Resources", key: "resources", soon: true },
     ];
   }
@@ -122,7 +122,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
     { icon: Zap, label: "Habits", key: "habits", soon: true },
     { icon: BookOpen, label: "Academics", key: "academics", soon: true },
     { icon: Library, label: "Resources", key: "resources", soon: true },
-    { icon: BarChart2, label: "Reports", key: "reports2", soon: true },
+    { icon: BarChart2, label: "Reports", key: "reports2", href: "/charts" },
   ];
 }
 
