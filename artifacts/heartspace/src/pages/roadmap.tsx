@@ -1140,7 +1140,7 @@ function generateSmartSchedule(
   let studyIdx = 0;
   /* Walk all calendar weeks up to the last study week's calendar position */
   const totalCalWeeks = calendarOffset + bufferWeeks + 10;
-  calendarOffset = 0;
+  let calendarOffset = 0;
   while (calendarOffset < totalCalWeeks || studyIdx < weeks.length) {
     const eff = getEffectiveHoursForWeekOffset(calendarOffset);
     /* Check if there's a study week starting at this calendar offset */
@@ -5367,3 +5367,4 @@ export default function Roadmap() {
   );
 }
 
+export default Roadmap;
