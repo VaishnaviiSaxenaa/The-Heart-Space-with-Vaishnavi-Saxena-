@@ -143,36 +143,6 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const navItems = getNavItems(user?.role ?? "student", space);
   // removed = useState<Array<{studentName: string; concern: string; status: string; scheduledDate?: string}>>([]);
 
-  useEffect(() => {
-    if (!isCounsellor) return;
-    supabase.from("profiles").select("id, full_name, email").neq("role", "admin")
-      .then(({ data: students }) => {
-        if (!students) return;
-        students.forEach(student => {
-          supabase.from("sessions_data").select("data").eq("user_id", student.id).single()
-            .then(({ data: sd }) => {
-              if (!sd?.data) return;
-              const sessions = sd.data as Array<Record<string,unknown>>;
-              const active = sessions.filter((s: Record<string,unknown>) =>
-                s.status === "requested" || s.status === "pending" ||
-                s.status === "confirmed" || s.status === "approved"
-              );
-              if (active.length > 0) {
-                setUpcomingSessions(prev => [
-                  ...prev,
-                  ...active.map((s: Record<string,unknown>) => ({
-                    studentName: student.full_name || student.email?.split("@")[0] || "Student",
-                    concern: s.concern as string || "",
-                    status: s.status as string,
-                    scheduledDate: s.scheduledDate as string || "",
-                  }))
-                ]);
-              }
-            });
-        });
-      });
-  }, [isCounsellor]);
-
   return (
     <div
       className="flex flex-col h-full overflow-y-auto"
