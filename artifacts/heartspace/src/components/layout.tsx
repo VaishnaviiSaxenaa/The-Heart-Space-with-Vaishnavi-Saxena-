@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 import { ReactNode } from "react";
 import {
   LayoutDashboard,
@@ -288,6 +289,29 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           );
         })}
       </nav>
+      {isCounsellor && upcomingSessions.length > 0 && (
+        <div className="px-3 py-3 border-t" style={{ borderColor: "#5C3D2E" }}>
+          <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#C9A96E" }}>
+            📅 Upcoming Sessions
+          </p>
+          <div className="space-y-1.5">
+            {upcomingSessions.slice(0, 5).map((s, i) => (
+              <button key={i} type="button"
+                onClick={() => { setLocation("/counsellor"); onClose?.(); }}
+                className="w-full text-left px-2.5 py-2 rounded-xl"
+                style={{ background: s.status === "confirmed" || s.status === "approved" ? "#6E8B6B22" : "#C9A96E15" }}>
+                <p className="text-[10px] font-semibold truncate" style={{ color: "#FAF7F2" }}>{s.studentName}</p>
+                {s.scheduledDate && <p className="text-[10px]" style={{ color: "#C9A96E" }}>📅 {s.scheduledDate}</p>}
+                {s.concern && <p className="text-[10px] italic truncate" style={{ color: "#8C7B70" }}>"{s.concern}"</p>}
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{
+                  background: (s.status === "confirmed" || s.status === "approved") ? "#6E8B6B33" : "#C9A96E33",
+                  color: (s.status === "confirmed" || s.status === "approved") ? "#6E8B6B" : "#C9A96E"
+                }}>{s.status}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Bottom */}
       <div className="px-3 pb-5 space-y-3">
