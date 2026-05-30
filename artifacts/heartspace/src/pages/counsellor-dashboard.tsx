@@ -208,7 +208,7 @@ export default function CounsellorDashboard() {
             .then(({ data: sd }) => {
               if (!sd?.data) return;
               const sessions = sd.data as Record<string,unknown>[];
-              const pending = sessions.filter(s => s.status === "pending");
+              const pending = sessions.filter(s => s.status === "pending" || s.status === "requested" || s.status === "requested");
               if (pending.length > 0) {
                 setAllPendingSessions(prev => {
                   const next = [...prev, ...pending.map(session => ({ student, session }))];
@@ -326,9 +326,9 @@ export default function CounsellorDashboard() {
                                 {session.preferredTime ? ` at ${session.preferredTime as string}` : ""}
                               </p>
                             )}
-                            {session.note && (
+                            {(session.note || session.concern) && (
                               <p className="text-xs mt-0.5 italic" style={{ color: MUTED }}>
-                                "{session.note as string}"
+                                "{(session.note || session.concern) as string}"
                               </p>
                             )}
                           </div>
@@ -616,7 +616,7 @@ export default function CounsellorDashboard() {
                                     <div className='flex-1'>
                                       <div className='flex items-center gap-2 mb-1'>
                                         <span className='text-xs font-bold' style={{ color: DARK }}>
-                                          {session.topic as string || 'Session Request'}
+                                          {session.topic as string || session.concern as string || 'Session Request'}
                                         </span>
                                         <span className='text-[10px] px-2 py-0.5 rounded-full font-semibold'
                                           style={{ background: statusBg, color: statusColor }}>
@@ -629,7 +629,7 @@ export default function CounsellorDashboard() {
                                           {session.preferredTime ? ` at ${session.preferredTime as string}` : ''}
                                         </p>
                                       )}
-                                      {session.note && (
+                                      {(session.note || session.concern) && (
                                         <p className='text-xs mt-1 italic' style={{ color: MUTED }}>
                                           &#34;{session.note as string}&#34;
                                         </p>
@@ -650,7 +650,7 @@ export default function CounsellorDashboard() {
                         <p className='text-xs font-semibold' style={{ color: DARK }}>
                           Total: {studentData.sessions.length} request{studentData.sessions.length !== 1 ? 's' : ''}
                           {' · '}
-                          {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'pending').length} pending
+                          {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'pending' || status === 'requested').length} pending
                           {' · '}
                           {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'approved').length} approved
                         </p>
