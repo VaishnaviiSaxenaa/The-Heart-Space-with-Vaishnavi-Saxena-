@@ -197,27 +197,26 @@ export default function CounsellorDashboard() {
       .select("id, full_name, email, role, plan, created_at")
       .neq("role", "admin")
       .order("created_at", { ascending: false })
-      .then(async ({ data }) => {
+      .then(({ data }) => {
         if (!data) return;
         const studentsData = data as Student[];
         setStudents(studentsData);
-        /* Fetch all pending sessions across all students */
-        const pending: Array<{student: Student; session: Record<string,unknown>}> = [];
-        await Promise.all(studentsData.map(async (student) => {
-          const { data: sd } = await supabase
-            .from("sessions_data")
-            .select("data")
-            .eq("user_id", student.id)
-            .single();
-          if (sd?.data) {
-            const sessions = sd.data as Record<string,unknown>[];
-            sessions.filter(s => s.status === "pending").forEach(session => {
-              pending.push({ student, session });
+        /* Fetch pending sessions for each student */
+        studentsData.forEach(student => {
+          supabase.from("sessions_data").select("data")
+            .eq("user_id", student.id).single()
+            .then(({ data: sd }) => {
+              if (!sd?.data) return;
+              const sessions = sd.data as Record<string,unknown>[];
+              const pending = sessions.filter(s => s.status === "pending");
+              if (pending.length > 0) {
+                setAllPendingSessions(prev => {
+                  const next = [...prev, ...pending.map(session => ({ student, session }))];
+                  return next.sort((a, b) => String(b.session.requestedAt ?? "").localeCompare(String(a.session.requestedAt ?? "")));
+                });
+              }
             });
-          }
-        }));
-        pending.sort((a, b) => String(b.session.requestedAt ?? "").localeCompare(String(a.session.requestedAt ?? "")));
-        setAllPendingSessions(pending);
+        });
       });
   }, []);
 
@@ -252,7 +251,7 @@ export default function CounsellorDashboard() {
       {/* LEFT — Student List */}
       <div className="w-72 flex-shrink-0 border-r flex flex-col" style={{ borderColor: BORDER, background: CARD }}>
         <div className="p-4 border-b" style={{ borderColor: BORDER }}>
-          <h2 className="text-sm font-bold mb-3" style={{ color: DARK }}>All Students</h2>
+          <h2 className="text-sm font-bold mb-3" style={{ color: DARK }}>All Students </h2>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or email…"
             className="w-full h-8 px-3 rounded-lg text-xs border-2 outline-none"
