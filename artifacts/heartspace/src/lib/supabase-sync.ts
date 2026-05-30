@@ -1,10 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-
-const SUPABASE_URL = "https://nrpheeyumpldxpikfrup.supabase.co";
-const SUPABASE_ANON =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ycGhlZXl1bXBsZHhwaWtmcnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDkwOTEsImV4cCI6MjA5NDMyNTA5MX0.di-M1sKzoQjGIcBsq1EtDP6gca0C_9j5qDX04B6VdfQ";
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+import { supabase } from "./supabase";
 
 /* ── Generic upsert/fetch for any table ── */
 async function sbGet(table: string, userId: string): Promise<unknown | null> {

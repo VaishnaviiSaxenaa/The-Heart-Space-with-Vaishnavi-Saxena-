@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/auth";
-import { supabase } from "../lib/supabase-sync";
+import { supabase } from "../lib/supabase";
 import { format } from "date-fns";
 
 const DARK    = "#3D2314";
