@@ -197,26 +197,27 @@ export default function CounsellorDashboard() {
       .select("id, full_name, email, role, plan, created_at")
       .neq("role", "admin")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!data) return;
         const studentsData = data as Student[];
         setStudents(studentsData);
-        /* Fetch pending sessions for each student */
-        studentsData.forEach(student => {
-          supabase.from("sessions_data").select("data")
-            .eq("user_id", student.id).single()
-            .then(({ data: sd }) => {
-              if (!sd?.data) return;
-              const sessions = sd.data as Record<string,unknown>[];
-              const pending = sessions.filter(s => s.status === "pending" || s.status === "requested" || s.status === "requested");
-              if (pending.length > 0) {
-                setAllPendingSessions(prev => {
-                  const next = [...prev, ...pending.map(session => ({ student, session }))];
-                  return next.sort((a, b) => String(b.session.requestedAt ?? "").localeCompare(String(a.session.requestedAt ?? "")));
-                });
-              }
+        /* Fetch all pending sessions across all students */
+        const pending: Array<{student: Student; session: Record<string,unknown>}> = [];
+        await Promise.all(studentsData.map(async (student) => {
+          const { data: sd } = await supabase
+            .from("sessions_data")
+            .select("data")
+            .eq("user_id", student.id)
+            .single();
+          if (sd?.data) {
+            const sessions = sd.data as Record<string,unknown>[];
+            sessions.filter(s => s.status === "pending").forEach(session => {
+              pending.push({ student, session });
             });
-        });
+          }
+        }));
+        pending.sort((a, b) => String(b.session.requestedAt ?? "").localeCompare(String(a.session.requestedAt ?? "")));
+        setAllPendingSessions(pending);
       });
   }, []);
 
@@ -251,7 +252,7 @@ export default function CounsellorDashboard() {
       {/* LEFT — Student List */}
       <div className="w-72 flex-shrink-0 border-r flex flex-col" style={{ borderColor: BORDER, background: CARD }}>
         <div className="p-4 border-b" style={{ borderColor: BORDER }}>
-          <h2 className="text-sm font-bold mb-3" style={{ color: DARK }}>All Students </h2>
+          <h2 className="text-sm font-bold mb-3" style={{ color: DARK }}>All Students</h2>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or email…"
             className="w-full h-8 px-3 rounded-lg text-xs border-2 outline-none"
@@ -326,9 +327,9 @@ export default function CounsellorDashboard() {
                                 {session.preferredTime ? ` at ${session.preferredTime as string}` : ""}
                               </p>
                             )}
-                            {(session.note || session.concern) && (
+                            {session.note && (
                               <p className="text-xs mt-0.5 italic" style={{ color: MUTED }}>
-                                "{(session.note || session.concern) as string}"
+                                "{session.note as string}"
                               </p>
                             )}
                           </div>
@@ -616,7 +617,7 @@ export default function CounsellorDashboard() {
                                     <div className='flex-1'>
                                       <div className='flex items-center gap-2 mb-1'>
                                         <span className='text-xs font-bold' style={{ color: DARK }}>
-                                          {session.topic as string || session.concern as string || 'Session Request'}
+                                          {session.topic as string || 'Session Request'}
                                         </span>
                                         <span className='text-[10px] px-2 py-0.5 rounded-full font-semibold'
                                           style={{ background: statusBg, color: statusColor }}>
@@ -629,7 +630,7 @@ export default function CounsellorDashboard() {
                                           {session.preferredTime ? ` at ${session.preferredTime as string}` : ''}
                                         </p>
                                       )}
-                                      {(session.note || session.concern) && (
+                                      {session.note && (
                                         <p className='text-xs mt-1 italic' style={{ color: MUTED }}>
                                           &#34;{session.note as string}&#34;
                                         </p>
@@ -640,30 +641,6 @@ export default function CounsellorDashboard() {
                                         </p>
                                       )}
                                     </div>
-                                    {(status === 'pending' || status === 'requested') && selected && (
-                                      <div className='flex flex-col gap-1.5 flex-shrink-0'>
-                                        <button type='button'
-                                          onClick={async () => {
-                                            const updated = (studentData.sessions as Array<Record<string,unknown>>).map((s,i) => i === idx ? {...s, status:'approved'} : s);
-                                            setStudentData(d => ({...d, sessions: updated}));
-                                            await saveStudentData(selected.id, 'sessions_data', updated);
-                                          }}
-                                          className='px-3 py-1 rounded-lg text-[10px] font-semibold'
-                                          style={{ background: '#6E8B6B22', color: '#6E8B6B' }}>
-                                          ✓ Approve
-                                        </button>
-                                        <button type='button'
-                                          onClick={async () => {
-                                            const updated = (studentData.sessions as Array<Record<string,unknown>>).map((s,i) => i === idx ? {...s, status:'rejected'} : s);
-                                            setStudentData(d => ({...d, sessions: updated}));
-                                            await saveStudentData(selected.id, 'sessions_data', updated);
-                                          }}
-                                          className='px-3 py-1 rounded-lg text-[10px] font-semibold'
-                                          style={{ background: '#E0707022', color: '#C0392B' }}>
-                                          ✗ Decline
-                                        </button>
-                                      </div>
-                                    )}
                                   </div>
                                 </div>
                               );
@@ -674,7 +651,7 @@ export default function CounsellorDashboard() {
                         <p className='text-xs font-semibold' style={{ color: DARK }}>
                           Total: {studentData.sessions.length} request{studentData.sessions.length !== 1 ? 's' : ''}
                           {' · '}
-                          {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'pending' || status === 'requested').length} pending
+                          {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'pending').length} pending
                           {' · '}
                           {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'approved').length} approved
                         </p>
@@ -690,4 +667,3 @@ export default function CounsellorDashboard() {
     </div>
   );
 }
-// force redeploy Sat May 30 09:02:57 UTC 2026
