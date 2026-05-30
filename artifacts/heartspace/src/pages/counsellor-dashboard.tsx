@@ -124,19 +124,39 @@ function SchedulePanel({ data, onChange }: {
 }
 
 /* ── Syllabus progress display ── */
+/* Map topic key prefixes to subject IDs */
+const TOPIC_PREFIX_MAP: Record<string, string> = {
+  la: "linear_algebra", ra: "real_analysis",
+  dc: "differential_calculus", int: "differential_calculus",
+  gt: "abstract_algebra", ode: "ode", mvc: "mvc", mi: "mi",
+};
+
+function getSyllabusStats(data: Record<string, unknown>) {
+  const subjectStats: Record<string, { done: number; total: number }> = {};
+  JAM_SUBJECTS.forEach(s => { subjectStats[s.id] = { done: 0, total: 0 }; });
+  Object.entries(data).forEach(([key, val]) => {
+    const prefix = key.split("_")[0];
+    const subjectId = TOPIC_PREFIX_MAP[prefix];
+    if (subjectId && subjectStats[subjectId]) {
+      subjectStats[subjectId].total++;
+      if ((val as Record<string,unknown>)?.status === "done") subjectStats[subjectId].done++;
+    }
+  });
+  return subjectStats;
+}
+
 function SyllabusPanel({ data }: { data: Record<string, unknown> }) {
+  const stats = getSyllabusStats(data);
   return (
     <div className="space-y-2">
       {JAM_SUBJECTS.map(subject => {
-        const subData = (data[subject.id] as Record<string, unknown>) ?? {};
-        const topics = Object.values(subData);
-        const done = topics.filter((t: unknown) => (t as Record<string, unknown>)?.status === "done").length;
-        const total = topics.length || 1;
-        const pct = Math.round((done / total) * 100);
+        const { done, total } = stats[subject.id];
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
         return (
           <div key={subject.id} className="flex items-center gap-3 px-3 py-2 rounded-xl"
             style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
             <span className="flex-1 text-xs font-medium" style={{ color: CHARCOAL }}>{subject.name}</span>
+            <span className="text-[10px]" style={{ color: MUTED }}>{done}/{total}</span>
             <div className="w-24 h-2 rounded-full overflow-hidden" style={{ background: BORDER }}>
               <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct === 100 ? OLIVE : GOLD }} />
             </div>
@@ -720,9 +740,11 @@ export default function CounsellorDashboard() {
                         <p className='text-xs font-semibold' style={{ color: DARK }}>
                           Total: {studentData.sessions.length} request{studentData.sessions.length !== 1 ? 's' : ''}
                           {' · '}
-                          {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'pending').length} pending
+                          {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'requested' || s.status === 'pending').length} pending
                           {' · '}
                           {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'approved').length} approved
+                          {' · '}
+                          {(studentData.sessions as Array<Record<string,unknown>>).filter(s => s.status === 'done').length} done
                         </p>
                       </div>
                     </div>
