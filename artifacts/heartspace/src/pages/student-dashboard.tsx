@@ -1,4 +1,4 @@
-import { useState, useMemo, Component, ReactNode } from "react";
+import { useState, useMemo, Component, ReactNode, useEffect } from "react";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import {
