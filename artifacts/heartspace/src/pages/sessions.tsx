@@ -417,6 +417,13 @@ function SagarSessionSection({ userId }: { userId: string }) {
                     >
                       {s.concern}
                     </p>
+                    {s.scheduledDate && (
+                      <div className="mt-2 px-3 py-2 rounded-xl" style={{ background: "#6E8B6B15", border: "1px solid #6E8B6B44" }}>
+                        <p className="text-xs font-semibold" style={{ color: "#6E8B6B" }}>
+                          📅 Scheduled: {s.scheduledDate}
+                        </p>
+                      </div>
+                    )}
                     <div
                       className="flex items-center justify-between mt-3 pt-3"
                       style={{ borderTop: `1px solid ${BORDER}` }}
