@@ -1,5 +1,6 @@
 import { useState, useMemo, Component, ReactNode } from "react";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 import {
   useGetDashboardSummary,
   useListMoods,
@@ -525,6 +526,18 @@ export default function StudentDashboard() {
     { query: { enabled: !!user?.id } },
   );
 
+  /* Load Sagar Sir sessions from Supabase */
+  const [sagarSessions, setSagarSessions] = useState<Array<Record<string,unknown>>>([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("sessions_data").select("data").eq("user_id", user.id).single()
+      .then(({ data: sd }) => {
+        if (sd?.data) setSagarSessions(sd.data as Array<Record<string,unknown>>);
+      });
+  }, [user?.id]);
+  const approvedSession = sagarSessions.find(s => s.status === "approved");
+  const doneCount = sagarSessions.filter(s => s.status === "done").length;
+
   const moodMutation = useCreateMood({
     mutation: {
       onSuccess: () => {
@@ -687,40 +700,45 @@ export default function StudentDashboard() {
         <TodaysPlan />
         <Card className="p-6 flex flex-col">
           <SectionTitle>Next Session</SectionTitle>
-          {upcomingSessions[0] ? (
-            <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4"
-              style={{ background: CREAM }}
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: `${GOLD}22` }}
-              >
-                <Calendar className="w-4 h-4" style={{ color: GOLD }} />
-              </div>
-              <div>
+          {approvedSession ? (
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl" style={{ background: "#6E8B6B11", border: "1.5px solid #6E8B6B44" }}>
+                <p className="text-xs font-bold mb-1" style={{ color: "#6E8B6B" }}>✅ Session Approved — Sagar Sir</p>
                 <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-                  {upcomingSessions[0].topic || "Counselling Session"}
+                  {approvedSession.callMessage as string || approvedSession.scheduledDate as string}
                 </p>
-                <p className="text-xs" style={{ color: MUTED }}>
-                  {safeFormat(upcomingSessions[0].scheduledAt, "MMM d, h:mm a")}
+                <p className="text-xs mt-1" style={{ color: MUTED }}>
+                  Topic: {approvedSession.concern as string}
                 </p>
               </div>
+              {doneCount > 0 && (
+                <p className="text-xs text-center" style={{ color: MUTED }}>
+                  🏁 {doneCount} session{doneCount !== 1 ? "s" : ""} completed with Sagar Sir
+                </p>
+              )}
+            </div>
+          ) : sagarSessions.filter(s => s.status === "requested").length > 0 ? (
+            <div className="p-4 rounded-2xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+              <p className="text-xs font-semibold mb-1" style={{ color: MUTED }}>⏳ Session Requested</p>
+              <p className="text-sm" style={{ color: CHARCOAL }}>
+                {sagarSessions.find(s => s.status === "requested")?.concern as string}
+              </p>
+              <p className="text-xs mt-1" style={{ color: MUTED }}>Awaiting approval from Vaishnavi Ma'am</p>
+              {doneCount > 0 && (
+                <p className="text-xs mt-2" style={{ color: MUTED }}>
+                  🏁 {doneCount} session{doneCount !== 1 ? "s" : ""} completed
+                </p>
+              )}
             </div>
           ) : (
             <div
               className="flex-1 flex flex-col items-center justify-center text-center py-8 rounded-2xl"
               style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
             >
-              <Calendar
-                className="w-8 h-8 mb-3 opacity-30"
-                style={{ color: GOLD }}
-              />
-              <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-                No upcoming sessions
-              </p>
+              <Calendar className="w-8 h-8 mb-3 opacity-30" style={{ color: GOLD }} />
+              <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No upcoming sessions</p>
               <p className="text-xs mt-1" style={{ color: MUTED }}>
-                Book a session to get started
+                {doneCount > 0 ? `${doneCount} session${doneCount !== 1 ? "s" : ""} completed` : "Request a session to get started"}
               </p>
             </div>
           )}
