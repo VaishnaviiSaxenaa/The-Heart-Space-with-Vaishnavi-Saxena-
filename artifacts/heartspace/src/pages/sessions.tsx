@@ -454,6 +454,23 @@ function SagarSessionSection({ userId }: { userId: string }) {
     );
   }
 
+  function markCouldNotConnect(id: string) {
+    /* Reset to requested with same concern — no need to re-enter */
+    persist(
+      sessions.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              status: "requested" as SessionStatus,
+              callMessage: undefined,
+              scheduledDate: undefined,
+              requestedAt: new Date().toISOString(),
+            }
+          : s,
+      ),
+    );
+  }
+
   const requested = sessions.filter(
     (s) => s.status === "requested" || s.status === "confirmed",
   );
@@ -565,18 +582,30 @@ function SagarSessionSection({ userId }: { userId: string }) {
                   </p>
                 </div>
               )}
-              <button
-                onClick={() => markDone(s.id)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold w-full justify-center"
-                style={{
-                  background: `${OLIVE}22`,
-                  color: OLIVE,
-                  border: `1px solid ${OLIVE}44`,
-                }}
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Mark as Done — Session completed with Sagar Sir
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => markDone(s.id)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold flex-1 justify-center"
+                  style={{
+                    background: `${OLIVE}22`,
+                    color: OLIVE,
+                    border: `1px solid ${OLIVE}44`,
+                  }}
+                >
+                  <CheckCircle2 className="w-4 h-4" />✅ Session Done
+                </button>
+                <button
+                  onClick={() => markCouldNotConnect(s.id)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold flex-1 justify-center"
+                  style={{
+                    background: `#E0707022`,
+                    color: "#C0392B",
+                    border: "1px solid #E0707044",
+                  }}
+                >
+                  📵 Could Not Connect
+                </button>
+              </div>
             </div>
           ))}
         </div>
