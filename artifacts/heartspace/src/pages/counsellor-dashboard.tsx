@@ -283,36 +283,72 @@ export default function CounsellorDashboard() {
         <div className="p-3 border-t text-xs text-center" style={{ borderColor: BORDER, color: MUTED }}>
           {students.length} student{students.length !== 1 ? "s" : ""} registered
         </div>
+
+        {/* Upcoming Sessions Panel */}
         <div className="border-t" style={{ borderColor: BORDER }}>
-          <div className="p-3 space-y-3">
-            <p className="text-xs font-bold" style={{ color: DARK }}>📅 Upcoming Sessions</p>
-            <div>
-              <p className="text-[10px] font-semibold mb-1" style={{ color: MUTED }}>With Sagar Sir</p>
-              {allPendingSessions.filter(p => p.session.status === "approved").length === 0
-                ? <p className="text-[10px] italic" style={{ color: MUTED }}>No upcoming sessions</p>
-                : allPendingSessions.filter(p => p.session.status === "approved").map(({ student, session }, idx) => (
-                  <div key={idx} onClick={() => setSelected(student)}
-                    className="rounded-xl p-2 mb-1 cursor-pointer"
-                    style={{ background: "#6E8B6B11", border: "1px solid #6E8B6B44" }}>
-                    <p className="text-[10px] font-semibold" style={{ color: CHARCOAL }}>{student.full_name || student.email?.split("@")[0]}</p>
-                    {session.concern && <p className="text-[10px] italic truncate" style={{ color: MUTED }}>"{session.concern as string}"</p>}
+          <div className="p-3">
+            <p className="text-xs font-bold mb-2" style={{ color: DARK }}>📅 Upcoming Sessions</p>
+
+            {/* Sagar Sir sessions */}
+            <div className="mb-3">
+              <p className="text-[10px] font-semibold mb-1.5" style={{ color: MUTED }}>With Sagar Sir</p>
+              {allPendingSessions.filter(p =>
+                p.session.status === "approved"
+              ).length === 0 ? (
+                <p className="text-[10px] italic" style={{ color: MUTED }}>No upcoming sessions</p>
+              ) : (
+                allPendingSessions.filter(p => p.session.status === "approved").map(({ student, session }, idx) => (
+                  <div key={idx} className="rounded-xl p-2 mb-1 cursor-pointer"
+                    style={{ background: `${OLIVE}11`, border: `1px solid ${OLIVE}44` }}
+                    onClick={() => setSelected(student)}>
+                    <p className="text-[10px] font-semibold" style={{ color: CHARCOAL }}>
+                      {student.full_name || student.email?.split("@")[0]}
+                    </p>
+                    {session.preferredDate && (
+                      <p className="text-[10px]" style={{ color: MUTED }}>
+                        📅 {session.preferredDate as string}
+                      </p>
+                    )}
+                    {session.concern && (
+                      <p className="text-[10px] italic truncate" style={{ color: MUTED }}>
+                        "{session.concern as string}"
+                      </p>
+                    )}
                   </div>
                 ))
-              }
+              )}
             </div>
+
+            {/* Vaishnavi sessions - requested status */}
             <div>
-              <p className="text-[10px] font-semibold mb-1" style={{ color: MUTED }}>With Vaishnavi Ma'am</p>
-              {allPendingSessions.filter(p => p.session.status === "requested" || p.session.status === "pending").length === 0
-                ? <p className="text-[10px] italic" style={{ color: MUTED }}>No pending requests</p>
-                : allPendingSessions.filter(p => p.session.status === "requested" || p.session.status === "pending").map(({ student, session }, idx) => (
-                  <div key={idx} onClick={() => setSelected(student)}
-                    className="rounded-xl p-2 mb-1 cursor-pointer"
-                    style={{ background: "#C9A96E11", border: "1px solid #C9A96E44" }}>
-                    <p className="text-[10px] font-semibold" style={{ color: CHARCOAL }}>{student.full_name || student.email?.split("@")[0]}</p>
-                    {session.concern && <p className="text-[10px] italic truncate" style={{ color: MUTED }}>"{session.concern as string}"</p>}
+              <p className="text-[10px] font-semibold mb-1.5" style={{ color: MUTED }}>With Vaishnavi Ma'am</p>
+              {allPendingSessions.filter(p =>
+                p.session.status === "requested" || p.session.status === "pending"
+              ).length === 0 ? (
+                <p className="text-[10px] italic" style={{ color: MUTED }}>No pending requests</p>
+              ) : (
+                allPendingSessions.filter(p =>
+                  p.session.status === "requested" || p.session.status === "pending"
+                ).map(({ student, session }, idx) => (
+                  <div key={idx} className="rounded-xl p-2 mb-1 cursor-pointer"
+                    style={{ background: `${GOLD}11`, border: `1px solid ${GOLD}44` }}
+                    onClick={() => setSelected(student)}>
+                    <p className="text-[10px] font-semibold" style={{ color: CHARCOAL }}>
+                      {student.full_name || student.email?.split("@")[0]}
+                    </p>
+                    {session.preferredDate && (
+                      <p className="text-[10px]" style={{ color: MUTED }}>
+                        📅 {session.preferredDate as string}
+                      </p>
+                    )}
+                    {session.concern && (
+                      <p className="text-[10px] italic truncate" style={{ color: MUTED }}>
+                        "{session.concern as string}"
+                      </p>
+                    )}
                   </div>
                 ))
-              }
+              )}
             </div>
           </div>
         </div>
