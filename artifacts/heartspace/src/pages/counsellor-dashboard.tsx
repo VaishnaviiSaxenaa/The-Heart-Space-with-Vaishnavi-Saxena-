@@ -640,6 +640,30 @@ export default function CounsellorDashboard() {
                                         </p>
                                       )}
                                     </div>
+                                    {(status === 'pending' || status === 'requested') && selected && (
+                                      <div className='flex flex-col gap-1.5 flex-shrink-0'>
+                                        <button type='button'
+                                          onClick={async () => {
+                                            const updated = (studentData.sessions as Array<Record<string,unknown>>).map((s,i) => i === idx ? {...s, status:'approved'} : s);
+                                            setStudentData(d => ({...d, sessions: updated}));
+                                            await saveStudentData(selected.id, 'sessions_data', updated);
+                                          }}
+                                          className='px-3 py-1 rounded-lg text-[10px] font-semibold'
+                                          style={{ background: '#6E8B6B22', color: '#6E8B6B' }}>
+                                          ✓ Approve
+                                        </button>
+                                        <button type='button'
+                                          onClick={async () => {
+                                            const updated = (studentData.sessions as Array<Record<string,unknown>>).map((s,i) => i === idx ? {...s, status:'rejected'} : s);
+                                            setStudentData(d => ({...d, sessions: updated}));
+                                            await saveStudentData(selected.id, 'sessions_data', updated);
+                                          }}
+                                          className='px-3 py-1 rounded-lg text-[10px] font-semibold'
+                                          style={{ background: '#E0707022', color: '#C0392B' }}>
+                                          ✗ Decline
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               );
