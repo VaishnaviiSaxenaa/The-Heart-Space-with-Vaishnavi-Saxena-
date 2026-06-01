@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { saveRoadmapToDB, saveScheduleInputsToDB, saveTopicSpeedToDB, saveSubjectOrderToDB, saveStudyPeriodsToDB, saveBaseWeeksToDB, syncAllFromDB, pushAllToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 import {
   Calendar,
   ChevronDown,
@@ -1459,6 +1460,24 @@ function MyProgressTab({
     .sort(([, a], [, b]) => (b.doneAt ?? "").localeCompare(a.doneAt ?? ""))
     .slice(0, 5);
 
+  // Load from Supabase in view mode
+  useEffect(() => {
+    if (!isViewMode) return;
+    Promise.all([
+      supabase.from("schedule_inputs").select("data").eq("user_id", effectiveUserId).single(),
+      supabase.from("topic_speed").select("data").eq("user_id", effectiveUserId).single(),
+      supabase.from("subject_order").select("data").eq("user_id", effectiveUserId).single(),
+      supabase.from("study_periods").select("data").eq("user_id", effectiveUserId).single(),
+      supabase.from("base_weeks").select("data").eq("user_id", effectiveUserId).single(),
+    ]).then(([si, ts, so, sp, bw]) => {
+      if (si.data?.data) setInputs(si.data.data as ScheduleInputs);
+      if (ts.data?.data) setTopicSpeed(ts.data.data as Record<string,string>);
+      if (so.data?.data) setSubjectOrder(so.data.data as string[]);
+      if (sp.data?.data) setStudyPeriods(sp.data.data as StudyPeriod[]);
+      if (bw.data?.data) setBaseWeeks(bw.data.data as Record<string,number>);
+    });
+  }, [effectiveUserId, isViewMode]);
+
   return (
     <div className="space-y-6">
       {/* Summary */}
@@ -2811,7 +2830,7 @@ function LiveScheduleTab({
   rm: Roadmap;
   persist: (next: Roadmap) => void;
 }) {
-  const saved = loadScheduleInputs(userId);
+  const saved = loadScheduleInputs(effectiveUserId);
   const [hoursPerDay, setHoursPerDay] = useState(saved.hoursPerDay);
   const [daysPerWeek, setDaysPerWeek] = useState(saved.daysPerWeek);
   const [targetMonths, setTargetMonths] = useState(saved.targetMonths);
@@ -2822,7 +2841,7 @@ function LiveScheduleTab({
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showParallelPanel, setShowParallelPanel] = useState(false);
   const [studyPeriods, setStudyPeriodsState] = useState<StudyPeriod[]>(() =>
-    loadStudyPeriods(userId),
+    loadStudyPeriods(effectiveUserId),
   );
   const [periodForm, setPeriodForm] = useState({
     label: "",
@@ -2835,8 +2854,8 @@ function LiveScheduleTab({
   });
 
   /* Live loads — always fresh */
-  const topicSpeed = loadTopicSpeed(userId);
-  const baseWeeksOverride = loadBaseWeeks(userId);
+  const topicSpeed = loadTopicSpeed(effectiveUserId);
+  const baseWeeksOverride = loadBaseWeeks(effectiveUserId);
   const practiceProgress = loadPracticeProgress(userId);
   const rawSubjectsList = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const defaultOrder = rawSubjectsList.map((s) => s.id);
@@ -2854,7 +2873,7 @@ function LiveScheduleTab({
 
   function updateSubjectOrder(newOrder: string[]) {
     setSubjectOrderState(newOrder);
-    saveSubjectOrder(userId, newOrder);
+    if (!isViewMode) saveSubjectOrder(userId, newOrder);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2900,7 +2919,7 @@ function LiveScheduleTab({
 
   function updateStudyPeriods(periods: StudyPeriod[]) {
     setStudyPeriodsState(periods);
-    saveStudyPeriods(userId, periods);
+    if (!isViewMode) saveStudyPeriods(userId, periods);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2960,7 +2979,7 @@ function LiveScheduleTab({
     if (patch.targetMonths !== undefined) setTargetMonths(patch.targetMonths);
     if (patch.revisionPercent !== undefined)
       setRevisionPercent(patch.revisionPercent);
-    saveScheduleInputs(userId, next);
+    if (!isViewMode) saveScheduleInputs(userId, next);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2983,7 +3002,7 @@ function LiveScheduleTab({
 
   function updateSpeed(subjectId: string, key: TopicSpeedKey) {
     const next = { ...topicSpeed, [subjectId]: key };
-    saveTopicSpeed(userId, next);
+    if (!isViewMode) saveTopicSpeed(userId, next);
     onSave(
       generateSmartSchedule(
         examType,
@@ -3006,7 +3025,7 @@ function LiveScheduleTab({
 
   function updateBaseWeeks(subjectId: string, weeks: number) {
     const next = { ...baseWeeksOverride, [subjectId]: Math.max(0.5, weeks) };
-    saveBaseWeeks(userId, next);
+    if (!isViewMode) saveBaseWeeks(userId, next);
     onSave(
       generateSmartSchedule(
         examType,
@@ -4239,7 +4258,7 @@ function RoadmapView({
   function persist(next: Roadmap) {
     const updated = { ...next, lastUpdated: new Date().toISOString() };
     setRm(updated);
-    saveRoadmap(userId, updated);
+    if (!isViewMode) saveRoadmap(userId, updated);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
@@ -5173,10 +5192,14 @@ function RoadmapView({
 export default function Roadmap() {
   const { user } = useAuth();
   const userId = String(user?.id ?? "guest");
+  // View-as mode: counsellor viewing a student
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const effectiveUserId = viewAsId ?? userId;
+  const isViewMode = !!viewAsId;
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
-    loadRoadmap(userId),
+    loadRoadmap(effectiveUserId),
   );
 
   function handleSelect(type: RoadmapType, months: number) {
@@ -5192,7 +5215,7 @@ export default function Roadmap() {
       lastUpdated: new Date().toISOString(),
     };
     setRoadmap(rm);
-    saveRoadmap(userId, rm);
+    if (!isViewMode) saveRoadmap(userId, rm);
   }
 
   function handleReset() {

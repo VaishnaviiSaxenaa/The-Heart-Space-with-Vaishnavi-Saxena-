@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { saveSyllabusToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 import { format } from "date-fns";
 import {
   ChevronDown,
@@ -1062,12 +1063,23 @@ function TickButton({
 export default function Syllabus() {
   const { user } = useAuth();
   const userId = String(user?.id ?? "guest");
+  // View-as mode: counsellor viewing a student
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const effectiveUserId = viewAsId ?? userId;
+  const isViewMode = !!viewAsId;
   const examType = (user as any)?.exam_type as string | null;
 
   const [progress, setProgress] = useState<SyllabusProgress>(() =>
     loadSyllabusProgress(userId),
   );
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!isViewMode) return;
+    supabase.from("syllabus_progress").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => {
+        if (sd?.data) setSyllabus(sd.data as Record<string, unknown>);
+      });
+  }, [effectiveUserId, isViewMode]);
   const [expandedT, setExpandedT] = useState<Record<string, boolean>>({});
 
   const syllabus = filterSyllabus(examType);

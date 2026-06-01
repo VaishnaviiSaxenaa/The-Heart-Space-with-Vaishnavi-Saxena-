@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { savePracticeToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 import { format } from "date-fns";
 import {
   ChevronDown,
@@ -1132,6 +1133,10 @@ function SubjectBlock({
 export default function QuestionPractice() {
   const { user } = useAuth();
   const userId = String(user?.id ?? "guest");
+  // View-as mode: counsellor viewing a student
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const effectiveUserId = viewAsId ?? userId;
+  const isViewMode = !!viewAsId;
   const examType = (user as any)?.exam_type as string | null;
   const isJAM = examType === "JAM";
 

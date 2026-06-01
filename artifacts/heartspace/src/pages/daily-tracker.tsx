@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { saveDailyToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 import { format } from "date-fns";
 import {
   Moon,
@@ -737,6 +738,10 @@ function NextDaySection({
 export default function DailyTracker() {
   const { user } = useAuth();
   const userId = String(user?.id ?? "guest");
+  // View-as mode: counsellor viewing a student
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const effectiveUserId = viewAsId ?? userId;
+  const isViewMode = !!viewAsId;
   const space = (user as any)?.space as string | null;
   const today = new Date().toISOString().split("T")[0];
 
@@ -745,11 +750,18 @@ export default function DailyTracker() {
   const isHeartSpace = space === "heartspace";
 
   const [allEntries, setAllEntries] = useState<Record<string, DailyEntry>>(() =>
-    loadDailyAll(userId),
+    loadDailyAll(effectiveUserId),
   );
+  useEffect(() => {
+    if (!isViewMode) return;
+    supabase.from("daily_tracker").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => {
+        if (sd?.data) setAllEntries(sd.data as Record<string, DailyEntry>);
+      });
+  }, [effectiveUserId, isViewMode]);
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState<DailyEntry>(
-    () => loadDailyAll(userId)[today] ?? blank(today),
+    () => loadDailyAll(effectiveUserId)[today] ?? blank(today),
   );
 
   const set =
@@ -760,7 +772,7 @@ export default function DailyTracker() {
   function handleSave() {
     const next = { ...allEntries, [today]: { ...form, date: today } };
     setAllEntries(next);
-    saveAll(userId, next);
+    if (!isViewMode) saveAll(userId, next);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
