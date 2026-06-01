@@ -1141,7 +1141,7 @@ export default function QuestionPractice() {
   const isJAM = examType === "JAM";
 
   const [progress, setProgress] = useState<PracticeProgress>(() =>
-    loadProgress(userId),
+    loadProgress(effectiveUserId),
   );
   const [filterSubject, setFilterSubject] = useState<string>("all");
 
