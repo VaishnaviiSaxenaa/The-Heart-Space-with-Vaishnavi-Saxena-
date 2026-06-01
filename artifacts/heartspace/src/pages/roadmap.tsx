@@ -2863,7 +2863,7 @@ function LiveScheduleTab({
     loadSubjectOrder(effectiveUserId, defaultOrder),
   );
   const [parallelCfg, setParallelCfgState] = useState<ParallelConfig>(() =>
-    loadParallelConfig(userId),
+    loadParallelConfig(effectiveUserId),
   );
 
   const hoursPerWeek = hoursPerDay * daysPerWeek;
@@ -2896,7 +2896,7 @@ function LiveScheduleTab({
 
   function updateParallelCfg(cfg: ParallelConfig) {
     setParallelCfgState(cfg);
-    saveParallelConfig(userId, cfg);
+    if (!isViewMode) saveParallelConfig(userId, cfg);
     onSave(
       generateSmartSchedule(
         examType,
