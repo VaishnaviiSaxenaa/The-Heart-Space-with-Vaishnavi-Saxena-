@@ -1379,6 +1379,14 @@ function MyProgressTab({
   const [progress, setProgress] = useState<SyllabusProgress>(() =>
     loadSyllabusProgress(userId),
   );
+  useEffect(() => {
+    const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+    if (!viewAsId) return;
+    import("../lib/supabase").then(({ supabase }) => {
+      supabase.from("syllabus_progress").select("data").eq("user_id", userId).single()
+        .then(({ data: sd }) => { if (sd?.data) setProgress(sd.data as SyllabusProgress); });
+    });
+  }, [userId]);
   const [expandedSubj, setExpandedSubj] = useState<Record<string, boolean>>({});
   const [expandedTopic, setExpandedTopic] = useState<Record<string, boolean>>(
     {},
@@ -4213,6 +4221,7 @@ function RoadmapView({
 }) {
   const isViewMode = !!new URLSearchParams(window.location.search).get("viewAs");
   const [rm, setRm] = useState(roadmap);
+  useEffect(() => { setRm(roadmap); }, [roadmap]);
   const [editMonths, setEditMonths] = useState(false);
   const [newMonths, setNewMonths] = useState(rm.totalMonths);
   const [showUnavail, setShowUnavail] = useState(false);
