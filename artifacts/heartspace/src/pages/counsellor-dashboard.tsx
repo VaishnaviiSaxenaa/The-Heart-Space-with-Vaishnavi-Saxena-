@@ -1566,6 +1566,22 @@ export default function CounsellorDashboard() {
                     Loading…
                   </span>
                 )}
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "📊 Dashboard", path: "/dashboard" },
+                    { label: "🗺️ Roadmap", path: "/roadmap" },
+                    { label: "📚 Syllabus", path: "/syllabus" },
+                    { label: "✏️ Practice", path: "/assignments" },
+                    { label: "📓 Daily", path: "/daily-tracker" },
+                  ].map(({ label, path }) => (
+                    <button key={path} type="button"
+                      onClick={() => window.open(`${path}?viewAs=${selected.id}`, "_blank")}
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold whitespace-nowrap"
+                      style={{ background: `${GOLD}22`, color: DARK, border: `1px solid ${GOLD}44` }}>
+                      {label} ↗
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
