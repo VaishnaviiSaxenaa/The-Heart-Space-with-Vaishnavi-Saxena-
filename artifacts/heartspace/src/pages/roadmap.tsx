@@ -5195,11 +5195,18 @@ export default function Roadmap() {
   const viewAsId2 = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId2 ?? userId;
   const isViewMode = !!viewAsId2;
-  const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
-  const space = (user as any)?.space as string | null;
+  const examType = isViewMode ? "JAM" : (((user as any)?.exam_type as string | null) ?? "JAM");
+  const space = isViewMode ? "zenith" : ((user as any)?.space as string | null);
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
     loadRoadmap(effectiveUserId),
   );
+  useEffect(() => {
+    if (!isViewMode) return;
+    supabase.from("roadmap_data").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => {
+        if (sd?.data) setRoadmap(sd.data as Roadmap);
+      });
+  }, [effectiveUserId, isViewMode]);
 
   function handleSelect(type: RoadmapType, months: number) {
     const phases = generatePhases(examType ?? "JAM", months);
