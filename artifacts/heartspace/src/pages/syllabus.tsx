@@ -1070,14 +1070,14 @@ export default function Syllabus() {
   const examType = (user as any)?.exam_type as string | null;
 
   const [progress, setProgress] = useState<SyllabusProgress>(() =>
-    loadSyllabusProgress(userId),
+    loadSyllabusProgress(effectiveUserId),
   );
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (!isViewMode) return;
     supabase.from("syllabus_progress").select("data").eq("user_id", effectiveUserId).single()
       .then(({ data: sd }) => {
-        if (sd?.data) setSyllabus(sd.data as Record<string, unknown>);
+        if (sd?.data) setProgress(sd.data as SyllabusProgress);
       });
   }, [effectiveUserId, isViewMode]);
   const [expandedT, setExpandedT] = useState<Record<string, boolean>>({});
