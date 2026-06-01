@@ -5187,7 +5187,7 @@ function RoadmapView({
 /* ─── Main Component ───────────────────── */
 export default function Roadmap() {
   const { user } = useAuth();
-  const userId = String(user?.id ?? "guest");
+  const userId = user?.id ? String(user.id) : "";
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
   const effectiveUserId = userId;

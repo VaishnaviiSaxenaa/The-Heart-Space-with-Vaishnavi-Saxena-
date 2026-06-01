@@ -20,6 +20,10 @@ async function sbSet(
   userId: string,
   value: unknown,
 ): Promise<void> {
+  if (!userId || userId === "guest") {
+    console.warn("[HS sync] skipping save — no valid userId", table);
+    return;
+  }
   const { error } = await supabase
     .from(table)
     .upsert(
