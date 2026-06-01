@@ -1460,23 +1460,6 @@ function MyProgressTab({
     .sort(([, a], [, b]) => (b.doneAt ?? "").localeCompare(a.doneAt ?? ""))
     .slice(0, 5);
 
-  // Load from Supabase in view mode
-  useEffect(() => {
-    if (!isViewMode) return;
-    Promise.all([
-      supabase.from("schedule_inputs").select("data").eq("user_id", effectiveUserId).single(),
-      supabase.from("topic_speed").select("data").eq("user_id", effectiveUserId).single(),
-      supabase.from("subject_order").select("data").eq("user_id", effectiveUserId).single(),
-      supabase.from("study_periods").select("data").eq("user_id", effectiveUserId).single(),
-      supabase.from("base_weeks").select("data").eq("user_id", effectiveUserId).single(),
-    ]).then(([si, ts, so, sp, bw]) => {
-      if (si.data?.data) setInputs(si.data.data as ScheduleInputs);
-      if (ts.data?.data) setTopicSpeed(ts.data.data as Record<string,string>);
-      if (so.data?.data) setSubjectOrder(so.data.data as string[]);
-      if (sp.data?.data) setStudyPeriods(sp.data.data as StudyPeriod[]);
-      if (bw.data?.data) setBaseWeeks(bw.data.data as Record<string,number>);
-    });
-  }, [effectiveUserId, isViewMode]);
 
   return (
     <div className="space-y-6">
