@@ -610,7 +610,7 @@ function DailyTab({ data }: { data: StudentData }) {
                           🟢 High
                         </span>
                         <span className="text-xs" style={{ color: CHARCOAL }}>
-                          {energySlots.high.join(", ")}
+                          {(energySlots.high as Array<Record<string,string>>).map(s => `${s.start}–${s.end}`).join(", ")}
                         </span>
                       </div>
                     )}
@@ -623,7 +623,7 @@ function DailyTab({ data }: { data: StudentData }) {
                           🟡 Med
                         </span>
                         <span className="text-xs" style={{ color: CHARCOAL }}>
-                          {energySlots.medium.join(", ")}
+                          {(energySlots.medium as Array<Record<string,string>>).map(s => `${s.start}–${s.end}`).join(", ")}
                         </span>
                       </div>
                     )}
@@ -636,7 +636,7 @@ function DailyTab({ data }: { data: StudentData }) {
                           🔴 Low
                         </span>
                         <span className="text-xs" style={{ color: CHARCOAL }}>
-                          {energySlots.low.join(", ")}
+                          {(energySlots.low as Array<Record<string,string>>).map(s => `${s.start}–${s.end}`).join(", ")}
                         </span>
                       </div>
                     )}
