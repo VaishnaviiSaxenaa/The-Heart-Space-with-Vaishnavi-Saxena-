@@ -2802,6 +2802,7 @@ function LiveScheduleTab({
   variableWeeks,
   rm,
   persist,
+  isViewMode,
 }: {
   examType: string;
   startDate: string;
@@ -2812,6 +2813,7 @@ function LiveScheduleTab({
   variableWeeks: VariableWeek[];
   rm: Roadmap;
   persist: (next: Roadmap) => void;
+  isViewMode?: boolean;
 }) {
   const saved = loadScheduleInputs(effectiveUserId);
   const [hoursPerDay, setHoursPerDay] = useState(saved.hoursPerDay);
