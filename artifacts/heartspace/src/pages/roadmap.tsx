@@ -1200,9 +1200,14 @@ function loadRoadmap(userId: string): Roadmap | null {
   }
 }
 function saveRoadmap(userId: string, rm: Roadmap) {
-  localStorage.setItem(lsKey(userId), JSON.stringify(rm));
-  console.log("Saving roadmap for", userId, "unavail:", rm.unavailablePeriods?.length);
-  saveRoadmapToDB(userId, rm)
+  // Fallback: get userId from localStorage if not provided
+  const effectiveId = userId || (() => {
+    try { return JSON.parse(localStorage.getItem("heartspace_user") ?? "{}").id ?? ""; } catch { return ""; }
+  })();
+  if (!effectiveId) { console.warn("saveRoadmap: no userId, skipping"); return; }
+  localStorage.setItem(lsKey(effectiveId), JSON.stringify(rm));
+  console.log("Saving roadmap for", effectiveId, "unavail:", rm.unavailablePeriods?.length);
+  saveRoadmapToDB(effectiveId, rm)
     .then(() => console.log("Roadmap saved to DB!"))
     .catch((e) => console.error("Roadmap save failed:", e));
 }
