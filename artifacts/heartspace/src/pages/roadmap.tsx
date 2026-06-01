@@ -5191,12 +5191,20 @@ function RoadmapView({
 export default function Roadmap() {
   const { user } = useAuth();
   const userId = user?.id ? String(user.id) : "";
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const effectiveUserId = viewAsId ?? userId;
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
-  const effectiveUserId = userId;
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
     loadRoadmap(effectiveUserId),
   );
+  useEffect(() => {
+    if (!viewAsId) return;
+    import("../lib/supabase").then(({ supabase }) => {
+      supabase.from("roadmap_data").select("data").eq("user_id", viewAsId).single()
+        .then(({ data: sd }) => { if (sd?.data) setRoadmap(sd.data as Roadmap); });
+    });
+  }, [viewAsId]);
   useEffect(() => {
     if (true) return;
     supabase.from("roadmap_data").select("data").eq("user_id", effectiveUserId).single()
