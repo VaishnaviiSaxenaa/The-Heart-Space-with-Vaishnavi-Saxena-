@@ -742,7 +742,7 @@ export default function DailyTracker() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? userId;
   const isViewMode = !!viewAsId;
-  const space = (user as any)?.space as string | null;
+  const space = isViewMode ? "zenith" : ((user as any)?.space as string | null);
   const today = new Date().toISOString().split("T")[0];
 
   const isZenith = space === "zenith";
