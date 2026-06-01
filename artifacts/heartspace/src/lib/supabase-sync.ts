@@ -20,16 +20,14 @@ async function sbSet(
   userId: string,
   value: unknown,
 ): Promise<void> {
-  try {
-    await supabase
-      .from(table)
-      .upsert(
-        { user_id: userId, data: value, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" },
-      );
-  } catch {
-    /* silent fail — localStorage is fallback */
-  }
+  const { error } = await supabase
+    .from(table)
+    .upsert(
+      { user_id: userId, data: value, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+  if (error) console.error("[HS sync] sbSet failed", table, userId, error.message, error.code);
+  else console.log("[HS sync] sbSet ok", table, userId);
 }
 
 /* ── Syllabus Progress ── */
