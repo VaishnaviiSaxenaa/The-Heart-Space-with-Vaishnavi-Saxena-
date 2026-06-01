@@ -4223,7 +4223,7 @@ function RoadmapView({
   onReset,
 }: {
   roadmap: Roadmap;
-  userId: string;
+  effectiveUserId: string;
   onReset: () => void;
 }) {
   const [rm, setRm] = useState(roadmap);
@@ -4249,7 +4249,7 @@ function RoadmapView({
     "overview" | "progress" | "schedule"
   >("overview");
 
-  const syllabusProgress = loadSyllabusProgress(userId);
+  const syllabusProgress = loadSyllabusProgress(effectiveUserId);
   const examType = rm.examType;
   const calc = runAIEngine(rm);
   const statusCfg = STATUS_CFG[calc.status];
@@ -4258,7 +4258,7 @@ function RoadmapView({
   function persist(next: Roadmap) {
     const updated = { ...next, lastUpdated: new Date().toISOString() };
     setRm(updated);
-    if (!isViewMode) saveRoadmap(userId, updated);
+    const viewMode = !!new URLSearchParams(window.location.search).get("viewAs"); if (!viewMode) saveRoadmap(effectiveUserId, updated);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
