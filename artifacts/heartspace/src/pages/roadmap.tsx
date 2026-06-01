@@ -4221,7 +4221,6 @@ function RoadmapView({
 }) {
   const isViewMode = !!new URLSearchParams(window.location.search).get("viewAs");
   const [rm, setRm] = useState(roadmap);
-  useEffect(() => { setRm(roadmap); }, [roadmap]);
   const [editMonths, setEditMonths] = useState(false);
   const [newMonths, setNewMonths] = useState(rm.totalMonths);
   const [showUnavail, setShowUnavail] = useState(false);
