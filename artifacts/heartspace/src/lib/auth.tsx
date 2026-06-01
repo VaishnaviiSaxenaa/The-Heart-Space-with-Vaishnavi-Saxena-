@@ -61,7 +61,7 @@ async function resolveSupabaseUser(
         .eq("id", supabaseUser.id)
         .single()
         .then((r) => r),
-      3000,
+      10000,
     );
 
     if (!result) {
