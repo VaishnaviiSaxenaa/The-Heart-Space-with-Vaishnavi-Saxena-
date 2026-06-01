@@ -5197,7 +5197,7 @@ export default function Roadmap() {
       .then(({ data: sd }) => {
         if (sd?.data) setRoadmap(sd.data as Roadmap);
       });
-  }, [effectiveUserId, isViewMode]);
+  }, [effectiveUserId]);
 
   function handleSelect(type: RoadmapType, months: number) {
     const phases = generatePhases(examType ?? "JAM", months);
