@@ -5161,7 +5161,6 @@ function RoadmapView({
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
           userId={effectiveUserId}
-          isViewMode={isViewMode}
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
@@ -5189,12 +5188,11 @@ export default function Roadmap() {
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
   const effectiveUserId = userId;
-  const isViewMode = false;
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
     loadRoadmap(effectiveUserId),
   );
   useEffect(() => {
-    if (!isViewMode) return;
+    if (true) return;
     supabase.from("roadmap_data").select("data").eq("user_id", effectiveUserId).single()
       .then(({ data: sd }) => {
         if (sd?.data) setRoadmap(sd.data as Roadmap);
