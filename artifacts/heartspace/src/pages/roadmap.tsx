@@ -2823,7 +2823,7 @@ function LiveScheduleTab({
   examType: string;
   startDate: string;
   syllabusProgress: SyllabusProgress;
-  userId: string;
+  effectiveUserId: string;
   onSave: (schedule: SmartSchedule) => void;
   unavailablePeriods: UnavailablePeriod[];
   variableWeeks: VariableWeek[];
@@ -2873,7 +2873,7 @@ function LiveScheduleTab({
 
   function updateSubjectOrder(newOrder: string[]) {
     setSubjectOrderState(newOrder);
-    if (!isViewMode) saveSubjectOrder(userId, newOrder);
+    if (!isViewMode) saveSubjectOrder(effectiveUserId, newOrder);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2896,7 +2896,7 @@ function LiveScheduleTab({
 
   function updateParallelCfg(cfg: ParallelConfig) {
     setParallelCfgState(cfg);
-    if (!isViewMode) saveParallelConfig(userId, cfg);
+    if (!isViewMode) saveParallelConfig(effectiveUserId, cfg);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2919,7 +2919,7 @@ function LiveScheduleTab({
 
   function updateStudyPeriods(periods: StudyPeriod[]) {
     setStudyPeriodsState(periods);
-    if (!isViewMode) saveStudyPeriods(userId, periods);
+    if (!isViewMode) saveStudyPeriods(effectiveUserId, periods);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2979,7 +2979,7 @@ function LiveScheduleTab({
     if (patch.targetMonths !== undefined) setTargetMonths(patch.targetMonths);
     if (patch.revisionPercent !== undefined)
       setRevisionPercent(patch.revisionPercent);
-    if (!isViewMode) saveScheduleInputs(userId, next);
+    if (!isViewMode) saveScheduleInputs(effectiveUserId, next);
     onSave(
       generateSmartSchedule(
         examType,
@@ -3002,7 +3002,7 @@ function LiveScheduleTab({
 
   function updateSpeed(subjectId: string, key: TopicSpeedKey) {
     const next = { ...topicSpeed, [subjectId]: key };
-    if (!isViewMode) saveTopicSpeed(userId, next);
+    if (!isViewMode) saveTopicSpeed(effectiveUserId, next);
     onSave(
       generateSmartSchedule(
         examType,
@@ -3025,7 +3025,7 @@ function LiveScheduleTab({
 
   function updateBaseWeeks(subjectId: string, weeks: number) {
     const next = { ...baseWeeksOverride, [subjectId]: Math.max(0.5, weeks) };
-    if (!isViewMode) saveBaseWeeks(userId, next);
+    if (!isViewMode) saveBaseWeeks(effectiveUserId, next);
     onSave(
       generateSmartSchedule(
         examType,
