@@ -1206,10 +1206,8 @@ function saveRoadmap(userId: string, rm: Roadmap) {
   })();
   if (!effectiveId) { console.warn("saveRoadmap: no userId, skipping"); return; }
   localStorage.setItem(lsKey(effectiveId), JSON.stringify(rm));
-  console.log("Saving roadmap for", effectiveId, "unavail:", rm.unavailablePeriods?.length);
   saveRoadmapToDB(effectiveId, rm)
-    .then(() => console.log("Roadmap saved to DB!"))
-    .catch((e) => console.error("Roadmap save failed:", e));
+.catch(() => {});
 }
 
 /* ─── Progress engine ──────────────────── */

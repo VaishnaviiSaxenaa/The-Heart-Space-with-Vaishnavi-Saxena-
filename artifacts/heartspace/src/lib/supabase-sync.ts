@@ -30,8 +30,6 @@ async function sbSet(
       { user_id: userId, data: value, updated_at: new Date().toISOString() },
       { onConflict: "user_id" },
     );
-  if (error) console.error("[HS sync] sbSet failed", table, userId, error.message, error.code);
-  else console.log("[HS sync] sbSet ok", table, userId);
 }
 
 /* ── Syllabus Progress ── */
