@@ -2810,7 +2810,6 @@ function LiveScheduleTab({
   variableWeeks,
   rm,
   persist,
-  isViewMode,
 }: {
   examType: string;
   startDate: string;
@@ -2866,7 +2865,7 @@ function LiveScheduleTab({
 
   function updateSubjectOrder(newOrder: string[]) {
     setSubjectOrderState(newOrder);
-    if (!isViewMode) saveSubjectOrder(effectiveUserId, newOrder);
+    saveSubjectOrder(effectiveUserId, newOrder);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2889,7 +2888,7 @@ function LiveScheduleTab({
 
   function updateParallelCfg(cfg: ParallelConfig) {
     setParallelCfgState(cfg);
-    if (!isViewMode) saveParallelConfig(effectiveUserId, cfg);
+    saveParallelConfig(effectiveUserId, cfg);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2912,7 +2911,7 @@ function LiveScheduleTab({
 
   function updateStudyPeriods(periods: StudyPeriod[]) {
     setStudyPeriodsState(periods);
-    if (!isViewMode) saveStudyPeriods(effectiveUserId, periods);
+    saveStudyPeriods(effectiveUserId, periods);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2972,7 +2971,7 @@ function LiveScheduleTab({
     if (patch.targetMonths !== undefined) setTargetMonths(patch.targetMonths);
     if (patch.revisionPercent !== undefined)
       setRevisionPercent(patch.revisionPercent);
-    if (!isViewMode) saveScheduleInputs(effectiveUserId, next);
+    saveScheduleInputs(effectiveUserId, next);
     onSave(
       generateSmartSchedule(
         examType,
@@ -2995,7 +2994,7 @@ function LiveScheduleTab({
 
   function updateSpeed(subjectId: string, key: TopicSpeedKey) {
     const next = { ...topicSpeed, [subjectId]: key };
-    if (!isViewMode) saveTopicSpeed(effectiveUserId, next);
+    saveTopicSpeed(effectiveUserId, next);
     onSave(
       generateSmartSchedule(
         examType,
@@ -3018,7 +3017,7 @@ function LiveScheduleTab({
 
   function updateBaseWeeks(subjectId: string, weeks: number) {
     const next = { ...baseWeeksOverride, [subjectId]: Math.max(0.5, weeks) };
-    if (!isViewMode) saveBaseWeeks(effectiveUserId, next);
+    saveBaseWeeks(effectiveUserId, next);
     onSave(
       generateSmartSchedule(
         examType,
@@ -4219,7 +4218,6 @@ function RoadmapView({
   effectiveUserId: string;
   onReset: () => void;
 }) {
-  const isViewMode = !!new URLSearchParams(window.location.search).get("viewAs");
   const [rm, setRm] = useState(roadmap);
   const initializedRef = useRef(false);
   useEffect(() => { if (!initializedRef.current && roadmap) { setRm(roadmap); initializedRef.current = true; } }, [roadmap]);
@@ -4254,7 +4252,7 @@ function RoadmapView({
   function persist(next: Roadmap) {
     const updated = { ...next, lastUpdated: new Date().toISOString() };
     setRm(updated);
-    const viewMode = !!new URLSearchParams(window.location.search).get("viewAs"); if (!viewMode) saveRoadmap(effectiveUserId, updated);
+    saveRoadmap(effectiveUserId, updated);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
@@ -5189,11 +5187,10 @@ function RoadmapView({
 export default function Roadmap() {
   const { user } = useAuth();
   const userId = String(user?.id ?? "guest");
-  const viewAsId2 = new URLSearchParams(window.location.search).get("viewAs");
-  const effectiveUserId = viewAsId2 ?? userId;
-  const isViewMode = !!viewAsId2;
-  const examType = isViewMode ? "JAM" : (((user as any)?.exam_type as string | null) ?? "JAM");
-  const space = isViewMode ? "zenith" : ((user as any)?.space as string | null);
+  const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
+  const space = (user as any)?.space as string | null;
+  const effectiveUserId = userId;
+  const isViewMode = false;
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
     loadRoadmap(effectiveUserId),
   );
@@ -5218,7 +5215,7 @@ export default function Roadmap() {
       lastUpdated: new Date().toISOString(),
     };
     setRoadmap(rm);
-    if (!isViewMode) saveRoadmap(effectiveUserId, rm);
+    saveRoadmap(effectiveUserId, rm);
   }
 
   function handleReset() {
