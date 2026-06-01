@@ -1201,7 +1201,10 @@ function loadRoadmap(userId: string): Roadmap | null {
 }
 function saveRoadmap(userId: string, rm: Roadmap) {
   localStorage.setItem(lsKey(userId), JSON.stringify(rm));
-  saveRoadmapToDB(userId, rm).catch(() => {});
+  console.log("Saving roadmap for", userId, "unavail:", rm.unavailablePeriods?.length);
+  saveRoadmapToDB(userId, rm)
+    .then(() => console.log("Roadmap saved to DB!"))
+    .catch((e) => console.error("Roadmap save failed:", e));
 }
 
 /* ─── Progress engine ──────────────────── */
