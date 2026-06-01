@@ -36,7 +36,6 @@ async function resolveSupabaseUser(
   supabaseUser: { id: string; email?: string },
   accessToken: string,
 ): Promise<{ user: User; token: string } | null> {
-  /* Hardcoded admin override — always wins */
   if (supabaseUser.email === ADMIN_EMAIL) {
     return {
       user: {
@@ -53,7 +52,6 @@ async function resolveSupabaseUser(
   }
 
   try {
-    /* ← exam_type added to select */
     const result = await withTimeout(
       supabase
         .from("profiles")
@@ -66,10 +64,21 @@ async function resolveSupabaseUser(
 
     if (!result) {
       console.warn(
-        "[HeartSpace auth] Profile fetch timed out for",
-        supabaseUser.id,
+        "[HeartSpace auth] Profile fetch timed out — using fallback",
       );
-      return null;
+      return {
+        user: {
+          id: supabaseUser.id as any,
+          email: supabaseUser.email ?? "",
+          name: supabaseUser.email?.split("@")[0] ?? "User",
+          role: "student" as any,
+          space: "zenith",
+          plan: "zenith",
+          exam_type: "JAM",
+          avatarUrl: null,
+        } as any,
+        token: accessToken,
+      };
     }
 
     const { data: profile, error: profileError } = result;
@@ -81,8 +90,20 @@ async function resolveSupabaseUser(
     );
 
     if (profileError && profileError.code !== "PGRST116") {
-      console.warn("[HeartSpace auth] Profile blocked:", profileError.message);
-      return null;
+      console.warn("[HeartSpace auth] Profile error — using fallback");
+      return {
+        user: {
+          id: supabaseUser.id as any,
+          email: supabaseUser.email ?? "",
+          name: supabaseUser.email?.split("@")[0] ?? "User",
+          role: "student" as any,
+          space: "zenith",
+          plan: "zenith",
+          exam_type: "JAM",
+          avatarUrl: null,
+        } as any,
+        token: accessToken,
+      };
     }
 
     const supaRole = (profile?.role as SupabaseRole) ?? "prep_student";
@@ -170,8 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (u && t) {
         localStorage.setItem("heartspace_user", JSON.stringify(u));
         localStorage.setItem("heartspace_token", t);
-        /* Sync: push existing localStorage data then pull from DB */
-        pushAllToDB(u.id).then(() => syncAllFromDB(u.id)).catch(() => {});
+        pushAllToDB(u.id)
+          .then(() => syncAllFromDB(u.id))
+          .catch(() => {});
       } else {
         localStorage.removeItem("heartspace_user");
         localStorage.removeItem("heartspace_token");
