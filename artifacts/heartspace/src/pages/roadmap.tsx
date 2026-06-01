@@ -2813,7 +2813,7 @@ function LiveScheduleTab({
   examType,
   startDate,
   syllabusProgress,
-  userId,
+  effectiveUserId,
   onSave,
   unavailablePeriods,
   variableWeeks,
@@ -2856,11 +2856,11 @@ function LiveScheduleTab({
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(effectiveUserId);
   const baseWeeksOverride = loadBaseWeeks(effectiveUserId);
-  const practiceProgress = loadPracticeProgress(userId);
+  const practiceProgress = loadPracticeProgress(effectiveUserId);
   const rawSubjectsList = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const defaultOrder = rawSubjectsList.map((s) => s.id);
   const [subjectOrder, setSubjectOrderState] = useState<string[]>(() =>
-    loadSubjectOrder(userId, defaultOrder),
+    loadSubjectOrder(effectiveUserId, defaultOrder),
   );
   const [parallelCfg, setParallelCfgState] = useState<ParallelConfig>(() =>
     loadParallelConfig(userId),
@@ -4219,7 +4219,7 @@ function RoadmapSelector({
 /* ─── Main Roadmap View ────────────────── */
 function RoadmapView({
   roadmap,
-  userId,
+  effectiveUserId,
   onReset,
 }: {
   roadmap: Roadmap;
@@ -5158,7 +5158,7 @@ function RoadmapView({
 
       {/* MY PROGRESS TAB */}
       {activeTab === "progress" && (
-        <MyProgressTab userId={userId} examType={examType} />
+        <MyProgressTab userId={effectiveUserId} examType={examType} />
       )}
 
       {/* SCHEDULE TAB — live, auto-updates */}
@@ -5167,7 +5167,7 @@ function RoadmapView({
           examType={rm.examType}
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
-          userId={userId}
+          userId={effectiveUserId}
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
@@ -5192,10 +5192,9 @@ function RoadmapView({
 export default function Roadmap() {
   const { user } = useAuth();
   const userId = String(user?.id ?? "guest");
-  // View-as mode: counsellor viewing a student
-  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
-  const effectiveUserId = viewAsId ?? userId;
-  const isViewMode = !!viewAsId;
+  const viewAsId2 = new URLSearchParams(window.location.search).get("viewAs");
+  const effectiveUserId = viewAsId2 ?? userId;
+  const isViewMode = !!viewAsId2;
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
@@ -5257,7 +5256,7 @@ export default function Roadmap() {
       <RoadmapSelector examType={examType ?? "JAM"} onSelect={handleSelect} />
     );
   return (
-    <RoadmapView roadmap={roadmap} userId={userId} onReset={handleReset} />
+    <RoadmapView roadmap={roadmap} userId={effectiveUserId} onReset={handleReset} />
   );
 }
 
