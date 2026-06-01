@@ -440,6 +440,11 @@ function PracticeTab({ data }: { data: StudentData }) {
 }
 
 /* ── Daily Tab ── */
+const MOOD_EMOJIS = ["😞", "😕", "😐", "🙂", "😄"];
+const MOOD_LABELS = ["Rough", "Hard", "Okay", "Good", "Great"];
+const STRESS_COLOR = (s: number) =>
+  s >= 4 ? "#C0392B" : s <= 2 ? "#27AE60" : "#E67E22";
+
 function DailyTab({ data }: { data: StudentData }) {
   const entries = Object.entries(data.daily)
     .sort(([a], [b]) => b.localeCompare(a))
@@ -448,17 +453,20 @@ function DailyTab({ data }: { data: StudentData }) {
   if (entries.length === 0)
     return (
       <div
-        className="text-center py-12 rounded-2xl"
+        className="text-center py-16 rounded-2xl"
         style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
       >
-        <p className="text-sm" style={{ color: MUTED }}>
-          No daily entries yet.
+        <p className="text-sm font-medium" style={{ color: MUTED }}>
+          No daily entries yet
+        </p>
+        <p className="text-xs mt-1" style={{ color: MUTED }}>
+          Student hasn't logged any days
         </p>
       </div>
     );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 max-w-2xl">
       {entries.map(([date, entry]) => {
         const e = entry as Record<string, unknown>;
         const priorities =
@@ -466,123 +474,198 @@ function DailyTab({ data }: { data: StudentData }) {
         const nextTasks =
           (e.nextDayTasks as Array<Record<string, unknown>>) ?? [];
         const emotions = (e.emotionalState as string[]) ?? [];
-        const energySlots = (e.energySlots as Record<string, string[]>) ?? {};
+        const energySlots =
+          (e.energySlots as Record<string, Array<Record<string, string>>>) ??
+          {};
+        const mood = e.mood as number | null;
+        const donePriorities = priorities.filter((p) => p.done).length;
+
         return (
           <div
             key={date}
             className="rounded-2xl overflow-hidden"
-            style={{ background: CARD, border: `1px solid ${BORDER}` }}
+            style={{
+              background: CARD,
+              border: `1px solid ${BORDER}`,
+              boxShadow: "0 4px 24px rgba(44,24,16,.06)",
+            }}
           >
+            {/* Date header */}
             <div
-              className="px-5 py-3 flex items-center justify-between"
+              className="px-6 py-4 flex items-center justify-between"
               style={{
-                background: `${GOLD}11`,
+                background: `${DARK}08`,
                 borderBottom: `1px solid ${BORDER}`,
               }}
             >
-              <p className="text-sm font-bold" style={{ color: DARK }}>
-                {date}
-              </p>
-              <div className="flex gap-4">
-                {e.mood != null && (
-                  <div className="text-center">
-                    <p className="text-xs font-bold" style={{ color: GOLD }}>
-                      {e.mood as number}/5
-                    </p>
-                    <p className="text-[9px]" style={{ color: MUTED }}>
-                      mood
-                    </p>
-                  </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: DARK }}>
+                  {format(new Date(date + "T00:00:00"), "EEEE, MMMM d, yyyy")}
+                </p>
+                {donePriorities > 0 && (
+                  <p className="text-xs mt-0.5" style={{ color: OLIVE }}>
+                    ✓ {donePriorities}/{priorities.length} priorities done
+                  </p>
                 )}
-                {e.stressLevel != null && (
-                  <div className="text-center">
-                    <p
-                      className="text-xs font-bold"
-                      style={{ color: "#C0392B" }}
-                    >
-                      {e.stressLevel as number}/5
-                    </p>
-                    <p className="text-[9px]" style={{ color: MUTED }}>
-                      stress
-                    </p>
-                  </div>
-                )}
+              </div>
+              {/* Mood */}
+              {mood != null && (
+                <div
+                  className="flex flex-col items-center px-4 py-2 rounded-2xl"
+                  style={{ background: DARK }}
+                >
+                  <span className="text-2xl">{MOOD_EMOJIS[mood - 1]}</span>
+                  <span
+                    className="text-[10px] font-semibold mt-0.5"
+                    style={{ color: CREAM }}
+                  >
+                    {MOOD_LABELS[mood - 1]}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Key stats row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {e.studyHours != null && (
-                  <div className="text-center">
-                    <p className="text-xs font-bold" style={{ color: OLIVE }}>
+                  <div
+                    className="rounded-xl p-3 text-center"
+                    style={{
+                      background: `${OLIVE}11`,
+                      border: `1px solid ${OLIVE}33`,
+                    }}
+                  >
+                    <p className="text-lg font-bold" style={{ color: OLIVE }}>
                       {e.studyHours as number}h
                     </p>
-                    <p className="text-[9px]" style={{ color: MUTED }}>
-                      study
+                    <p className="text-[10px]" style={{ color: MUTED }}>
+                      Study hours
                     </p>
                   </div>
                 )}
                 {e.sleepHours != null && (
-                  <div className="text-center">
-                    <p className="text-xs font-bold" style={{ color: DARK }}>
+                  <div
+                    className="rounded-xl p-3 text-center"
+                    style={{
+                      background: `${DARK}08`,
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <p className="text-lg font-bold" style={{ color: DARK }}>
                       {e.sleepHours as number}h
                     </p>
-                    <p className="text-[9px]" style={{ color: MUTED }}>
-                      sleep
+                    <p className="text-[10px]" style={{ color: MUTED }}>
+                      Sleep
+                    </p>
+                  </div>
+                )}
+                {e.stressLevel != null && (
+                  <div
+                    className="rounded-xl p-3 text-center"
+                    style={{
+                      background: "#fff",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <p
+                      className="text-lg font-bold"
+                      style={{ color: STRESS_COLOR(e.stressLevel as number) }}
+                    >
+                      {e.stressLevel as number}/5
+                    </p>
+                    <p className="text-[10px]" style={{ color: MUTED }}>
+                      Stress
+                    </p>
+                  </div>
+                )}
+                {e.sittingCapacityHours != null && (
+                  <div
+                    className="rounded-xl p-3 text-center"
+                    style={{
+                      background: `${GOLD}11`,
+                      border: `1px solid ${GOLD}33`,
+                    }}
+                  >
+                    <p className="text-lg font-bold" style={{ color: GOLD }}>
+                      {e.sittingCapacityHours as number}h
+                    </p>
+                    <p className="text-[10px]" style={{ color: MUTED }}>
+                      Sitting
                     </p>
                   </div>
                 )}
               </div>
-            </div>
-            <div className="p-5 space-y-4">
+
+              {/* Extra stats */}
+              <div className="flex flex-wrap gap-2">
+                {e.sleepQuality != null && (
+                  <span
+                    className="text-xs px-3 py-1.5 rounded-full font-medium"
+                    style={{ background: `${DARK}08`, color: MUTED }}
+                  >
+                    😴 Sleep quality: {e.sleepQuality as number}/5
+                  </span>
+                )}
+                {e.studyCapacityHours != null && (
+                  <span
+                    className="text-xs px-3 py-1.5 rounded-full font-medium"
+                    style={{ background: `${OLIVE}11`, color: OLIVE }}
+                  >
+                    📖 Study capacity: {e.studyCapacityHours as number}h
+                  </span>
+                )}
+                {e.meTimeMinutes != null && (
+                  <span
+                    className="text-xs px-3 py-1.5 rounded-full font-medium"
+                    style={{ background: `${GOLD}11`, color: GOLD }}
+                  >
+                    🌿 Me time: {e.meTimeMinutes as number} mins
+                  </span>
+                )}
+                {e.physicalActivity && (
+                  <span
+                    className="text-xs px-3 py-1.5 rounded-full font-medium"
+                    style={{ background: `${OLIVE}22`, color: OLIVE }}
+                  >
+                    🏃 {(e.activityType as string) || "Active"} ✓
+                  </span>
+                )}
+              </div>
+
+              {/* Note */}
               {e.note && (
-                <div>
+                <div
+                  className="px-4 py-3 rounded-xl"
+                  style={{ background: CREAM, border: `1px solid ${BORDER}` }}
+                >
                   <p
                     className="text-[10px] font-semibold uppercase mb-1"
                     style={{ color: MUTED }}
                   >
                     Note
                   </p>
-                  <p className="text-sm italic" style={{ color: CHARCOAL }}>
+                  <p className="text-sm" style={{ color: CHARCOAL }}>
                     "{e.note as string}"
                   </p>
                 </div>
               )}
-              <div className="flex flex-wrap gap-2">
-                {e.sittingCapacityHours != null && (
-                  <span
-                    className="text-xs px-2 py-1 rounded-lg"
-                    style={{ background: CREAM, color: MUTED }}
-                  >
-                    🪑 Sitting: {e.sittingCapacityHours as number}h
-                  </span>
-                )}
-                {e.meTimeMinutes != null && (
-                  <span
-                    className="text-xs px-2 py-1 rounded-lg"
-                    style={{ background: CREAM, color: MUTED }}
-                  >
-                    🌿 Me time: {e.meTimeMinutes as number}m
-                  </span>
-                )}
-                {e.physicalActivity && (
-                  <span
-                    className="text-xs px-2 py-1 rounded-lg"
-                    style={{ background: `${OLIVE}11`, color: OLIVE }}
-                  >
-                    🏃 Active ✓
-                  </span>
-                )}
-              </div>
+
+              {/* Emotional state */}
               {emotions.length > 0 && (
                 <div>
                   <p
-                    className="text-[10px] font-semibold uppercase mb-1"
+                    className="text-xs font-semibold mb-2"
                     style={{ color: MUTED }}
                   >
                     Emotional State
                   </p>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {emotions.map((em, i) => (
                       <span
                         key={i}
-                        className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ background: `${GOLD}22`, color: GOLD }}
+                        className="text-xs px-3 py-1.5 rounded-full font-medium"
+                        style={{ background: `${GOLD}22`, color: DARK }}
                       >
                         {em}
                       </span>
@@ -590,79 +673,137 @@ function DailyTab({ data }: { data: StudentData }) {
                   </div>
                 </div>
               )}
+
+              {/* Energy slots */}
               {(energySlots.high?.length > 0 ||
                 energySlots.medium?.length > 0 ||
                 energySlots.low?.length > 0) && (
                 <div>
                   <p
-                    className="text-[10px] font-semibold uppercase mb-2"
+                    className="text-xs font-semibold mb-2"
                     style={{ color: MUTED }}
                   >
                     Energy Slots
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {energySlots.high?.length > 0 && (
-                      <div className="flex gap-2">
+                      <div
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                        style={{
+                          background: `${OLIVE}11`,
+                          border: `1px solid ${OLIVE}33`,
+                        }}
+                      >
                         <span
-                          className="text-[10px] font-semibold w-14"
+                          className="text-xs font-bold w-16 flex-shrink-0"
                           style={{ color: OLIVE }}
                         >
                           🟢 High
                         </span>
-                        <span className="text-xs" style={{ color: CHARCOAL }}>
-                          {(energySlots.high as Array<Record<string,string>>).map(s => `${s.start}–${s.end}`).join(", ")}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {energySlots.high.map((s, i) => (
+                            <span
+                              key={i}
+                              className="text-xs px-2 py-0.5 rounded-lg"
+                              style={{ background: `${OLIVE}22`, color: OLIVE }}
+                            >
+                              {s.start}–{s.end}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {energySlots.medium?.length > 0 && (
-                      <div className="flex gap-2">
+                      <div
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                        style={{
+                          background: `${GOLD}11`,
+                          border: `1px solid ${GOLD}33`,
+                        }}
+                      >
                         <span
-                          className="text-[10px] font-semibold w-14"
+                          className="text-xs font-bold w-16 flex-shrink-0"
                           style={{ color: GOLD }}
                         >
-                          🟡 Med
+                          🟡 Medium
                         </span>
-                        <span className="text-xs" style={{ color: CHARCOAL }}>
-                          {(energySlots.medium as Array<Record<string,string>>).map(s => `${s.start}–${s.end}`).join(", ")}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {energySlots.medium.map((s, i) => (
+                            <span
+                              key={i}
+                              className="text-xs px-2 py-0.5 rounded-lg"
+                              style={{ background: `${GOLD}22`, color: GOLD }}
+                            >
+                              {s.start}–{s.end}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {energySlots.low?.length > 0 && (
-                      <div className="flex gap-2">
+                      <div
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                        style={{
+                          background: "#fff",
+                          border: `1px solid ${BORDER}`,
+                        }}
+                      >
                         <span
-                          className="text-[10px] font-semibold w-14"
+                          className="text-xs font-bold w-16 flex-shrink-0"
                           style={{ color: MUTED }}
                         >
                           🔴 Low
                         </span>
-                        <span className="text-xs" style={{ color: CHARCOAL }}>
-                          {(energySlots.low as Array<Record<string,string>>).map(s => `${s.start}–${s.end}`).join(", ")}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {energySlots.low.map((s, i) => (
+                            <span
+                              key={i}
+                              className="text-xs px-2 py-0.5 rounded-lg"
+                              style={{ background: BORDER, color: MUTED }}
+                            >
+                              {s.start}–{s.end}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
               )}
+
+              {/* Priorities */}
               {priorities.length > 0 && (
                 <div>
                   <p
-                    className="text-[10px] font-semibold uppercase mb-1"
+                    className="text-xs font-semibold mb-2"
                     style={{ color: MUTED }}
                   >
-                    Priorities ({priorities.filter((p) => p.done).length}/
-                    {priorities.length} done)
+                    Priorities — {donePriorities}/{priorities.length} done
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {priorities.map((p, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span style={{ color: p.done ? OLIVE : MUTED }}>
-                          {p.done ? "✓" : "○"}
-                        </span>
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                        style={{
+                          background: p.done ? `${OLIVE}11` : CREAM,
+                          border: `1px solid ${p.done ? OLIVE + "33" : BORDER}`,
+                        }}
+                      >
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: p.done ? OLIVE : BORDER }}
+                        >
+                          {p.done && (
+                            <span className="text-white text-[10px]">✓</span>
+                          )}
+                        </div>
                         <span
-                          className="text-xs"
+                          className="text-sm flex-1"
                           style={{
                             color: p.done ? OLIVE : CHARCOAL,
                             textDecoration: p.done ? "line-through" : "none",
+                            opacity: p.done ? 0.7 : 1,
                           }}
                         >
                           {p.text as string}
@@ -672,19 +813,33 @@ function DailyTab({ data }: { data: StudentData }) {
                   </div>
                 </div>
               )}
+
+              {/* Next day tasks */}
               {nextTasks.length > 0 && (
                 <div>
                   <p
-                    className="text-[10px] font-semibold uppercase mb-1"
+                    className="text-xs font-semibold mb-2"
                     style={{ color: MUTED }}
                   >
                     Tomorrow's Plan
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {nextTasks.map((t, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span style={{ color: GOLD }}>→</span>
-                        <span className="text-xs" style={{ color: CHARCOAL }}>
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                        style={{
+                          background: CREAM,
+                          border: `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <span
+                          className="text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: `${GOLD}22`, color: DARK }}
+                        >
+                          {i + 1}
+                        </span>
+                        <span className="text-sm" style={{ color: CHARCOAL }}>
                           {t.text as string}
                         </span>
                       </div>
