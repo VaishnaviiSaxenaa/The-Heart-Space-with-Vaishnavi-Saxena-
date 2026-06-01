@@ -5151,6 +5151,7 @@ function RoadmapView({
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
           userId={effectiveUserId}
+          isViewMode={isViewMode}
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
@@ -5204,12 +5205,12 @@ export default function Roadmap() {
       lastUpdated: new Date().toISOString(),
     };
     setRoadmap(rm);
-    if (!isViewMode) saveRoadmap(userId, rm);
+    if (!isViewMode) saveRoadmap(effectiveUserId, rm);
   }
 
   function handleReset() {
     if (!confirm("Reset your roadmap? Progress will be lost.")) return;
-    localStorage.removeItem(lsKey(userId));
+    localStorage.removeItem(lsKey(effectiveUserId));
     setRoadmap(null);
   }
 
