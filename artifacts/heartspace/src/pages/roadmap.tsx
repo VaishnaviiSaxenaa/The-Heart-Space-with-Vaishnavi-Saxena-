@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { saveRoadmapToDB, saveScheduleInputsToDB, saveTopicSpeedToDB, saveSubjectOrderToDB, saveStudyPeriodsToDB, saveBaseWeeksToDB, syncAllFromDB, pushAllToDB } from "../lib/supabase-sync";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
@@ -4221,6 +4221,8 @@ function RoadmapView({
 }) {
   const isViewMode = !!new URLSearchParams(window.location.search).get("viewAs");
   const [rm, setRm] = useState(roadmap);
+  const initializedRef = useRef(false);
+  useEffect(() => { if (!initializedRef.current && roadmap) { setRm(roadmap); initializedRef.current = true; } }, [roadmap]);
   const [editMonths, setEditMonths] = useState(false);
   const [newMonths, setNewMonths] = useState(rm.totalMonths);
   const [showUnavail, setShowUnavail] = useState(false);
