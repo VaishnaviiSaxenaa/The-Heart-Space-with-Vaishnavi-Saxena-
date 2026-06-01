@@ -61,7 +61,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         href: "/counsellor",
       },
       { icon: Calendar, label: "Sessions", key: "sessions", href: "/sessions" },
-      { icon: Users, label: "Student Reports", key: "reports", soon: true },
+      { icon: Users, label: "Students", key: "reports", href: "/counsellor" },
       { icon: BarChart2, label: "Analytics", key: "analytics", soon: true },
       { icon: Library, label: "Resources", key: "resources", soon: true },
     ];

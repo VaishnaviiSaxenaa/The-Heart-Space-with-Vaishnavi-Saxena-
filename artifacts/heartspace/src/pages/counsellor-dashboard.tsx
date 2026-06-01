@@ -447,74 +447,258 @@ function DailyTab({ data }: { data: StudentData }) {
 
   if (entries.length === 0)
     return (
-      <p className="text-sm" style={{ color: MUTED }}>
-        No daily entries yet.
-      </p>
+      <div
+        className="text-center py-12 rounded-2xl"
+        style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
+      >
+        <p className="text-sm" style={{ color: MUTED }}>
+          No daily entries yet.
+        </p>
+      </div>
     );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {entries.map(([date, entry]) => {
         const e = entry as Record<string, unknown>;
+        const priorities =
+          (e.priorities as Array<Record<string, unknown>>) ?? [];
+        const nextTasks =
+          (e.nextDayTasks as Array<Record<string, unknown>>) ?? [];
+        const emotions = (e.emotionalState as string[]) ?? [];
+        const energySlots = (e.energySlots as Record<string, string[]>) ?? {};
         return (
           <div
             key={date}
-            className="rounded-2xl p-4"
+            className="rounded-2xl overflow-hidden"
             style={{ background: CARD, border: `1px solid ${BORDER}` }}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div
+              className="px-5 py-3 flex items-center justify-between"
+              style={{
+                background: `${GOLD}11`,
+                borderBottom: `1px solid ${BORDER}`,
+              }}
+            >
               <p className="text-sm font-bold" style={{ color: DARK }}>
                 {date}
               </p>
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 {e.mood != null && (
-                  <span className="text-xs" style={{ color: GOLD }}>
-                    😊 {e.mood as number}/5
-                  </span>
-                )}
-                {e.studyHours != null && (
-                  <span className="text-xs" style={{ color: OLIVE }}>
-                    📚 {e.studyHours as number}h
-                  </span>
+                  <div className="text-center">
+                    <p className="text-xs font-bold" style={{ color: GOLD }}>
+                      {e.mood as number}/5
+                    </p>
+                    <p className="text-[9px]" style={{ color: MUTED }}>
+                      mood
+                    </p>
+                  </div>
                 )}
                 {e.stressLevel != null && (
-                  <span className="text-xs" style={{ color: MUTED }}>
-                    😰 {e.stressLevel as number}/5
-                  </span>
+                  <div className="text-center">
+                    <p
+                      className="text-xs font-bold"
+                      style={{ color: "#C0392B" }}
+                    >
+                      {e.stressLevel as number}/5
+                    </p>
+                    <p className="text-[9px]" style={{ color: MUTED }}>
+                      stress
+                    </p>
+                  </div>
+                )}
+                {e.studyHours != null && (
+                  <div className="text-center">
+                    <p className="text-xs font-bold" style={{ color: OLIVE }}>
+                      {e.studyHours as number}h
+                    </p>
+                    <p className="text-[9px]" style={{ color: MUTED }}>
+                      study
+                    </p>
+                  </div>
+                )}
+                {e.sleepHours != null && (
+                  <div className="text-center">
+                    <p className="text-xs font-bold" style={{ color: DARK }}>
+                      {e.sleepHours as number}h
+                    </p>
+                    <p className="text-[9px]" style={{ color: MUTED }}>
+                      sleep
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
-            {e.note && (
-              <p className="text-xs italic" style={{ color: MUTED }}>
-                "{e.note as string}"
-              </p>
-            )}
-            {Array.isArray(e.priorities) &&
-              (e.priorities as Array<Record<string, unknown>>).length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {(e.priorities as Array<Record<string, unknown>>).map(
-                    (p, i) => (
-                      <span
-                        key={i}
-                        className="text-[10px] px-1.5 py-0.5 rounded-full"
-                        style={{
-                          background: p.done ? `${OLIVE}22` : `${GOLD}22`,
-                          color: p.done ? OLIVE : GOLD,
-                        }}
-                      >
-                        {p.done ? "✓" : "○"} {p.text as string}
-                      </span>
-                    ),
-                  )}
+            <div className="p-5 space-y-4">
+              {e.note && (
+                <div>
+                  <p
+                    className="text-[10px] font-semibold uppercase mb-1"
+                    style={{ color: MUTED }}
+                  >
+                    Note
+                  </p>
+                  <p className="text-sm italic" style={{ color: CHARCOAL }}>
+                    "{e.note as string}"
+                  </p>
                 </div>
               )}
+              <div className="flex flex-wrap gap-2">
+                {e.sittingCapacityHours != null && (
+                  <span
+                    className="text-xs px-2 py-1 rounded-lg"
+                    style={{ background: CREAM, color: MUTED }}
+                  >
+                    🪑 Sitting: {e.sittingCapacityHours as number}h
+                  </span>
+                )}
+                {e.meTimeMinutes != null && (
+                  <span
+                    className="text-xs px-2 py-1 rounded-lg"
+                    style={{ background: CREAM, color: MUTED }}
+                  >
+                    🌿 Me time: {e.meTimeMinutes as number}m
+                  </span>
+                )}
+                {e.physicalActivity && (
+                  <span
+                    className="text-xs px-2 py-1 rounded-lg"
+                    style={{ background: `${OLIVE}11`, color: OLIVE }}
+                  >
+                    🏃 Active ✓
+                  </span>
+                )}
+              </div>
+              {emotions.length > 0 && (
+                <div>
+                  <p
+                    className="text-[10px] font-semibold uppercase mb-1"
+                    style={{ color: MUTED }}
+                  >
+                    Emotional State
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {emotions.map((em, i) => (
+                      <span
+                        key={i}
+                        className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ background: `${GOLD}22`, color: GOLD }}
+                      >
+                        {em}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(energySlots.high?.length > 0 ||
+                energySlots.medium?.length > 0 ||
+                energySlots.low?.length > 0) && (
+                <div>
+                  <p
+                    className="text-[10px] font-semibold uppercase mb-2"
+                    style={{ color: MUTED }}
+                  >
+                    Energy Slots
+                  </p>
+                  <div className="space-y-1">
+                    {energySlots.high?.length > 0 && (
+                      <div className="flex gap-2">
+                        <span
+                          className="text-[10px] font-semibold w-14"
+                          style={{ color: OLIVE }}
+                        >
+                          🟢 High
+                        </span>
+                        <span className="text-xs" style={{ color: CHARCOAL }}>
+                          {energySlots.high.join(", ")}
+                        </span>
+                      </div>
+                    )}
+                    {energySlots.medium?.length > 0 && (
+                      <div className="flex gap-2">
+                        <span
+                          className="text-[10px] font-semibold w-14"
+                          style={{ color: GOLD }}
+                        >
+                          🟡 Med
+                        </span>
+                        <span className="text-xs" style={{ color: CHARCOAL }}>
+                          {energySlots.medium.join(", ")}
+                        </span>
+                      </div>
+                    )}
+                    {energySlots.low?.length > 0 && (
+                      <div className="flex gap-2">
+                        <span
+                          className="text-[10px] font-semibold w-14"
+                          style={{ color: MUTED }}
+                        >
+                          🔴 Low
+                        </span>
+                        <span className="text-xs" style={{ color: CHARCOAL }}>
+                          {energySlots.low.join(", ")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {priorities.length > 0 && (
+                <div>
+                  <p
+                    className="text-[10px] font-semibold uppercase mb-1"
+                    style={{ color: MUTED }}
+                  >
+                    Priorities ({priorities.filter((p) => p.done).length}/
+                    {priorities.length} done)
+                  </p>
+                  <div className="space-y-1">
+                    {priorities.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span style={{ color: p.done ? OLIVE : MUTED }}>
+                          {p.done ? "✓" : "○"}
+                        </span>
+                        <span
+                          className="text-xs"
+                          style={{
+                            color: p.done ? OLIVE : CHARCOAL,
+                            textDecoration: p.done ? "line-through" : "none",
+                          }}
+                        >
+                          {p.text as string}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {nextTasks.length > 0 && (
+                <div>
+                  <p
+                    className="text-[10px] font-semibold uppercase mb-1"
+                    style={{ color: MUTED }}
+                  >
+                    Tomorrow's Plan
+                  </p>
+                  <div className="space-y-1">
+                    {nextTasks.map((t, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span style={{ color: GOLD }}>→</span>
+                        <span className="text-xs" style={{ color: CHARCOAL }}>
+                          {t.text as string}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         );
       })}
     </div>
   );
 }
-
 /* ── Sessions Tab ── */
 function SessionsTab({
   student,
