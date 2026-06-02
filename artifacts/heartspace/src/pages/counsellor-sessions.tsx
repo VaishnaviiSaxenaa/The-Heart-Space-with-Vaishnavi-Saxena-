@@ -47,6 +47,8 @@ interface VSession {
   scheduled_at: string;
   status: "upcoming" | "done" | "missed";
   note?: string;
+  cancel_reason?: string;
+  student_response?: string;
   student?: Student;
 }
 
