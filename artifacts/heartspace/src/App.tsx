@@ -14,6 +14,8 @@ import ExamSelect from "./pages/exam-select";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import MySessions from "./pages/my-sessions";
+import CounsellorSessionsPage from "./pages/counsellor-sessions";
+import CounsellorSessionsPage from "./pages/counsellor-sessions";
 import Sessions from "./pages/sessions";
 import Syllabus from "./pages/syllabus";
 import QuestionPractice from "./pages/assignments";
@@ -127,6 +129,12 @@ function Router() {
         </Route>
         <Route path="/self-dashboard">
           <StudentRoute component={StudentDashboard} />
+        </Route>
+        <Route path="/counsellor-sessions">
+          <ProtectedRoute component={CounsellorSessionsPage} allowedRole="counsellor" />
+        </Route>
+        <Route path="/counsellor-sessions">
+          <ProtectedRoute component={CounsellorSessionsPage} allowedRole="counsellor" />
         </Route>
         <Route path="/counsellor">
           <ProtectedRoute
