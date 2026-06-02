@@ -302,7 +302,7 @@ function CounsellorSessionsPage() {
                       className="text-xs font-semibold mb-1"
                       style={{ color: MUTED }}
                     >
-                      Student's concern:
+                      What they want to talk about:
                     </p>
                     <p
                       className="text-sm p-3 rounded-xl"
@@ -513,7 +513,7 @@ function SagarSessionSection({ userId }: { userId: string }) {
             rows={3}
             value={concern}
             onChange={(e) => setConcern(e.target.value)}
-            placeholder="Describe your concern or topic…"
+            placeholder="What do you want to talk about? or topic…"
             className="w-full px-3 py-2.5 rounded-xl text-sm border-2 outline-none resize-none"
             style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }}
           />
@@ -558,7 +558,7 @@ function SagarSessionSection({ userId }: { userId: string }) {
               style={{ background: CARD, border: `2px solid ${OLIVE}66` }}
             >
               <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>
-                Your concern: {s.concern}
+                What do you want to talk about?: {s.concern}
               </p>
               {s.callMessage && (
                 <div
@@ -736,12 +736,7 @@ function VaishnaviNoteSection({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Star className="w-4 h-4" style={{ color: GOLD }} />
-        <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
-          Note for Vaishnavi Ma'am
-        </h3>
-      </div>
+      
       {editing ? (
         <div
           className="rounded-2xl p-4 space-y-3"
@@ -849,7 +844,7 @@ export default function Sessions() {
         </h1>
         <p className="mt-1 text-sm" style={{ color: MUTED }}>
           {isZenith
-            ? "Manage your sessions with Vaishnavi Ma'am and Sagar Sir."
+            ? "Manage your sessions with Sagar Sir."
             : "Request and track your counselling sessions."}
         </p>
       </div>
