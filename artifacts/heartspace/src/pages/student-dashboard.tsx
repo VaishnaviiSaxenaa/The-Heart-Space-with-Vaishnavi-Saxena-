@@ -528,11 +528,20 @@ export default function StudentDashboard() {
 
   /* Load Sagar Sir sessions from Supabase */
   const [sagarSessions, setSagarSessions] = useState<Array<Record<string,unknown>>>([]);
+  const [vaishnaviSession, setVaishnaviSession] = useState<{id:string,scheduled_at:string,note?:string}|null>(null);
   useEffect(() => {
     if (!user?.id) return;
     supabase.from("sessions_data").select("data").eq("user_id", user.id).single()
       .then(({ data: sd }) => {
         if (sd?.data) setSagarSessions(sd.data as Array<Record<string,unknown>>);
+      });
+    supabase.from("vaishnavi_sessions").select("*").eq("student_id", user.id).eq("status", "upcoming").order("scheduled_at", { ascending: true }).limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setVaishnaviSession(data[0] as any);
+      });
+    supabase.from("vaishnavi_sessions").select("*").eq("student_id", user.id).eq("status", "upcoming").order("scheduled_at", { ascending: true }).limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setVaishnaviSession(data[0] as any);
       });
   }, [user?.id]);
   const approvedSession = sagarSessions.find(s => s.status === "approved");
@@ -699,47 +708,40 @@ export default function StudentDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <TodaysPlan />
         <Card className="p-6 flex flex-col">
-          <SectionTitle>Next Session</SectionTitle>
-          {approvedSession ? (
+          <SectionTitle>Upcoming Session</SectionTitle>
+          {vaishnaviSession ? (
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl" style={{ background: "#C9A96E11", border: "1.5px solid #C9A96E44" }}>
+                <p className="text-xs font-bold mb-1" style={{ color: "#C9A96E" }}>📅 Session with Vaishnavi Ma'am</p>
+                <p className="text-sm font-medium" style={{ color: "#2C1810" }}>
+                  {new Date(vaishnaviSession.scheduled_at).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "#8C7B70" }}>
+                  🕐 {new Date(vaishnaviSession.scheduled_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                </p>
+                {vaishnaviSession.note && <p className="text-xs mt-1" style={{ color: "#8C7B70" }}>📝 {vaishnaviSession.note}</p>}
+              </div>
+              <p className="text-xs italic" style={{ color: "#8C7B70", lineHeight: 1.5 }}>
+                If you are unavailable at your allotted session time without prior notice to Vaishnavi Ma'am, your session will be conducted in the next session cycle.
+              </p>
+              <a href="/my-sessions" className="text-xs font-semibold" style={{ color: "#C9A96E" }}>
+                Manage session →
+              </a>
+            </div>
+          ) : approvedSession ? (
             <div className="space-y-3">
               <div className="p-4 rounded-2xl" style={{ background: "#6E8B6B11", border: "1.5px solid #6E8B6B44" }}>
                 <p className="text-xs font-bold mb-1" style={{ color: "#6E8B6B" }}>✅ Session Approved — Sagar Sir</p>
-                <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
+                <p className="text-sm font-medium" style={{ color: "#2C1810" }}>
                   {approvedSession.callMessage as string || approvedSession.scheduledDate as string}
                 </p>
-                <p className="text-xs mt-1" style={{ color: MUTED }}>
-                  Topic: {approvedSession.concern as string}
-                </p>
               </div>
-              {doneCount > 0 && (
-                <p className="text-xs text-center" style={{ color: MUTED }}>
-                  🏁 {doneCount} session{doneCount !== 1 ? "s" : ""} completed with Sagar Sir
-                </p>
-              )}
-            </div>
-          ) : sagarSessions.filter(s => s.status === "requested").length > 0 ? (
-            <div className="p-4 rounded-2xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: MUTED }}>⏳ Session Requested</p>
-              <p className="text-sm" style={{ color: CHARCOAL }}>
-                {sagarSessions.find(s => s.status === "requested")?.concern as string}
-              </p>
-              <p className="text-xs mt-1" style={{ color: MUTED }}>Awaiting approval from Vaishnavi Ma'am</p>
-              {doneCount > 0 && (
-                <p className="text-xs mt-2" style={{ color: MUTED }}>
-                  🏁 {doneCount} session{doneCount !== 1 ? "s" : ""} completed
-                </p>
-              )}
             </div>
           ) : (
-            <div
-              className="flex-1 flex flex-col items-center justify-center text-center py-8 rounded-2xl"
-              style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
-            >
-              <Calendar className="w-8 h-8 mb-3 opacity-30" style={{ color: GOLD }} />
-              <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No upcoming sessions</p>
-              <p className="text-xs mt-1" style={{ color: MUTED }}>
-                {doneCount > 0 ? `${doneCount} session${doneCount !== 1 ? "s" : ""} completed` : "Request a session to get started"}
-              </p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+              <div className="text-3xl mb-2">📅</div>
+              <p className="text-sm font-medium" style={{ color: "#2C1810" }}>No upcoming sessions</p>
+              <p className="text-xs mt-1" style={{ color: "#8C7B70" }}>Your next session will be scheduled by Vaishnavi Ma'am</p>
             </div>
           )}
         </Card>
