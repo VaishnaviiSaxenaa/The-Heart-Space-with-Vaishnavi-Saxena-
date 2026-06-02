@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { ReactNode } from "react";
 import {
   LayoutDashboard,
+  CalendarDays,
   Calendar,
   BookOpen,
   FlaskConical,
@@ -60,6 +61,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         key: "home",
         href: "/counsellor",
       },
+      { icon: CalendarDays, label: "My Sessions", key: "my-sessions", href: "/my-sessions" },
       { icon: Calendar, label: "Sessions", key: "sessions", href: "/sessions" },
       { icon: Users, label: "Students", key: "reports", href: "/counsellor" },
       { icon: BarChart2, label: "Analytics", key: "analytics", soon: true },
@@ -94,6 +96,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         key: "daily",
         href: "/daily-tracker",
       },
+      { icon: CalendarDays, label: "My Sessions", key: "my-sessions", href: "/my-sessions" },
       { icon: Calendar, label: "Sessions", key: "sessions", href: "/sessions" },
       { icon: Heart, label: "Health & Wellness", key: "health", soon: true },
       { icon: Brain, label: "Mood & Mind", key: "mood", soon: true },

@@ -13,6 +13,7 @@ import ResetPassword from "./pages/reset-password";
 import ExamSelect from "./pages/exam-select";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
+import MySessions from "./pages/my-sessions";
 import Sessions from "./pages/sessions";
 import Syllabus from "./pages/syllabus";
 import QuestionPractice from "./pages/assignments";
@@ -147,6 +148,9 @@ function Router() {
         </Route>
         <Route path="/assignments">
           <StudentRoute component={QuestionPractice} />
+        </Route>
+        <Route path="/my-sessions">
+          <StudentRoute component={MySessions} />
         </Route>
         <Route path="/roadmap">
           <StudentRoute component={Roadmap} />
