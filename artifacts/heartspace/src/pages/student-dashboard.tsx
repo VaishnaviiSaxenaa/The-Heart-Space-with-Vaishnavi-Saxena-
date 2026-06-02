@@ -722,22 +722,45 @@ export default function StudentDashboard() {
         <TodaysPlan />
         <Card className="p-6 flex flex-col">
           <SectionTitle>Upcoming Session</SectionTitle>
-          {vaishnaviSession ? (
-            <div className="space-y-3">
-              <div className="p-4 rounded-2xl" style={{ background: "#C9A96E11", border: "1.5px solid #C9A96E44" }}>
-                <p className="text-xs font-bold mb-1" style={{ color: "#C9A96E" }}>📅 Session with Vaishnavi Ma'am</p>
-                <p className="text-sm font-medium" style={{ color: "#2C1810" }}>
-                  {new Date(vaishnaviSession.scheduled_at).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          {/* Reschedule popup */}
+          {showSessionPopup && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+              <div style={{ background: "#FAF7F2", borderRadius: 20, padding: "2rem", maxWidth: 380, width: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+                <div style={{ fontSize: "1.5rem", marginBottom: "0.75rem" }}>📅</div>
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#3D2314", margin: "0 0 0.75rem" }}>Your session has been rescheduled!</h2>
+                <p style={{ fontSize: "0.9rem", color: "#8C7B70", margin: "0 0 1.5rem", lineHeight: 1.5 }}>
+                  Vaishnavi Ma'am has updated your session timing. Please review and accept or cancel your session.
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: "#8C7B70" }}>
-                  🕐 {new Date(vaishnaviSession.scheduled_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                </p>
-                {vaishnaviSession.note && <p className="text-xs mt-1" style={{ color: "#8C7B70" }}>📝 {vaishnaviSession.note}</p>}
+                <button onClick={() => { setShowSessionPopup(false); window.location.href = "/my-sessions"; }}
+                  style={{ width: "100%", background: "#C9A96E", color: "#fff", border: "none", borderRadius: 10, padding: "0.75rem", fontWeight: 600, fontSize: "0.95rem", cursor: "pointer" }}>
+                  View My Sessions
+                </button>
               </div>
+            </div>
+          )}
+          {allVaishnaviSessions.length > 0 ? (
+            <div className="space-y-3">
+              {(showAllUpcoming ? allVaishnaviSessions : allVaishnaviSessions.slice(0, 1)).map((s, i) => (
+                <div key={s.id} className="p-4 rounded-2xl" style={{ background: "#C9A96E11", border: "1.5px solid #C9A96E44" }}>
+                  <p className="text-xs font-bold mb-1" style={{ color: "#C9A96E" }}>📅 Session with Vaishnavi Ma'am</p>
+                  <p className="text-sm font-medium" style={{ color: "#2C1810" }}>
+                    {new Date(s.scheduled_at).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "#8C7B70" }}>
+                    🕐 {new Date(s.scheduled_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                  {s.note && <p className="text-xs mt-1" style={{ color: "#8C7B70" }}>📝 {s.note}</p>}
+                </div>
+              ))}
+              {allVaishnaviSessions.length > 1 && (
+                <button onClick={() => setShowAllUpcoming(p => !p)}
+                  style={{ width: "100%", background: "none", border: "1px solid #E8DDD0", borderRadius: 8, padding: "0.35rem", fontSize: "0.8rem", color: "#8C7B70", cursor: "pointer", fontWeight: 600 }}>
+                  {showAllUpcoming ? "Show less ↑" : `Show all ${allVaishnaviSessions.length} sessions ↓`}
+                </button>
+              )}
               <p className="text-xs italic" style={{ color: "#8C7B70", lineHeight: 1.5 }}>
                 If you are unavailable at your allotted session time without prior notice to Vaishnavi Ma'am, your session will be conducted in the next session cycle.
               </p>
-              
             </div>
           ) : approvedSession ? (
             <div className="space-y-3">
