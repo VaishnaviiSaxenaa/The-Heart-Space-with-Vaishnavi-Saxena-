@@ -100,7 +100,7 @@ export default function MySessions() {
     if (!cancelReason.trim()) return;
     await supabase
       .from("vaishnavi_sessions")
-      .update({ status: "missed", cancel_reason: cancelReason.trim() })
+      .update({ status: "missed", cancel_reason: cancelReason.trim(), student_response: "cancelled" })
       .eq("id", id);
     setSessions((prev) =>
       prev.map((s) => (s.id === id ? { ...s, status: "missed" } : s)),
