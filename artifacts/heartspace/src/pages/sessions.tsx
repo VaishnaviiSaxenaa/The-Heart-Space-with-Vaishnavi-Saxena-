@@ -481,10 +481,7 @@ function SagarSessionSection({ userId }: { userId: string }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <User className="w-4 h-4" style={{ color: GOLD }} />
-          <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
-            Sessions with Sagar Sir
-          </h3>
+          <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>Sessions with Sagar Sir</h1>
         </div>
         {!showForm && (
           <button
@@ -850,8 +847,6 @@ export default function Sessions() {
       </div>
       {isZenith && (
         <>
-          <VaishnaviNoteSection userId={userId} />
-          <div className="h-px" style={{ background: BORDER }} />
           <SagarSessionSection userId={userId} />
         </>
       )}
