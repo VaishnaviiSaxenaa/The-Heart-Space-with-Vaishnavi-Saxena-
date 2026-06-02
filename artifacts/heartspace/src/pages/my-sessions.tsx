@@ -1,8 +1,16 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
-import { format, isPast, isFuture } from "date-fns";
-import { Calendar, Clock, CheckCircle2, XCircle, Send } from "lucide-react";
+import { format } from "date-fns";
+import {
+  Calendar,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Send,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 const CREAM = "#FAF7F2";
 const CHARCOAL = "#2C1810";
@@ -18,6 +26,7 @@ interface VSession {
   scheduled_at: string;
   status: "upcoming" | "done" | "missed";
   note?: string;
+  cancel_reason?: string;
 }
 
 interface SessionNote {
@@ -33,9 +42,11 @@ export default function MySessions() {
   const [notes, setNotes] = useState<SessionNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [saving, setSaving] = useState(false);
-  const [cancellingId, setCancellingId] = useState<string|null>(null);
-  const [cancelReason, setCancelReason] = useState("");
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [showAllPast, setShowAllPast] = useState(false);
+  const [showAllNotes, setShowAllNotes] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -57,15 +68,12 @@ export default function MySessions() {
     });
   }, [userId]);
 
-  const upcoming = sessions.filter(
-    (s) => s.status === "upcoming" && isFuture(new Date(s.scheduled_at)),
-  );
+  const upcoming = sessions.filter((s) => s.status === "upcoming");
   const past = sessions.filter(
-    (s) =>
-      s.status === "done" ||
-      s.status === "missed" ||
-      (s.status === "upcoming" && isPast(new Date(s.scheduled_at))),
+    (s) => s.status === "done" || s.status === "missed",
   );
+  const visiblePast = showAllPast ? past : past.slice(0, 3);
+  const visibleNotes = showAllNotes ? notes : notes.slice(0, 3);
 
   async function submitNote() {
     if (!newNote.trim() || !userId) return;
@@ -84,8 +92,13 @@ export default function MySessions() {
 
   async function cancelSession(id: string) {
     if (!cancelReason.trim()) return;
-    await supabase.from("vaishnavi_sessions").update({ status: "missed", cancel_reason: cancelReason.trim() }).eq("id", id);
-    setSessions(prev => prev.map(s => s.id === id ? { ...s, status: "missed" } : s));
+    await supabase
+      .from("vaishnavi_sessions")
+      .update({ status: "missed", cancel_reason: cancelReason.trim() })
+      .eq("id", id);
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status: "missed" } : s)),
+    );
     setCancellingId(null);
     setCancelReason("");
   }
@@ -109,6 +122,7 @@ export default function MySessions() {
   return (
     <div style={{ background: CREAM, minHeight: "100vh", padding: "2rem" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <h1
             style={{
@@ -120,10 +134,8 @@ export default function MySessions() {
           >
             My Sessions with Vaishnavi Ma'am
           </h1>
-          <p
-            style={{ color: MUTED, marginTop: "0.5rem", margin: "0.5rem 0 0" }}
-          >
-            Your upcoming and past coaching sessions
+          <p style={{ color: MUTED, margin: "0.5rem 0 0" }}>
+            Your upcoming and past counselling sessions
           </p>
         </div>
 
@@ -184,6 +196,7 @@ export default function MySessions() {
                       display: "flex",
                       alignItems: "center",
                       gap: "0.75rem",
+                      marginBottom: "0.75rem",
                     }}
                   >
                     <div
@@ -221,29 +234,112 @@ export default function MySessions() {
                     </div>
                   </div>
                   {s.note && (
-                    <div style={{ background: CREAM, borderRadius: 10, padding: "0.75rem", fontSize: "0.9rem", color: CHARCOAL, marginTop: "0.75rem" }}>
+                    <div
+                      style={{
+                        background: CREAM,
+                        borderRadius: 10,
+                        padding: "0.75rem",
+                        fontSize: "0.9rem",
+                        color: CHARCOAL,
+                        marginBottom: "0.75rem",
+                      }}
+                    >
                       📝 {s.note}
                     </div>
                   )}
                   {cancellingId === s.id ? (
-                    <div style={{ marginTop: "0.75rem", background: "#FFF8F8", borderRadius: 10, padding: "0.75rem", border: "1px solid #FFCDD2" }}>
-                      <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#C62828", marginBottom: "0.5rem" }}>Reason for cancellation</p>
-                      <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="Please provide a reason..." rows={2}
-                        style={{ width: "100%", borderRadius: 8, border: "1.5px solid #FFCDD2", padding: "0.5rem", fontSize: "0.85rem", resize: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
-                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                        <button onClick={() => cancelSession(s.id)} disabled={!cancelReason.trim()}
-                          style={{ background: "#C62828", color: "#fff", border: "none", borderRadius: 8, padding: "0.4rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", opacity: cancelReason.trim() ? 1 : 0.5 }}>
+                    <div
+                      style={{
+                        background: "#FFF8F8",
+                        borderRadius: 10,
+                        padding: "0.75rem",
+                        border: "1px solid #FFCDD2",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                          color: "#C62828",
+                          margin: "0 0 0.5rem",
+                        }}
+                      >
+                        Reason for cancellation
+                      </p>
+                      <textarea
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="Please provide a reason..."
+                        rows={2}
+                        style={{
+                          width: "100%",
+                          borderRadius: 8,
+                          border: "1.5px solid #FFCDD2",
+                          padding: "0.5rem",
+                          fontSize: "0.85rem",
+                          resize: "none",
+                          fontFamily: "inherit",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.5rem",
+                          marginTop: "0.5rem",
+                        }}
+                      >
+                        <button
+                          onClick={() => cancelSession(s.id)}
+                          disabled={!cancelReason.trim()}
+                          style={{
+                            background: "#C62828",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 8,
+                            padding: "0.4rem 0.75rem",
+                            fontSize: "0.8rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            opacity: cancelReason.trim() ? 1 : 0.5,
+                          }}
+                        >
                           Confirm Cancel
                         </button>
-                        <button onClick={() => { setCancellingId(null); setCancelReason(""); }}
-                          style={{ background: CREAM, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0.4rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>
+                        <button
+                          onClick={() => {
+                            setCancellingId(null);
+                            setCancelReason("");
+                          }}
+                          style={{
+                            background: CREAM,
+                            color: MUTED,
+                            border: `1px solid ${BORDER}`,
+                            borderRadius: 8,
+                            padding: "0.4rem 0.75rem",
+                            fontSize: "0.8rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
                           Go back
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => setCancellingId(s.id)}
-                      style={{ marginTop: "0.75rem", background: "none", border: "1px solid #FFCDD2", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", color: "#C62828", cursor: "pointer", fontWeight: 600 }}>
+                    <button
+                      onClick={() => setCancellingId(s.id)}
+                      style={{
+                        background: "none",
+                        border: "1px solid #FFCDD2",
+                        borderRadius: 8,
+                        padding: "0.35rem 0.75rem",
+                        fontSize: "0.8rem",
+                        color: "#C62828",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
                       Cancel session
                     </button>
                   )}
@@ -318,15 +414,9 @@ export default function MySessions() {
             <Send size={16} />
             {saving ? "Saving..." : "Add Note"}
           </button>
+
           {notes.length > 0 && (
-            <div
-              style={{
-                marginTop: "1.25rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.75rem",
-              }}
-            >
+            <div style={{ marginTop: "1.25rem" }}>
               <div
                 style={{
                   fontSize: "0.85rem",
@@ -334,34 +424,74 @@ export default function MySessions() {
                   color: MUTED,
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
+                  marginBottom: "0.75rem",
                 }}
               >
                 Previous notes
               </div>
-              {notes.map((n) => (
-                <div
-                  key={n.id}
-                  style={{
-                    background: CREAM,
-                    borderRadius: 10,
-                    padding: "0.75rem 1rem",
-                    border: `1px solid ${BORDER}`,
-                  }}
-                >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
+              >
+                {visibleNotes.map((n) => (
                   <div
+                    key={n.id}
                     style={{
-                      fontSize: "0.75rem",
-                      color: MUTED,
-                      marginBottom: "0.25rem",
+                      background: CREAM,
+                      borderRadius: 10,
+                      padding: "0.75rem 1rem",
+                      border: `1px solid ${BORDER}`,
                     }}
                   >
-                    {format(new Date(n.created_at), "MMM d, yyyy · h:mm a")}
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: MUTED,
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      {format(new Date(n.created_at), "MMM d, yyyy · h:mm a")}
+                    </div>
+                    <div style={{ color: CHARCOAL, fontSize: "0.9rem" }}>
+                      {n.note}
+                    </div>
                   </div>
-                  <div style={{ color: CHARCOAL, fontSize: "0.9rem" }}>
-                    {n.note}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              {notes.length > 3 && (
+                <button
+                  onClick={() => setShowAllNotes((p) => !p)}
+                  style={{
+                    marginTop: "0.75rem",
+                    background: "none",
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 8,
+                    padding: "0.35rem 0.75rem",
+                    fontSize: "0.8rem",
+                    color: MUTED,
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    width: "100%",
+                    justifyContent: "center",
+                  }}
+                >
+                  {showAllNotes ? (
+                    <>
+                      <ChevronUp size={14} /> Show less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown size={14} /> Show all {notes.length} notes
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -388,7 +518,7 @@ export default function MySessions() {
                 gap: "0.75rem",
               }}
             >
-              {past.map((s) => (
+              {visiblePast.map((s) => (
                 <div
                   key={s.id}
                   style={{
@@ -396,63 +526,111 @@ export default function MySessions() {
                     border: `1px solid ${BORDER}`,
                     borderRadius: 14,
                     padding: "1rem 1.25rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 600, color: DARK }}>
-                      {format(new Date(s.scheduled_at), "EEEE, MMMM d, yyyy")}
-                    </div>
-                    <div
-                      style={{
-                        color: MUTED,
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        marginTop: 2,
-                      }}
-                    >
-                      <Clock size={13} />
-                      {format(new Date(s.scheduled_at), "h:mm a")}
-                    </div>
-                    {s.note && (
-                      <div
-                        style={{
-                          fontSize: "0.85rem",
-                          color: MUTED,
-                          marginTop: 4,
-                        }}
-                      >
-                        📝 {s.note}
-                      </div>
-                    )}
-                  </div>
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.4rem",
-                      background: s.status === "done" ? "#E8F5E9" : "#FFEBEE",
-                      borderRadius: 20,
-                      padding: "0.3rem 0.75rem",
-                      color: s.status === "done" ? OLIVE : "#C62828",
-                      fontWeight: 600,
-                      fontSize: "0.85rem",
+                      justifyContent: "space-between",
                     }}
                   >
-                    {s.status === "done" ? (
-                      <CheckCircle2 size={15} />
-                    ) : (
-                      <XCircle size={15} />
-                    )}
-                    {s.status === "done" ? "Done" : "Missed"}
+                    <div>
+                      <div style={{ fontWeight: 600, color: DARK }}>
+                        {format(new Date(s.scheduled_at), "EEEE, MMMM d, yyyy")}
+                      </div>
+                      <div
+                        style={{
+                          color: MUTED,
+                          fontSize: "0.85rem",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          marginTop: 2,
+                        }}
+                      >
+                        <Clock size={13} />
+                        {format(new Date(s.scheduled_at), "h:mm a")}
+                      </div>
+                      {s.note && (
+                        <div
+                          style={{
+                            fontSize: "0.85rem",
+                            color: MUTED,
+                            marginTop: 4,
+                          }}
+                        >
+                          📝 {s.note}
+                        </div>
+                      )}
+                      {s.cancel_reason && (
+                        <div
+                          style={{
+                            fontSize: "0.8rem",
+                            color: "#C62828",
+                            marginTop: 4,
+                          }}
+                        >
+                          Cancelled: {s.cancel_reason}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        background: s.status === "done" ? "#E8F5E9" : "#FFEBEE",
+                        borderRadius: 20,
+                        padding: "0.3rem 0.75rem",
+                        color: s.status === "done" ? OLIVE : "#C62828",
+                        fontWeight: 600,
+                        fontSize: "0.85rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {s.status === "done" ? (
+                        <CheckCircle2 size={15} />
+                      ) : (
+                        <XCircle size={15} />
+                      )}
+                      {s.status === "done" ? "Done" : "Missed"}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
+            {past.length > 3 && (
+              <button
+                onClick={() => setShowAllPast((p) => !p)}
+                style={{
+                  marginTop: "0.75rem",
+                  background: "none",
+                  border: `1px solid ${BORDER}`,
+                  borderRadius: 8,
+                  padding: "0.35rem 0.75rem",
+                  fontSize: "0.8rem",
+                  color: MUTED,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  width: "100%",
+                  justifyContent: "center",
+                }}
+              >
+                {showAllPast ? (
+                  <>
+                    <ChevronUp size={14} /> Show less
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={14} /> Show all {past.length} sessions
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>
