@@ -27,6 +27,7 @@ interface VSession {
   status: "upcoming" | "done" | "missed";
   note?: string;
   cancel_reason?: string;
+  student_response?: string;
 }
 
 interface SessionNote {
@@ -88,6 +89,11 @@ export default function MySessions() {
       setNewNote("");
     }
     setSaving(false);
+  }
+
+  async function acceptSession(id: string) {
+    await supabase.from("vaishnavi_sessions").update({ student_response: "accepted" }).eq("id", id);
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, student_response: "accepted" } : s));
   }
 
   async function cancelSession(id: string) {
@@ -248,10 +254,16 @@ export default function MySessions() {
                     </div>
                   )}
                   <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                    <button onClick={() => { /* already accepted */ }}
-                      style={{ background: "#E8F5E9", color: "#2E7D32", border: "1px solid #A5D6A7", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "default" }}>
-                      ✅ Session accepted
-                    </button>
+                    {s.student_response === "accepted" ? (
+                      <button style={{ background: "#E8F5E9", color: "#2E7D32", border: "1px solid #A5D6A7", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "default" }}>
+                        ✅ Accepted
+                      </button>
+                    ) : (
+                      <button onClick={() => acceptSession(s.id)}
+                        style={{ background: CREAM, color: OLIVE, border: `1px solid ${OLIVE}`, borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>
+                        Accept
+                      </button>
+                    )}
                     <button onClick={() => setCancellingId(s.id)}
                       style={{ background: "none", border: "1px solid #FFCDD2", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", color: "#C62828", cursor: "pointer", fontWeight: 600 }}>
                       Cancel session
