@@ -336,23 +336,7 @@ export default function MySessions() {
                         </button>
                       </div>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => setCancellingId(s.id)}
-                      style={{
-                        background: "none",
-                        border: "1px solid #FFCDD2",
-                        borderRadius: 8,
-                        padding: "0.35rem 0.75rem",
-                        fontSize: "0.8rem",
-                        color: "#C62828",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Cancel session
-                    </button>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
