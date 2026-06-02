@@ -113,7 +113,7 @@ export default function MySessions() {
           <p
             style={{ color: MUTED, marginTop: "0.5rem", margin: "0.5rem 0 0" }}
           >
-            Your upcoming and past coaching sessions
+            Your upcoming and past counselling sessions
           </p>
         </div>
 
