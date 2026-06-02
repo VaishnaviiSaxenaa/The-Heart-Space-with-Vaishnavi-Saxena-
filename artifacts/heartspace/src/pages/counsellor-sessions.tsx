@@ -69,6 +69,9 @@ export default function CounsellorSessions() {
   const [selectedTime, setSelectedTime] = useState("10:00");
   const [sessionNote, setSessionNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [rescheduling, setRescheduling] = useState<string|null>(null);
+  const [reschedDate, setReschedDate] = useState('');
+  const [reschedTime, setReschedTime] = useState('');
 
   useEffect(() => {
     loadData();
@@ -141,6 +144,14 @@ export default function CounsellorSessions() {
     setSessions((prev) =>
       prev.map((s) => (s.id === id ? { ...s, status } : s)),
     );
+  }
+
+  async function rescheduleSession(id: string) {
+    if (!reschedDate || !reschedTime) return;
+    const scheduled_at = new Date(`${reschedDate}T${reschedTime}:00`).toISOString();
+    await supabase.from("vaishnavi_sessions").update({ scheduled_at, student_response: null, rescheduled_at: new Date().toISOString() }).eq("id", id);
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, scheduled_at, student_response: undefined } : s));
+    setRescheduling(null);
   }
 
   async function deleteSession(id: string) {
@@ -575,6 +586,8 @@ export default function CounsellorSessions() {
                               >
                                 {s.student?.full_name ?? "Student"}
                               </span>
+                              {s.student_response === "accepted" && <span title="Student accepted">✅</span>}
+                              {s.student_response === "cancelled" && <span title={s.cancel_reason ?? "Cancelled"} style={{cursor:"help"}}>❌</span>}
                             </div>
                             <div
                               style={{
@@ -692,6 +705,37 @@ export default function CounsellorSessions() {
           </div>
         )}
       </div>
+
+      {/* Reschedule Modal */}
+      {rescheduling && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+          <div style={{ background: CARD, borderRadius: 20, padding: "2rem", width: 360, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: DARK, margin: "0 0 1.5rem" }}>🔄 Reschedule Session</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div>
+                <label style={{ fontSize: "0.85rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.4rem" }}>New Date</label>
+                <input type="date" value={reschedDate} onChange={e => setReschedDate(e.target.value)}
+                  style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: CREAM, color: CHARCOAL, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.85rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.4rem" }}>New Time</label>
+                <input type="time" value={reschedTime} onChange={e => setReschedTime(e.target.value)}
+                  style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: CREAM, color: CHARCOAL, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button onClick={() => rescheduleSession(rescheduling)}
+                  style={{ flex: 1, background: GOLD, color: "#fff", border: "none", borderRadius: 10, padding: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
+                  Save
+                </button>
+                <button onClick={() => setRescheduling(null)}
+                  style={{ flex: 1, background: CREAM, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Session Modal */}
       {showAddForm && (

@@ -529,19 +529,32 @@ export default function StudentDashboard() {
   /* Load Sagar Sir sessions from Supabase */
   const [sagarSessions, setSagarSessions] = useState<Array<Record<string,unknown>>>([]);
   const [vaishnaviSession, setVaishnaviSession] = useState<{id:string,scheduled_at:string,note?:string}|null>(null);
+  const [allVaishnaviSessions, setAllVaishnaviSessions] = useState<Array<{id:string,scheduled_at:string,note?:string,rescheduled_at?:string}>>([]);
+  const [showSessionPopup, setShowSessionPopup] = useState(false);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   useEffect(() => {
     if (!user?.id) return;
     supabase.from("sessions_data").select("data").eq("user_id", user.id).single()
       .then(({ data: sd }) => {
         if (sd?.data) setSagarSessions(sd.data as Array<Record<string,unknown>>);
       });
-    supabase.from("vaishnavi_sessions").select("*").eq("student_id", user.id).eq("status", "upcoming").order("scheduled_at", { ascending: true }).limit(1)
+    supabase.from("vaishnavi_sessions").select("*").eq("student_id", user.id).eq("status", "upcoming").order("scheduled_at", { ascending: true })
       .then(({ data }) => {
-        if (data && data.length > 0) setVaishnaviSession(data[0] as any);
+        if (data && data.length > 0) {
+          setVaishnaviSession(data[0] as any);
+          setAllVaishnaviSessions(data as any);
+          // Show popup if any session was rescheduled
+          if (data.some((s: any) => s.rescheduled_at && !s.student_response)) setShowSessionPopup(true);
+        }
       });
-    supabase.from("vaishnavi_sessions").select("*").eq("student_id", user.id).eq("status", "upcoming").order("scheduled_at", { ascending: true }).limit(1)
+    supabase.from("vaishnavi_sessions").select("*").eq("student_id", user.id).eq("status", "upcoming").order("scheduled_at", { ascending: true })
       .then(({ data }) => {
-        if (data && data.length > 0) setVaishnaviSession(data[0] as any);
+        if (data && data.length > 0) {
+          setVaishnaviSession(data[0] as any);
+          setAllVaishnaviSessions(data as any);
+          // Show popup if any session was rescheduled
+          if (data.some((s: any) => s.rescheduled_at && !s.student_response)) setShowSessionPopup(true);
+        }
       });
   }, [user?.id]);
   const approvedSession = sagarSessions.find(s => s.status === "approved");
