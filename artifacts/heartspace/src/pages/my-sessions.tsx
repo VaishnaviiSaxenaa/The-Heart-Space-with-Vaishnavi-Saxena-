@@ -247,6 +247,16 @@ export default function MySessions() {
                       📝 {s.note}
                     </div>
                   )}
+                  <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                    <button onClick={() => { /* already accepted */ }}
+                      style={{ background: "#E8F5E9", color: "#2E7D32", border: "1px solid #A5D6A7", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "default" }}>
+                      ✅ Session accepted
+                    </button>
+                    <button onClick={() => setCancellingId(s.id)}
+                      style={{ background: "none", border: "1px solid #FFCDD2", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", color: "#C62828", cursor: "pointer", fontWeight: 600 }}>
+                      Cancel session
+                    </button>
+                  </div>
                   {cancellingId === s.id ? (
                     <div
                       style={{
