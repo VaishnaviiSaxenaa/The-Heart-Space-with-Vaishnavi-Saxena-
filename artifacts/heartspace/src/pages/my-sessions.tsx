@@ -33,6 +33,8 @@ export default function MySessions() {
   const [notes, setNotes] = useState<SessionNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string|null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,6 +80,14 @@ export default function MySessions() {
       setNewNote("");
     }
     setSaving(false);
+  }
+
+  async function cancelSession(id: string) {
+    if (!cancelReason.trim()) return;
+    await supabase.from("vaishnavi_sessions").update({ status: "missed", cancel_reason: cancelReason.trim() }).eq("id", id);
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, status: "missed" } : s));
+    setCancellingId(null);
+    setCancelReason("");
   }
 
   if (loading)
@@ -211,18 +221,31 @@ export default function MySessions() {
                     </div>
                   </div>
                   {s.note && (
-                    <div
-                      style={{
-                        background: CREAM,
-                        borderRadius: 10,
-                        padding: "0.75rem",
-                        fontSize: "0.9rem",
-                        color: CHARCOAL,
-                        marginTop: "0.75rem",
-                      }}
-                    >
+                    <div style={{ background: CREAM, borderRadius: 10, padding: "0.75rem", fontSize: "0.9rem", color: CHARCOAL, marginTop: "0.75rem" }}>
                       📝 {s.note}
                     </div>
+                  )}
+                  {cancellingId === s.id ? (
+                    <div style={{ marginTop: "0.75rem", background: "#FFF8F8", borderRadius: 10, padding: "0.75rem", border: "1px solid #FFCDD2" }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#C62828", marginBottom: "0.5rem" }}>Reason for cancellation</p>
+                      <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="Please provide a reason..." rows={2}
+                        style={{ width: "100%", borderRadius: 8, border: "1.5px solid #FFCDD2", padding: "0.5rem", fontSize: "0.85rem", resize: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                        <button onClick={() => cancelSession(s.id)} disabled={!cancelReason.trim()}
+                          style={{ background: "#C62828", color: "#fff", border: "none", borderRadius: 8, padding: "0.4rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", opacity: cancelReason.trim() ? 1 : 0.5 }}>
+                          Confirm Cancel
+                        </button>
+                        <button onClick={() => { setCancellingId(null); setCancelReason(""); }}
+                          style={{ background: CREAM, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0.4rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}>
+                          Go back
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setCancellingId(s.id)}
+                      style={{ marginTop: "0.75rem", background: "none", border: "1px solid #FFCDD2", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", color: "#C62828", cursor: "pointer", fontWeight: 600 }}>
+                      Cancel session
+                    </button>
                   )}
                 </div>
               ))}
