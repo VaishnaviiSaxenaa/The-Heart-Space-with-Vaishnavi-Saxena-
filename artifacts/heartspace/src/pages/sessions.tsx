@@ -833,17 +833,6 @@ export default function Sessions() {
   return (
     <div className="space-y-7 animate-in fade-in duration-500">
       <div>
-        <h1
-          className="text-3xl font-serif font-bold"
-          style={{ color: CHARCOAL }}
-        >
-          Sessions
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: MUTED }}>
-          {isZenith
-            ? "Manage your sessions with Sagar Sir."
-            : "Request and track your counselling sessions."}
-        </p>
       </div>
       {isZenith && (
         <>
