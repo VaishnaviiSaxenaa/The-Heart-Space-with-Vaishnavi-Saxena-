@@ -724,9 +724,7 @@ export default function StudentDashboard() {
               <p className="text-xs italic" style={{ color: "#8C7B70", lineHeight: 1.5 }}>
                 If you are unavailable at your allotted session time without prior notice to Vaishnavi Ma'am, your session will be conducted in the next session cycle.
               </p>
-              <a href="/my-sessions" className="text-xs font-semibold" style={{ color: "#C9A96E" }}>
-                Manage session →
-              </a>
+              <button onClick={() => window.location.href="/my-sessions"} style={{ background: "none", border: "none", color: "#C9A96E", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", padding: 0 }}>Manage session →</button>
             </div>
           ) : approvedSession ? (
             <div className="space-y-3">
