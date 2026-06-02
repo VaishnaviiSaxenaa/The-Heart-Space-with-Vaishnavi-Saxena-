@@ -731,10 +731,7 @@ export default function StudentDashboard() {
                 <p style={{ fontSize: "0.9rem", color: "#8C7B70", margin: "0 0 1.5rem", lineHeight: 1.5 }}>
                   Vaishnavi Ma'am has updated your session timing. Please review and accept or cancel your session.
                 </p>
-                <button onClick={() => { setShowSessionPopup(false); window.location.href = "/my-sessions"; }}
-                  style={{ width: "100%", background: "#C9A96E", color: "#fff", border: "none", borderRadius: 10, padding: "0.75rem", fontWeight: 600, fontSize: "0.95rem", cursor: "pointer" }}>
-                  View My Sessions
-                </button>
+                <Link href="/my-sessions" onClick={() => setShowSessionPopup(false)} style={{ display: "block", width: "100%", background: "#C9A96E", color: "#fff", border: "none", borderRadius: 10, padding: "0.75rem", fontWeight: 600, fontSize: "0.95rem", cursor: "pointer", textAlign: "center", textDecoration: "none" }}>View My Sessions</Link>
               </div>
             </div>
           )}
