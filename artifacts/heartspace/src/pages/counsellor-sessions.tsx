@@ -679,6 +679,12 @@ export default function CounsellorSessions() {
                               </div>
                             )}
                             <button
+                              onClick={() => { setRescheduling(s.id); setReschedDate(s.scheduled_at.split("T")[0]); setReschedTime(s.scheduled_at.substring(11,16)); }}
+                              style={{ marginTop: "0.5rem", background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.75rem", color: MUTED, cursor: "pointer", fontWeight: 600, width: "100%", display: "block" }}
+                            >
+                              🔄 Reschedule
+                            </button>
+                            <button
                               onClick={() => deleteSession(s.id)}
                               style={{
                                 position: "absolute",
