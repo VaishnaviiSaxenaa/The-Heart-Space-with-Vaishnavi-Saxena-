@@ -709,6 +709,16 @@ function SagarSessionSection({ userId }: { userId: string }) {
           </div>
         </div>
       )}
+
+      {/* Upcoming section */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: MUTED }}>Your upcoming and past sessions with Sagar Sir</p>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: MUTED }}>Upcoming</p>
+        <div className="rounded-2xl p-5 text-center" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+          <p className="text-sm" style={{ color: MUTED }}>No upcoming sessions scheduled yet.</p>
+          <p className="text-xs mt-1" style={{ color: MUTED }}>Your next session will be scheduled upon request.</p>
+        </div>
+      </div>
     </div>
   );
 }
