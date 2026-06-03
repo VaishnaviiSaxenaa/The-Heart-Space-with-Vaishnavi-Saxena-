@@ -684,6 +684,10 @@ export default function CounsellorSessions() {
                             >
                               🔄 Reschedule
                             </button>
+                            <a href={googleCalendarLink(s)} target="_blank" rel="noopener noreferrer"
+                              style={{ marginTop: "0.25rem", background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.75rem", color: MUTED, cursor: "pointer", fontWeight: 600, width: "100%", display: "block", textAlign: "center", textDecoration: "none" }}>
+                              📅 Add to Google Calendar
+                            </a>
                             <button
                               onClick={() => deleteSession(s.id)}
                               style={{
