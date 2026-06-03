@@ -80,9 +80,13 @@ export default function CounsellorSessions() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
-    format(new Date(), "yyyy-MM-dd"),
-  );
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + (day === 0 ? 1 : day === 1 ? 0 : 8 - day));
+    return format(monday, "yyyy-MM-dd");
+  });
   const [selectedTime, setSelectedTime] = useState("10:00");
   const [endTime, setEndTime] = useState("11:00");
   const [sessionNote, setSessionNote] = useState("");
