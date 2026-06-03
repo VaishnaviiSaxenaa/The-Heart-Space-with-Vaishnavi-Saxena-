@@ -446,16 +446,35 @@ export default function NoteTracker() {
 
         {/* Pro Tip */}
         <div style={{ background: "#FFFBEB", border: "1.5px solid #FCD34D", borderRadius: 16, padding: "1.25rem", marginBottom: "1.5rem" }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#92400E", margin: "0 0 0.75rem" }}>💡 Pro Tip: How to Make Notes That Stick</h2>
-          <div style={{ fontSize: "0.85rem", color: "#78350F", lineHeight: 1.7 }}>
-            <p style={{ margin: "0 0 0.6rem" }}>Before making notes, <strong>close your existing notes first</strong>. After a lecture, recall everything you can remember. Then open your notes and compare — how much did you remember?</p>
-            <p style={{ margin: "0 0 0.6rem" }}>Mark your topics by how well you recalled them:</p>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.6rem" }}>
-              <span style={{ background: "#DCFCE7", color: "#166534", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🟢 Green — Remembered fully</span>
-              <span style={{ background: "#DBEAFE", color: "#1e40af", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🔵 Blue — Remembered ~50%</span>
-              <span style={{ background: "#FEE2E2", color: "#991B1B", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🔴 Red — Barely remembered</span>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#92400E", margin: "0 0 1rem" }}>💡 Pro Tips: Study Smarter</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+
+            <div style={{ fontSize: "0.85rem", color: "#78350F", lineHeight: 1.7 }}>
+              <div style={{ fontWeight: 700, marginBottom: "0.35rem" }}>📖 Note-Making Recall Method</div>
+              After making notes, recall everything you can remember. Then open your notes and compare — how much did you remember? Mark your topics:
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", margin: "0.5rem 0" }}>
+                <span style={{ background: "#DCFCE7", color: "#166534", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🟢 Green — Remembered fully</span>
+                <span style={{ background: "#DBEAFE", color: "#1e40af", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🔵 Blue — Remembered ~50%</span>
+                <span style={{ background: "#FEE2E2", color: "#991B1B", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🔴 Red — Barely remembered</span>
+              </div>
+              Each time you revise, if you can fully recall a Blue or Red topic, upgrade it to Green. Over time, all your notes will become Green — and that's when you truly know the material. ✨
             </div>
-            <p style={{ margin: 0 }}>Each time you revise, if you can fully recall a Blue or Red topic, upgrade it to Green. Over time, all your notes will become Green — and that's when you truly know the material. ✨</p>
+
+            <div style={{ borderTop: "1px solid #FCD34D", paddingTop: "0.75rem", fontSize: "0.85rem", color: "#78350F", lineHeight: 1.7 }}>
+              <div style={{ fontWeight: 700, marginBottom: "0.35rem" }}>🃏 Flash Cards</div>
+              Make flash cards for things you forget easily and revise them more often. Don't want to buy flash cards? A small notebook works just as well — write the concept on one side, explanation on the other.
+            </div>
+
+            <div style={{ borderTop: "1px solid #FCD34D", paddingTop: "0.75rem", fontSize: "0.85rem", color: "#78350F", lineHeight: 1.7 }}>
+              <div style={{ fontWeight: 700, marginBottom: "0.35rem" }}>📓 Problem Book Method</div>
+              Your problem book contains <em>only question numbers</em> — make 5 columns: Round 1 to Round 5.
+              <ul style={{ margin: "0.4rem 0 0 1rem", padding: 0 }}>
+                <li>Round 1: Write all questions you found difficult</li>
+                <li>Round 2: From those, write the ones still difficult</li>
+                <li>By Round 5: You're left with only the truly tough questions — perfectly filtered for deep practice</li>
+              </ul>
+            </div>
+
           </div>
         </div>
 

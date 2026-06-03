@@ -519,7 +519,7 @@ export default function RevisionTracker() {
             </div>
             <div style={{ background: "#F0FDF4", borderRadius: 12, padding: "1rem", border: "1px solid #BBF7D0" }}>
               <div style={{ fontWeight: 700, color: "#166534", fontSize: "0.9rem", marginBottom: "0.4rem" }}>📅 Spaced Repetition</div>
-              <div style={{ fontSize: "0.8rem", color: "#15803D", lineHeight: 1.5 }}>Revise a topic (by recalling) the next day, then 7 days, then 4 weeks. Each time you recall successfully, increase the gap. This builds long-term memory efficiently.</div>
+              <div style={{ fontSize: "0.8rem", color: "#15803D", lineHeight: 1.5 }}>Revise a topic (by recalling) the same day, then 7 days, then 4 weeks. You can choose to recall immediately after the lecture or at the end of the day. Each time you recall successfully, increase the gap. This builds long-term memory efficiently.</div>
             </div>
           </div>
         </div>
