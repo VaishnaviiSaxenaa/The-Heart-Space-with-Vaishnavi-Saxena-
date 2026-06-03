@@ -509,6 +509,7 @@ function TodaysPlan() {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
