@@ -1,4 +1,5 @@
 import { useState, useMemo, Component, ReactNode, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import {
