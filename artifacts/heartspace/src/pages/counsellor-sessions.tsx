@@ -897,6 +897,23 @@ export default function CounsellorSessions() {
                   />
                 </div>
                 <div>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.4rem" }}>Duration</label>
+                  <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                    {[10, 15, 20, 30, 45, 60].map(mins => (
+                      <button key={mins} type="button"
+                        onClick={() => {
+                          if (!selectedTime) return;
+                          const [h, m] = selectedTime.split(":").map(Number);
+                          const total = h * 60 + m + mins;
+                          setEndTime(`${String(Math.floor(total/60)).padStart(2,"0")}:${String(total%60).padStart(2,"0")}`);
+                        }}
+                        style={{ background: CREAM, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0.3rem 0.6rem", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600, color: MUTED }}>
+                        {mins}m
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
                   <label style={{ fontSize: "0.85rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.4rem" }}>End Time</label>
                   <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
                     style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: CREAM, color: CHARCOAL, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }} />
