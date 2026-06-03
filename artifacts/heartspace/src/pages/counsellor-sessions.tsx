@@ -76,6 +76,7 @@ export default function CounsellorSessions() {
   const [reschedTime, setReschedTime] = useState('');
   const [reschedEndTime, setReschedEndTime] = useState('');
   const [rescheduledSession, setRescheduledSession] = useState<VSession|null>(null);
+  const [showBulkExport, setShowBulkExport] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -85,9 +86,18 @@ export default function CounsellorSessions() {
     const start = new Date(s.scheduled_at);
     const end = s.end_time ? new Date(s.scheduled_at.split("T")[0] + "T" + s.end_time + ":00") : new Date(start.getTime() + 60 * 60 * 1000);
     const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-    const title = encodeURIComponent(`Session with ${s.student?.full_name ?? "Student"}`);
+    const title = encodeURIComponent(s.student?.full_name ?? "Student");
     const details = encodeURIComponent(s.note ? `Note: ${s.note}` : "HeartSpace counselling session");
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}`;
+  }
+
+
+  function bulkGoogleCalendarLinks(sessions: VSession[]) {
+    return sessions.map(s => ({
+      name: s.student?.full_name ?? "Student",
+      url: googleCalendarLink(s),
+      date: format(new Date(s.scheduled_at), "MMM d, h:mm a"),
+    }));
   }
 
   async function loadData() {
@@ -788,6 +798,35 @@ export default function CounsellorSessions() {
                 </a>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Export Modal */}
+      {showBulkExport && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+          <div style={{ background: CARD, borderRadius: 20, padding: "2rem", width: 480, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.15)", maxHeight: "80vh", overflow: "auto" }}>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: DARK, margin: "0 0 0.5rem" }}>📅 Add All to Google Calendar</h2>
+            <p style={{ color: MUTED, fontSize: "0.85rem", margin: "0 0 1.25rem" }}>Click each session to add it to Google Calendar</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {bulkGoogleCalendarLinks(sessions.filter(s => s.status === "upcoming")).map((item, i) => (
+                <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: CREAM, borderRadius: 10, padding: "0.75rem 1rem", textDecoration: "none", border: `1px solid ${BORDER}` }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: DARK, fontSize: "0.9rem" }}>{item.name}</div>
+                    <div style={{ color: MUTED, fontSize: "0.8rem" }}>{item.date}</div>
+                  </div>
+                  <span style={{ color: "#1a73e8", fontSize: "0.8rem", fontWeight: 600 }}>+ Add →</span>
+                </a>
+              ))}
+              {sessions.filter(s => s.status === "upcoming").length === 0 && (
+                <p style={{ color: MUTED, textAlign: "center", padding: "1rem" }}>No upcoming sessions</p>
+              )}
+            </div>
+            <button onClick={() => setShowBulkExport(false)}
+              style={{ marginTop: "1.25rem", width: "100%", background: CREAM, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
+              Close
+            </button>
           </div>
         </div>
       )}
