@@ -85,7 +85,7 @@ export default function CounsellorSessions() {
 
   function googleCalendarLink(s: VSession) {
     const start = new Date(s.scheduled_at);
-    const end = s.end_time ? new Date(s.scheduled_at.split("T")[0] + "T" + s.end_time + ":00") : new Date(start.getTime() + 60 * 60 * 1000);
+    const end = s.end_time ? (() => { const d = new Date(start); const [h,m] = s.end_time!.split(":").map(Number); d.setHours(h,m,0,0); return d; })() : new Date(start.getTime() + 60 * 60 * 1000);
     const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
     const title = encodeURIComponent(s.student?.full_name ?? "Student");
     const details = encodeURIComponent(s.note ? `Note: ${s.note}` : "HeartSpace counselling session");
@@ -824,8 +824,28 @@ export default function CounsellorSessions() {
                 Clear
               </button>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: 300, overflowY: "auto" }}>
-              {sessions.filter(s => s.status === "upcoming").map(s => {
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: 350, overflowY: "auto" }}>
+              {Object.entries(
+                sessions.filter(s => s.status === "upcoming").reduce((acc, s) => {
+                  const date = format(new Date(s.scheduled_at), "EEEE, MMM d");
+                  if (!acc[date]) acc[date] = [];
+                  acc[date].push(s);
+                  return acc;
+                }, {} as Record<string, typeof sessions>)
+              ).map(([date, dateSessions]) => (
+                <div key={date}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.4rem 0.5rem" }}>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 700, color: MUTED, textTransform: "uppercase" }}>{date}</span>
+                    <button onClick={() => {
+                      const next = new Set(selectedForExport);
+                      const allSelected = dateSessions.every(s => next.has(s.id));
+                      dateSessions.forEach(s => allSelected ? next.delete(s.id) : next.add(s.id));
+                      setSelectedForExport(next);
+                    }} style={{ background: "none", border: "none", color: "#1a73e8", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
+                      {dateSessions.every(s => selectedForExport.has(s.id)) ? "Deselect day" : "Select day"}
+                    </button>
+                  </div>
+                  {dateSessions.map(s => {
                 const checked = selectedForExport.has(s.id);
                 return (
                   <div key={s.id} onClick={() => {
@@ -844,6 +864,8 @@ export default function CounsellorSessions() {
                   </div>
                 );
               })}
+                </div>
+              ))}
               {sessions.filter(s => s.status === "upcoming").length === 0 && (
                 <p style={{ color: MUTED, textAlign: "center", padding: "1rem" }}>No upcoming sessions</p>
               )}
@@ -851,7 +873,8 @@ export default function CounsellorSessions() {
             <button
               disabled={selectedForExport.size === 0}
               onClick={() => {
-                sessions.filter(s => selectedForExport.has(s.id)).forEach(s => window.open(googleCalendarLink(s), "_blank"));
+                const toExport = sessions.filter(s => selectedForExport.has(s.id));
+                toExport.forEach((s, i) => setTimeout(() => window.open(googleCalendarLink(s), "_blank"), i * 300));
                 setShowBulkExport(false);
                 setSelectedForExport(new Set());
               }}
