@@ -792,6 +792,18 @@ export default function CounsellorSessions() {
         </div>
       )}
 
+      {/* Post-reschedule Google Calendar banner */}
+      {rescheduledSession && !rescheduling && (
+        <div style={{ position: "fixed", bottom: "2rem", left: "50%", transform: "translateX(-50%)", background: CARD, borderRadius: 16, padding: "1rem 1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.15)", display: "flex", alignItems: "center", gap: "1rem", zIndex: 60, border: `1px solid ${BORDER}` }}>
+          <span style={{ fontSize: "0.9rem", color: CHARCOAL, fontWeight: 600 }}>✅ Session rescheduled!</span>
+          <a href={googleCalendarLink(rescheduledSession)} target="_blank" rel="noopener noreferrer"
+            style={{ background: "#E8F0FE", color: "#1a73e8", borderRadius: 10, padding: "0.5rem 1rem", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none", whiteSpace: "nowrap" }}>
+            📅 Update Google Calendar
+          </a>
+          <button onClick={() => setRescheduledSession(null)} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: "1rem" }}>✕</button>
+        </div>
+      )}
+
       {/* Add Session Modal */}
       {showAddForm && (
         <div
