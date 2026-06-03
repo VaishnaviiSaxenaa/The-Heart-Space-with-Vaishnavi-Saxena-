@@ -444,6 +444,21 @@ export default function NoteTracker() {
           )}
         </div>
 
+        {/* Pro Tip */}
+        <div style={{ background: "#FFFBEB", border: "1.5px solid #FCD34D", borderRadius: 16, padding: "1.25rem", marginBottom: "1.5rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#92400E", margin: "0 0 0.75rem" }}>💡 Pro Tip: How to Make Notes That Stick</h2>
+          <div style={{ fontSize: "0.85rem", color: "#78350F", lineHeight: 1.7 }}>
+            <p style={{ margin: "0 0 0.6rem" }}>Before making notes, <strong>close your existing notes first</strong>. After a lecture, recall everything you can remember. Then open your notes and compare — how much did you remember?</p>
+            <p style={{ margin: "0 0 0.6rem" }}>Mark your topics by how well you recalled them:</p>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.6rem" }}>
+              <span style={{ background: "#DCFCE7", color: "#166534", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🟢 Green — Remembered fully</span>
+              <span style={{ background: "#DBEAFE", color: "#1e40af", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🔵 Blue — Remembered ~50%</span>
+              <span style={{ background: "#FEE2E2", color: "#991B1B", borderRadius: 8, padding: "0.25rem 0.65rem", fontSize: "0.8rem", fontWeight: 600 }}>🔴 Red — Barely remembered</span>
+            </div>
+            <p style={{ margin: 0 }}>Each time you revise, if you can fully recall a Blue or Red topic, upgrade it to Green. Over time, all your notes will become Green — and that's when you truly know the material. ✨</p>
+          </div>
+        </div>
+
         {/* Subject + Topic list */}
         {subjects.map((subject) => {
           const expanded = expandedSubjects.has(subject.key);
