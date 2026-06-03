@@ -141,6 +141,7 @@ export default function CounsellorSessions() {
         scheduled_at,
         status: "upcoming",
         note: sessionNote.trim() || null,
+        end_time: endTime || null,
       })
       .select()
       .single();
@@ -874,9 +875,14 @@ export default function CounsellorSessions() {
               disabled={selectedForExport.size === 0}
               onClick={() => {
                 const toExport = sessions.filter(s => selectedForExport.has(s.id));
-                toExport.forEach((s, i) => setTimeout(() => window.open(googleCalendarLink(s), "_blank"), i * 300));
+                // Open first one directly (allowed by browser)
+                if (toExport.length > 0) window.open(googleCalendarLink(toExport[0]), "_blank");
+                // Store remaining for sequential manual open
                 setShowBulkExport(false);
                 setSelectedForExport(new Set());
+                if (toExport.length > 1) {
+                  alert(`${toExport.length} sessions selected. Due to browser restrictions, only 1 tab opens at a time. Please click "📅 Add to Google Calendar" on each session card individually, or allow popups in your browser settings for this site.`);
+                }
               }}
               style={{ marginTop: "1rem", width: "100%", background: selectedForExport.size > 0 ? "#1a73e8" : BORDER, color: selectedForExport.size > 0 ? "#fff" : MUTED, border: "none", borderRadius: 10, padding: "0.75rem", fontWeight: 600, cursor: selectedForExport.size > 0 ? "pointer" : "default", fontSize: "0.95rem" }}>
               {selectedForExport.size > 0 ? `📅 Add ${selectedForExport.size} session${selectedForExport.size > 1 ? "s" : ""} to Google Calendar` : "Select sessions above"}
