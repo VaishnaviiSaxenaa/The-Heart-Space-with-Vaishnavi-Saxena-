@@ -77,6 +77,7 @@ export default function CounsellorSessions() {
   const [reschedEndTime, setReschedEndTime] = useState('');
   const [rescheduledSession, setRescheduledSession] = useState<VSession|null>(null);
   const [showBulkExport, setShowBulkExport] = useState(false);
+  const [selectedForExport, setSelectedForExport] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -812,23 +813,53 @@ export default function CounsellorSessions() {
           <div style={{ background: CARD, borderRadius: 20, padding: "2rem", width: 480, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.15)", maxHeight: "80vh", overflow: "auto" }}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: DARK, margin: "0 0 0.5rem" }}>📅 Add All to Google Calendar</h2>
             <p style={{ color: MUTED, fontSize: "0.85rem", margin: "0 0 1.25rem" }}>Click each session to add it to Google Calendar</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {bulkGoogleCalendarLinks(sessions.filter(s => s.status === "upcoming")).map((item, i) => (
-                <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: CREAM, borderRadius: 10, padding: "0.75rem 1rem", textDecoration: "none", border: `1px solid ${BORDER}` }}>
-                  <div>
-                    <div style={{ fontWeight: 600, color: DARK, fontSize: "0.9rem" }}>{item.name}</div>
-                    <div style={{ color: MUTED, fontSize: "0.8rem" }}>{item.date}</div>
+            {/* Select all */}
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <button onClick={() => setSelectedForExport(new Set(sessions.filter(s => s.status === "upcoming").map(s => s.id)))}
+                style={{ background: "none", border: "none", color: "#1a73e8", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
+                Select all
+              </button>
+              <button onClick={() => setSelectedForExport(new Set())}
+                style={{ background: "none", border: "none", color: MUTED, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
+                Clear
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: 300, overflowY: "auto" }}>
+              {sessions.filter(s => s.status === "upcoming").map(s => {
+                const checked = selectedForExport.has(s.id);
+                return (
+                  <div key={s.id} onClick={() => {
+                    const next = new Set(selectedForExport);
+                    checked ? next.delete(s.id) : next.add(s.id);
+                    setSelectedForExport(next);
+                  }}
+                  style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: checked ? "#E8F0FE" : CREAM, borderRadius: 10, padding: "0.75rem 1rem", cursor: "pointer", border: `1.5px solid ${checked ? "#1a73e8" : BORDER}` }}>
+                    <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${checked ? "#1a73e8" : MUTED}`, background: checked ? "#1a73e8" : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {checked && <span style={{ color: "white", fontSize: 12, fontWeight: 700 }}>✓</span>}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: DARK, fontSize: "0.9rem" }}>{s.student?.full_name ?? "Student"}</div>
+                      <div style={{ color: MUTED, fontSize: "0.8rem" }}>{format(new Date(s.scheduled_at), "MMM d, h:mm a")}{s.end_time ? ` – ${s.end_time}` : ""}</div>
+                    </div>
                   </div>
-                  <span style={{ color: "#1a73e8", fontSize: "0.8rem", fontWeight: 600 }}>+ Add →</span>
-                </a>
-              ))}
+                );
+              })}
               {sessions.filter(s => s.status === "upcoming").length === 0 && (
                 <p style={{ color: MUTED, textAlign: "center", padding: "1rem" }}>No upcoming sessions</p>
               )}
             </div>
-            <button onClick={() => setShowBulkExport(false)}
-              style={{ marginTop: "1.25rem", width: "100%", background: CREAM, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
+            <button
+              disabled={selectedForExport.size === 0}
+              onClick={() => {
+                sessions.filter(s => selectedForExport.has(s.id)).forEach(s => window.open(googleCalendarLink(s), "_blank"));
+                setShowBulkExport(false);
+                setSelectedForExport(new Set());
+              }}
+              style={{ marginTop: "1rem", width: "100%", background: selectedForExport.size > 0 ? "#1a73e8" : BORDER, color: selectedForExport.size > 0 ? "#fff" : MUTED, border: "none", borderRadius: 10, padding: "0.75rem", fontWeight: 600, cursor: selectedForExport.size > 0 ? "pointer" : "default", fontSize: "0.95rem" }}>
+              {selectedForExport.size > 0 ? `📅 Add ${selectedForExport.size} session${selectedForExport.size > 1 ? "s" : ""} to Google Calendar` : "Select sessions above"}
+            </button>
+            <button onClick={() => { setShowBulkExport(false); setSelectedForExport(new Set()); }}
+              style={{ marginTop: "0.5rem", width: "100%", background: CREAM, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
               Close
             </button>
           </div>
