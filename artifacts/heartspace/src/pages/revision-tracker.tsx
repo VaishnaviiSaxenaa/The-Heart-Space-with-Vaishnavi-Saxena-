@@ -178,6 +178,7 @@ export default function RevisionTracker() {
   const [revising, setRevising] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!userId) return;
@@ -507,6 +508,21 @@ export default function RevisionTracker() {
             </div>
           </div>
         )}
+
+        {/* Techniques */}
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem", marginBottom: "1.5rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: CHARCOAL, margin: "0 0 1rem" }}>🧠 Revision Techniques</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div style={{ background: "#EEF2FF", borderRadius: 12, padding: "1rem", border: "1px solid #C7D2FE" }}>
+              <div style={{ fontWeight: 700, color: "#3730A3", fontSize: "0.9rem", marginBottom: "0.4rem" }}>⚡ Active Recall</div>
+              <div style={{ fontSize: "0.8rem", color: "#4338CA", lineHeight: 1.5 }}>Close your notes and try to recall the concept from memory. Test yourself with questions instead of re-reading. This is proven to be 2-3× more effective than passive reading.</div>
+            </div>
+            <div style={{ background: "#F0FDF4", borderRadius: 12, padding: "1rem", border: "1px solid #BBF7D0" }}>
+              <div style={{ fontWeight: 700, color: "#166534", fontSize: "0.9rem", marginBottom: "0.4rem" }}>📅 Spaced Repetition</div>
+              <div style={{ fontSize: "0.8rem", color: "#15803D", lineHeight: 1.5 }}>Revise a topic after 1 day, then 3 days, then 7 days, then 2 weeks. Each time you recall successfully, increase the gap. This builds long-term memory efficiently.</div>
+            </div>
+          </div>
+        </div>
 
         {/* Subject list */}
         {subjects.map((subject) => {
