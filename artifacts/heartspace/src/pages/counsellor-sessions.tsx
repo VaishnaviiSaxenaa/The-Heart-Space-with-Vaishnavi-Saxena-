@@ -48,6 +48,7 @@ interface VSession {
   status: "upcoming" | "done" | "missed";
   note?: string;
   cancel_reason?: string;
+  end_time?: string;
   student_response?: string;
   student?: Student;
 }
@@ -67,6 +68,7 @@ export default function CounsellorSessions() {
     format(new Date(), "yyyy-MM-dd"),
   );
   const [selectedTime, setSelectedTime] = useState("10:00");
+  const [endTime, setEndTime] = useState("11:00");
   const [sessionNote, setSessionNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [rescheduling, setRescheduling] = useState<string|null>(null);
@@ -79,7 +81,7 @@ export default function CounsellorSessions() {
 
   function googleCalendarLink(s: VSession) {
     const start = new Date(s.scheduled_at);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const end = s.end_time ? new Date(s.scheduled_at.split("T")[0] + "T" + s.end_time + ":00") : new Date(start.getTime() + 60 * 60 * 1000);
     const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
     const title = encodeURIComponent(`Session with ${s.student?.full_name ?? "Student"}`);
     const details = encodeURIComponent(s.note ? `Note: ${s.note}` : "HeartSpace counselling session");
@@ -144,6 +146,7 @@ export default function CounsellorSessions() {
       setSessionNote("");
       setSelectedDate(format(new Date(), "yyyy-MM-dd"));
       setSelectedTime("10:00");
+      setEndTime("11:00");
     }
     setSaving(false);
   }
