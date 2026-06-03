@@ -75,6 +75,7 @@ export default function CounsellorSessions() {
   const [reschedDate, setReschedDate] = useState('');
   const [reschedTime, setReschedTime] = useState('');
   const [reschedEndTime, setReschedEndTime] = useState('');
+  const [rescheduledSession, setRescheduledSession] = useState<VSession|null>(null);
 
   useEffect(() => {
     loadData();
@@ -163,7 +164,9 @@ export default function CounsellorSessions() {
     if (!reschedDate || !reschedTime) return;
     const scheduled_at = new Date(`${reschedDate}T${reschedTime}:00`).toISOString();
     await supabase.from("vaishnavi_sessions").update({ scheduled_at, end_time: reschedEndTime || null, student_response: null, rescheduled_at: new Date().toISOString() }).eq("id", id);
-    setSessions(prev => prev.map(s => s.id === id ? { ...s, scheduled_at, student_response: undefined } : s));
+    const updated = sessions.find(s => s.id === id);
+    if (updated) setRescheduledSession({ ...updated, scheduled_at, end_time: reschedEndTime || undefined });
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, scheduled_at, end_time: reschedEndTime || undefined, student_response: undefined } : s));
     setRescheduling(null);
     setReschedEndTime('');
   }
@@ -778,6 +781,12 @@ export default function CounsellorSessions() {
                   Cancel
                 </button>
               </div>
+              {rescheduledSession && (
+                <a href={googleCalendarLink(rescheduledSession)} target="_blank" rel="noopener noreferrer"
+                  style={{ display: "block", textAlign: "center", marginTop: "0.5rem", background: "#E8F0FE", color: "#1a73e8", borderRadius: 10, padding: "0.75rem", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none" }}>
+                  📅 Update Google Calendar
+                </a>
+              )}
             </div>
           </div>
         </div>
