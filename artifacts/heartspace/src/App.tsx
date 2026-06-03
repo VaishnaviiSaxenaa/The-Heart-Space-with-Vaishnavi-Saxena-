@@ -14,6 +14,8 @@ import ExamSelect from "./pages/exam-select";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import MySessions from "./pages/my-sessions";
+import RevisionTracker from "./pages/revision-tracker";
+import NoteTracker from "./pages/note-tracker";
 import CounsellorSessionsPage from "./pages/counsellor-sessions";
 import CounsellorSessionsPage from "./pages/counsellor-sessions";
 import Sessions from "./pages/sessions";
@@ -130,8 +132,20 @@ function Router() {
         <Route path="/self-dashboard">
           <StudentRoute component={StudentDashboard} />
         </Route>
+        <Route path="/revision-tracker">
+          <ProtectedRoute component={RevisionTracker} allowedRole="student" />
+        </Route>
+        <Route path="/note-tracker">
+          <ProtectedRoute component={NoteTracker} allowedRole="student" />
+        </Route>
         <Route path="/counsellor-sessions">
           <ProtectedRoute component={CounsellorSessionsPage} allowedRole="counsellor" />
+        </Route>
+        <Route path="/revision-tracker">
+          <ProtectedRoute component={RevisionTracker} allowedRole="student" />
+        </Route>
+        <Route path="/note-tracker">
+          <ProtectedRoute component={NoteTracker} allowedRole="student" />
         </Route>
         <Route path="/counsellor-sessions">
           <ProtectedRoute component={CounsellorSessionsPage} allowedRole="counsellor" />
