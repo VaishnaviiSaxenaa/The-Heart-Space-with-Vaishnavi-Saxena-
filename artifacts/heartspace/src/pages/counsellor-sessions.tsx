@@ -71,6 +71,7 @@ export default function CounsellorSessions() {
   const [endTime, setEndTime] = useState("11:00");
   const [sessionNote, setSessionNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [addToGcal, setAddToGcal] = useState(false);
   const [rescheduling, setRescheduling] = useState<string|null>(null);
   const [reschedDate, setReschedDate] = useState('');
   const [reschedTime, setReschedTime] = useState('');
@@ -148,6 +149,9 @@ export default function CounsellorSessions() {
 
     if (!error && data) {
       const student = students.find((s) => s.id === selectedStudent);
+      // Auto-open Google Calendar if checkbox checked
+      const newSession = { ...(data as VSession), student, end_time: endTime || undefined };
+      if (addToGcal) window.open(googleCalendarLink(newSession), "_blank");
       setSessions((prev) =>
         [...prev, { ...(data as VSession), student }].sort(
           (a, b) =>
@@ -161,6 +165,7 @@ export default function CounsellorSessions() {
       setSelectedDate(format(new Date(), "yyyy-MM-dd"));
       setSelectedTime("10:00");
       setEndTime("11:00");
+      setAddToGcal(false);
     }
     setSaving(false);
   }
