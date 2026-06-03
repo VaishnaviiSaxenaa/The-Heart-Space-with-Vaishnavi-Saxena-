@@ -280,6 +280,10 @@ export default function CounsellorSessions() {
             Manage your sessions with students
           </p>
         </div>
+        <button onClick={() => setShowBulkExport(true)}
+          style={{ background: "none", border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 12, padding: "0.6rem 1.25rem", fontWeight: 600, fontSize: "0.9rem", cursor: "pointer" }}>
+          📅 Bulk Export
+        </button>
         <button
           onClick={() => setShowAddForm(true)}
           style={{
