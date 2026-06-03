@@ -34,8 +34,8 @@ const CREAM = "#FAF7F2";
 const CHARCOAL = "#2C1810";
 const GOLD = "#C9A96E";
 const CARD = "#FFFFFF";
-const SIDEBAR = "#1C2B1A";
-const SIDEBAR_HEADER = "#111F10";
+const SIDEBAR = "#EBE3D9";
+const SIDEBAR_HEADER = "#3D2314";
 const MUTED = "#8C7B70";
 const BORDER = "#E8DDD0";
 
@@ -160,7 +160,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
     <div
       className="flex flex-col h-full overflow-y-auto"
       style={{
-        background: `linear-gradient(180deg, ${SIDEBAR} 0%, #243522 100%)`,
+        background: `linear-gradient(180deg, ${SIDEBAR} 0%, #E5D9CC 100%)`,
         borderRight: `1px solid ${BORDER}`,
       }}
     >
@@ -211,7 +211,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
               </svg>
               <span
                 className="font-serif text-lg font-bold leading-none"
-                style={{ color: "#F5EFE6" }}
+                style={{ color: SIDEBAR_HEADER }}
               >
                 The Heart Space
               </span>
@@ -269,7 +269,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                   <span className="text-sm font-medium">{label}</span>
                   <span
                     className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                    style={{ background: `${GOLD}44`, color: "#FFFFFF" }}
+                    style={{ background: `${GOLD}33`, color: SIDEBAR_HEADER }}
                   >
                     soon
                   </span>
@@ -284,7 +284,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                             background: `${GOLD}22`,
                             borderLeft: `3px solid ${GOLD}`,
                             paddingLeft: "9px",
-                            color: "#D4C9B8",
+                            color: SIDEBAR_HEADER,
                             fontWeight: 600,
                           }
                         : { color: CHARCOAL }
@@ -310,7 +310,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         <div
           className="rounded-2xl p-4"
           style={{
-            background: "rgba(255,255,255,0.08)",
+            background: `${SIDEBAR_HEADER}14`,
             border: `1px solid ${BORDER}`,
           }}
         >
@@ -383,7 +383,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <header
           className="md:hidden sticky top-0 z-10 flex items-center justify-between px-4 h-14"
           style={{
-            background: "#111F10",
+            background: SIDEBAR_HEADER,
             borderBottom: `1px solid rgba(255,255,255,.10)`,
           }}
         >
