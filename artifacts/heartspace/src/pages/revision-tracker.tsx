@@ -675,17 +675,32 @@ export default function RevisionTracker() {
                             }}
                           >
                             {topicLogs.length > 0 ? (
-                              <>
-                                Revised {topicLogs.length}× · Last:{" "}
-                                {format(
-                                  new Date(topicLogs[0].revised_at),
-                                  "MMM d, yyyy",
-                                )}
-                              </>
+                              <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                                <button onClick={() => setExpandedHistory(prev => { const n = new Set(prev); n.has(topicKey) ? n.delete(topicKey) : n.add(topicKey); return n; })}
+                                  style={{ background: "none", border: "none", padding: 0, fontSize: "0.75rem", color: GOLD, cursor: "pointer", fontWeight: 600, textDecoration: "underline" }}>
+                                  Revised {topicLogs.length}×
+                                </button>
+                                <span>· Last: {format(new Date(topicLogs[0].revised_at), "MMM d, yyyy")}</span>
+                              </span>
                             ) : (
                               "Never revised"
                             )}
                           </div>
+                          {expandedHistory.has(topicKey) && (
+                            <div style={{ marginTop: "0.5rem", background: CREAM, borderRadius: 8, padding: "0.5rem 0.75rem", border: `1px solid ${BORDER}` }}>
+                              <div style={{ fontSize: "0.72rem", fontWeight: 600, color: MUTED, marginBottom: "0.3rem", textTransform: "uppercase" }}>Revision History</div>
+                              {topicLogs.map((log, i) => {
+                                const conf = CONFIDENCE.find(c => c.key === log.confidence);
+                                return (
+                                  <div key={log.id} style={{ fontSize: "0.78rem", color: CHARCOAL, display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0" }}>
+                                    <span style={{ color: MUTED }}>#{topicLogs.length - i}</span>
+                                    <span>{format(new Date(log.revised_at), "MMM d, yyyy · h:mm a")}</span>
+                                    {conf && <span style={{ background: conf.bg, color: conf.color, borderRadius: 20, padding: "0.1rem 0.4rem", fontSize: "0.7rem", fontWeight: 600 }}>{conf.label}</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
 
                           {isRevising && (
                             <div
