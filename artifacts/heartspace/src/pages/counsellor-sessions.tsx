@@ -877,7 +877,7 @@ export default function CounsellorSessions() {
                       marginBottom: "0.4rem",
                     }}
                   >
-                    Time
+                    Start Time
                   </label>
                   <input
                     type="time"
@@ -895,6 +895,11 @@ export default function CounsellorSessions() {
                       boxSizing: "border-box",
                     }}
                   />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.4rem" }}>End Time</label>
+                  <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                    style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: CREAM, color: CHARCOAL, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }} />
                 </div>
               </div>
 
