@@ -1106,6 +1106,11 @@ export default function CounsellorSessions() {
                 />
               </div>
 
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", marginBottom: "0.5rem" }}>
+                <input type="checkbox" checked={addToGcal} onChange={e => setAddToGcal(e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: "#C9A96E", cursor: "pointer" }} />
+                <span style={{ fontSize: "0.85rem", color: "#8C7B70", fontWeight: 500 }}>📅 Also add to Google Calendar</span>
+              </label>
               <div
                 style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}
               >
