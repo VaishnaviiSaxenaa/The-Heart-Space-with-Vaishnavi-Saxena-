@@ -13,11 +13,11 @@ import {
 } from "lucide-react";
 
 /* ─── Brand tokens ─────────────────────── */
-const CREAM = "#FAF7F2";
-const CHARCOAL = "#2C1810";
-const GOLD = "#C9A96E";
-const MUTED = "#8C7B70";
-const BORDER = "#E8DDD0";
+const CREAM = "#F8F5F0";
+const CHARCOAL = "#2D2A25";
+const GOLD = "#C9A84C";
+const MUTED = "#7A7267";
+const BORDER = "#E5DDD0";
 const SIDEBAR = "#3D2314";
 const OLIVE = "#6E8B6B";
 const ROSE = "#D4A5A5";

@@ -32,12 +32,12 @@ import {
 
 const CREAM = "#FAF7F2";
 const CHARCOAL = "#2C1810";
-const GOLD = "#C9A96E";
+const GOLD = "#C9A84C";
 const CARD = "#FFFFFF";
-const SIDEBAR = "#EBE3D9";
-const SIDEBAR_HEADER = "#3D2314";
-const MUTED = "#8C7B70";
-const BORDER = "#E8DDD0";
+const SIDEBAR = "#F0E8D8";
+const SIDEBAR_HEADER = "#2D2A25";
+const MUTED = "#7A7267";
+const BORDER = "#E5DDD0";
 
 interface NavItem {
   icon: React.ElementType;
@@ -160,7 +160,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
     <div
       className="flex flex-col h-full overflow-y-auto"
       style={{
-        background: `linear-gradient(180deg, ${SIDEBAR} 0%, #E5D9CC 100%)`,
+        background: `linear-gradient(180deg, ${SIDEBAR} 0%, #E8DFD0 100%)`,
         borderRight: `1px solid ${BORDER}`,
       }}
     >

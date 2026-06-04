@@ -5,13 +5,13 @@ import { useAuth } from "../lib/auth";
 import { format } from "date-fns";
 import { Calendar, CheckCircle2, Clock, User, Star } from "lucide-react";
 
-const CREAM = "#FAF7F2";
-const CHARCOAL = "#2C1810";
-const GOLD = "#C9A96E";
-const DARK = "#3D2314";
-const CARD = "#FFFFFF";
-const MUTED = "#8C7B70";
-const BORDER = "#E8DDD0";
+const CREAM = "#F8F5F0";
+const CHARCOAL = "#2D2A25";
+const GOLD = "#C9A84C";
+const DARK = "#2D2A25";
+const CARD = "#FFFDF9";
+const MUTED = "#7A7267";
+const BORDER = "#E5DDD0";
 const OLIVE = "#6E8B6B";
 
 /* ─── Types ── */
