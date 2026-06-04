@@ -48,8 +48,8 @@
   --elevate-1: rgba(230,167,86,.04);
   --elevate-2: rgba(230,167,86,.08);
 
-  /* #FAF7F2 warm cream */
-  --background: 40 33% 97%;
+  /* #F8F5F0 warm cream */
+  --background: 38 33% 96%;
   /* #3D3530 warm charcoal */
   --foreground: 15 12% 22%;
 
@@ -57,8 +57,8 @@
   --input: 34 25% 90%;
   --ring: 35 74% 62%;
 
-  /* #F3EDE6 soft ivory card */
-  --card: 34 37% 93%;
+  /* #FFFDF9 soft warm white */
+  --card: 40 100% 99%;
   --card-foreground: 15 12% 22%;
   --card-border: 34 28% 88%;
 
@@ -104,10 +104,7 @@
 
 @layer base {
   * { @apply border-border; }
-  body {
-  background: #F8F5F0;
-  color: #2D2A25;
-}
+  body { background: #F8F5F0; color: #2D2A25; }
   h1, h2, h3, h4, h5, h6 { @apply font-serif; }
 }
 
