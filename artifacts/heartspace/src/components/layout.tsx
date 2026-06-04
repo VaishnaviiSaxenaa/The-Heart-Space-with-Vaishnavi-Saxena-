@@ -30,10 +30,10 @@ import {
   PenLine,
 } from "lucide-react";
 
-const CREAM = "#FAF7F2";
-const CHARCOAL = "#2C1810";
+const CREAM = "#F8F5F0";
+const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
-const CARD = "#FFFFFF";
+const CARD = "#FFFDF9";
 const SIDEBAR = "#F0E8D8";
 const SIDEBAR_HEADER = "#2D2A25";
 const MUTED = "#7A7267";

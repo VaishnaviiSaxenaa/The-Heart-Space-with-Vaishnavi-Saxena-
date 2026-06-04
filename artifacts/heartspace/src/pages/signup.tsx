@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-const CREAM = "#FAF7F2";
+const CREAM = "#F8F5F0";
 const CHARCOAL = "#3D3530";
 const GOLD = "#E6A756";
-const SIDEBAR = "#3D2314";
-const MUTED = "#8C7B70";
-const BORDER = "#E8DDD0";
+const SIDEBAR = "#2D2A25";
+const MUTED = "#7A7267";
+const BORDER = "#E5DDD0";
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -60,7 +60,7 @@ const SERVICES: Service[] = [
     key: "academy_student",
     name: "Zenith",
     emoji: "🏆",
-    color: "#C9A96E",
+    color: "#C9A84C",
     tagBg: "rgba(201,169,110,0.12)",
     tagline: "Full mentorship + counsellor support",
     bullets: [
@@ -74,7 +74,7 @@ const SERVICES: Service[] = [
     key: "prep_student",
     name: "Apex+",
     emoji: "⚡",
-    color: "#3D2314",
+    color: "#2D2A25",
     tagBg: "rgba(61,35,20,0.08)",
     tagline: "Academic tracking + AI guidance",
     bullets: [

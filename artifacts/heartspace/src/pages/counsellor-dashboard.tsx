@@ -3,13 +3,13 @@ import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import { format } from "date-fns";
 
-const DARK = "#3D2314";
-const GOLD = "#C9A96E";
-const CREAM = "#FAF7F2";
-const CARD = "#FFFFFF";
-const BORDER = "#E8DDD0";
-const MUTED = "#8C7B70";
-const CHARCOAL = "#3D2314";
+const DARK = "#2D2A25";
+const GOLD = "#C9A84C";
+const CREAM = "#F8F5F0";
+const CARD = "#FFFDF9";
+const BORDER = "#E5DDD0";
+const MUTED = "#7A7267";
+const CHARCOAL = "#2D2A25";
 const OLIVE = "#6E8B6B";
 
 /* ── Types ── */

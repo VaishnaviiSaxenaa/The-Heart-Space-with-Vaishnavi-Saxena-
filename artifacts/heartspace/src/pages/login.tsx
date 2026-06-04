@@ -17,12 +17,12 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-const CREAM = "#FAF7F2";
+const CREAM = "#F8F5F0";
 const CHARCOAL = "#3D3530";
 const GOLD = "#E6A756";
-const SIDEBAR = "#3D2314";
-const MUTED = "#8C7B70";
-const BORDER = "#E8DDD0";
+const SIDEBAR = "#2D2A25";
+const MUTED = "#7A7267";
+const BORDER = "#E5DDD0";
 
 const RESET_REDIRECT =
   "https://the-heart-space-with-vaishnavi-saxe-eight.vercel.app";
