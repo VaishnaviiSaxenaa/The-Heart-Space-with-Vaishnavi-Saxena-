@@ -2836,20 +2836,9 @@ function LiveScheduleTab({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showOrderPanel, setShowOrderPanel] = useState(false);
-  const [showParallelPanel, setShowParallelPanel] = useState(false);
-  const [studyPeriods, setStudyPeriodsState] = useState<StudyPeriod[]>(() =>
-    loadStudyPeriods(effectiveUserId),
-  );
-  const [periodForm, setPeriodForm] = useState({
-    label: "",
-    startDate: "",
-    endDate: "",
-    mode: "sequential" as "sequential" | "parallel",
-    parallelCount: 2,
-    subjectIds: [] as string[],
-    hoursPerSubject: {} as Record<string, number>,
-  });
-
+  const [showSimPanel, setShowSimPanel] = useState(false);
+  const [simSlots, setSimSlots] = useState<StudyPeriod[]>(() => loadStudyPeriods(effectiveUserId));
+  const [simForm, setSimForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string, number> });
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(effectiveUserId);
   const baseWeeksOverride = loadBaseWeeks(effectiveUserId);
@@ -2915,7 +2904,7 @@ function LiveScheduleTab({
   }
 
   function updateStudyPeriods(periods: StudyPeriod[]) {
-    setStudyPeriodsState(periods);
+    setSimSlots(periods);
     saveStudyPeriods(effectiveUserId, periods);
     onSave(
       generateSmartSchedule(
@@ -2952,7 +2941,7 @@ function LiveScheduleTab({
     baseWeeksOverride,
     practiceProgress,
     subjectOrder,
-    studyPeriods,
+    simSlots,
   );
 
   /* Save inputs + notify parent whenever anything changes */
@@ -2992,7 +2981,7 @@ function LiveScheduleTab({
         baseWeeksOverride,
         practiceProgress,
         subjectOrder,
-        studyPeriods,
+        simSlots,
       ),
     );
   }
@@ -3015,7 +3004,7 @@ function LiveScheduleTab({
         baseWeeksOverride,
         practiceProgress,
         subjectOrder,
-        studyPeriods,
+        simSlots,
       ),
     );
   }
@@ -3038,7 +3027,7 @@ function LiveScheduleTab({
         next,
         practiceProgress,
         subjectOrder,
-        studyPeriods,
+        simSlots,
       ),
     );
   }
@@ -3326,9 +3315,9 @@ function LiveScheduleTab({
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
       >
         <button
-          onClick={() => setShowParallelPanel(!showParallelPanel)}
+          onClick={() => setShowSimPanel(!showSimPanel)}
           className="w-full flex items-center gap-3 px-5 py-4 text-left"
-          style={{ background: showParallelPanel ? `${GOLD}08` : CARD }}
+          style={{ background: showSimPanel ? `${GOLD}08` : CARD }}
         >
           <BookOpen className="w-4 h-4" style={{ color: GOLD }} />
           <div className="flex-1">
@@ -3336,18 +3325,18 @@ function LiveScheduleTab({
               Simultaneous Studies
             </p>
             <p className="text-xs mt-0.5" style={{ color: MUTED }}>
-              {studyPeriods.length === 0
+              {simSlots.length === 0
                 ? "Sequential by default — add a period below to study topics simultaneously"
-                : `${studyPeriods.length} study period${studyPeriods.length > 1 ? "s" : ""} configured`}
+                : `${simSlots.length} study period${simSlots.length > 1 ? "s" : ""} configured`}
             </p>
           </div>
-          {showParallelPanel ? (
+          {showSimPanel ? (
             <ChevronDown className="w-4 h-4" style={{ color: MUTED }} />
           ) : (
             <ChevronRight className="w-4 h-4" style={{ color: MUTED }} />
           )}
         </button>
-        {showParallelPanel && (
+        {showSimPanel && (
           <div
             className="px-5 pb-5 pt-3 space-y-4"
             style={{ borderTop: `1px solid ${BORDER}` }}
@@ -3371,9 +3360,9 @@ function LiveScheduleTab({
                   Label
                 </label>
                 <input
-                  value={periodForm.label}
+                  value={simForm.label}
                   onChange={(e) =>
-                    setPeriodForm((p) => ({ ...p, label: e.target.value }))
+                    setSimForm((p) => ({ ...p, label: e.target.value }))
                   }
                   placeholder="e.g. Exam sprint, Daily revision…"
                   className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none"
@@ -3394,9 +3383,9 @@ function LiveScheduleTab({
                   </label>
                   <input
                     type="date"
-                    value={periodForm.startDate}
+                    value={simForm.startDate}
                     onChange={(e) =>
-                      setPeriodForm((p) => ({
+                      setSimForm((p) => ({
                         ...p,
                         startDate: e.target.value,
                       }))
@@ -3419,13 +3408,13 @@ function LiveScheduleTab({
                   <input
                     type="date"
                     value={
-                      periodForm.endDate === "indefinite"
+                      simForm.endDate === "indefinite"
                         ? ""
-                        : periodForm.endDate
+                        : simForm.endDate
                     }
-                    disabled={periodForm.endDate === "indefinite"}
+                    disabled={simForm.endDate === "indefinite"}
                     onChange={(e) =>
-                      setPeriodForm((p) => ({ ...p, endDate: e.target.value }))
+                      setSimForm((p) => ({ ...p, endDate: e.target.value }))
                     }
                     className="w-full h-9 px-3 rounded-lg text-xs border-2 outline-none disabled:opacity-40"
                     style={{
@@ -3437,9 +3426,9 @@ function LiveScheduleTab({
                   <label className="flex items-center gap-2 mt-1 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={periodForm.endDate === "indefinite"}
+                      checked={simForm.endDate === "indefinite"}
                       onChange={(e) =>
-                        setPeriodForm((p) => ({
+                        setSimForm((p) => ({
                           ...p,
                           endDate: e.target.checked ? "indefinite" : "",
                         }))
@@ -3469,11 +3458,11 @@ function LiveScheduleTab({
                       key={opt.key}
                       type="button"
                       onClick={() =>
-                        setPeriodForm((p) => ({ ...p, mode: opt.key }))
+                        setSimForm((p) => ({ ...p, mode: opt.key }))
                       }
                       className="flex-1 p-2.5 rounded-xl text-xs font-semibold"
                       style={
-                        periodForm.mode === opt.key
+                        simForm.mode === opt.key
                           ? {
                               background: `${GOLD}22`,
                               border: `2px solid ${GOLD}`,
@@ -3491,7 +3480,7 @@ function LiveScheduleTab({
                   ))}
                 </div>
               </div>
-              {periodForm.mode === "parallel" && (
+              {simForm.mode === "parallel" && (
                 <div className="space-y-3">
                   <div>
                     <label
@@ -3502,13 +3491,13 @@ function LiveScheduleTab({
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {rawSubjectsList.map((s) => {
-                        const selected = periodForm.subjectIds.includes(s.id);
+                        const selected = simForm.subjectIds.includes(s.id);
                         return (
                           <button
                             key={s.id}
                             type="button"
                             onClick={() =>
-                              setPeriodForm((p) => ({
+                              setSimForm((p) => ({
                                 ...p,
                                 subjectIds: selected
                                   ? p.subjectIds.filter((id) => id !== s.id)
@@ -3528,7 +3517,7 @@ function LiveScheduleTab({
                       })}
                     </div>
                   </div>
-                  {periodForm.subjectIds.length > 0 && (
+                  {simForm.subjectIds.length > 0 && (
                     <div>
                       <label
                         className="text-xs font-semibold mb-2 block"
@@ -3536,7 +3525,7 @@ function LiveScheduleTab({
                       >
                         Hours per day per topic:
                       </label>
-                      {periodForm.subjectIds.map((sid) => {
+                      {simForm.subjectIds.map((sid) => {
                         const s = rawSubjectsList.find((x) => x.id === sid);
                         if (!s) return null;
                         return (
@@ -3559,10 +3548,10 @@ function LiveScheduleTab({
                               min={0.5}
                               max={12}
                               step={0.5}
-                              value={periodForm.hoursPerSubject[sid] ?? ""}
+                              value={simForm.hoursPerSubject[sid] ?? ""}
                               placeholder="hrs/day"
                               onChange={(e) =>
-                                setPeriodForm((p) => ({
+                                setSimForm((p) => ({
                                   ...p,
                                   hoursPerSubject: {
                                     ...p.hoursPerSubject,
@@ -3591,23 +3580,23 @@ function LiveScheduleTab({
                 type="button"
                 onClick={() => {
                   if (
-                    !periodForm.label ||
-                    !periodForm.startDate ||
-                    !periodForm.endDate
+                    !simForm.label ||
+                    !simForm.startDate ||
+                    !simForm.endDate
                   )
                     return;
                   const newP: StudyPeriod = {
                     id: `${Date.now()}`,
-                    label: periodForm.label,
-                    startDate: periodForm.startDate,
-                    endDate: periodForm.endDate,
-                    mode: periodForm.mode,
-                    parallelCount: periodForm.parallelCount,
-                    subjectIds: periodForm.subjectIds,
-                    hoursPerSubject: periodForm.hoursPerSubject,
+                    label: simForm.label,
+                    startDate: simForm.startDate,
+                    endDate: simForm.endDate,
+                    mode: simForm.mode,
+                    parallelCount: simForm.parallelCount,
+                    subjectIds: simForm.subjectIds,
+                    hoursPerSubject: simForm.hoursPerSubject,
                   };
-                  updateStudyPeriods([...studyPeriods, newP]);
-                  setPeriodForm({
+                  updateStudyPeriods([...simSlots, newP]);
+                  setSimForm({
                     label: "",
                     startDate: "",
                     endDate: "",
@@ -3626,14 +3615,14 @@ function LiveScheduleTab({
                 <Plus className="w-3 h-3" /> Add Unavailable Period
               </button>
             </div>
-            {studyPeriods.length === 0 ? (
+            {simSlots.length === 0 ? (
               <p className="text-xs" style={{ color: MUTED }}>
                 No simultaneous study periods added. Topics will be studied one
                 at a time by default.
               </p>
             ) : (
               <div className="space-y-2">
-                {studyPeriods.map((p) => (
+                {simSlots.map((p) => (
                   <div
                     key={p.id}
                     className="rounded-xl px-4 py-3"
@@ -3674,7 +3663,7 @@ function LiveScheduleTab({
                         type="button"
                         onClick={() =>
                           updateStudyPeriods(
-                            studyPeriods.filter((x) => x.id !== p.id),
+                            simSlots.filter((x) => x.id !== p.id),
                           )
                         }
                         className="p-1 rounded-lg"
