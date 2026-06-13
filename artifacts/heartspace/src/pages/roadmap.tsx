@@ -5017,6 +5017,18 @@ function RoadmapView({
                 const phaseStart = addWeeks(parseISO(rm.startDate), weekStart);
                 const phaseEnd = addWeeks(phaseStart, phase.durationWeeks);
 
+  // Sim slots at TOP LEVEL where effectiveUserId is always correct
+  const [topLevelSimSlots, setTopLevelSimSlots] = useState<StudyPeriod[]>([]);
+  useEffect(() => {
+    if (effectiveUserId) {
+      setTopLevelSimSlots(loadStudyPeriods(effectiveUserId));
+    }
+  }, [effectiveUserId]);
+  function topLevelSaveSimSlots(periods: StudyPeriod[]) {
+    setTopLevelSimSlots(periods);
+    saveStudyPeriods(effectiveUserId, periods);
+  }
+
                 return (
                   <div
                     key={phase.id}
@@ -5202,18 +5214,6 @@ export default function Roadmap() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? userId;
   console.log("[DEBUG] effectiveUserId:", effectiveUserId, "userId:", userId, "user?.id:", user?.id);
-
-  // Sim slots at TOP LEVEL where effectiveUserId is always correct
-  const [topLevelSimSlots, setTopLevelSimSlots] = useState<StudyPeriod[]>([]);
-  useEffect(() => {
-    if (effectiveUserId) {
-      setTopLevelSimSlots(loadStudyPeriods(effectiveUserId));
-    }
-  }, [effectiveUserId]);
-  function topLevelSaveSimSlots(periods: StudyPeriod[]) {
-    setTopLevelSimSlots(periods);
-    saveStudyPeriods(effectiveUserId, periods);
-  }
 
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
