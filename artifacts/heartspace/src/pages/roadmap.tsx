@@ -5166,7 +5166,7 @@ function RoadmapView({
           examType={rm.examType}
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
-          userId={effectiveUserId}
+          effectiveUserId={effectiveUserId}
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
