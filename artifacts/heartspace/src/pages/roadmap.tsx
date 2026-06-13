@@ -5211,7 +5211,6 @@ export default function Roadmap() {
     setTopLevelSimSlots(periods);
     saveStudyPeriods(effectiveUserId, periods);
   }
-  console.log("[DEBUG] effectiveUserId:", effectiveUserId, "userId:", userId, "user?.id:", user?.id);
 
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
