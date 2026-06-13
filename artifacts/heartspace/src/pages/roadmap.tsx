@@ -5017,17 +5017,6 @@ function RoadmapView({
                 const phaseStart = addWeeks(parseISO(rm.startDate), weekStart);
                 const phaseEnd = addWeeks(phaseStart, phase.durationWeeks);
 
-  // Sim slots at TOP LEVEL where effectiveUserId is always correct
-  const [topLevelSimSlots, setTopLevelSimSlots] = useState<StudyPeriod[]>([]);
-  useEffect(() => {
-    if (effectiveUserId) {
-      setTopLevelSimSlots(loadStudyPeriods(effectiveUserId));
-    }
-  }, [effectiveUserId]);
-  function topLevelSaveSimSlots(periods: StudyPeriod[]) {
-    setTopLevelSimSlots(periods);
-    saveStudyPeriods(effectiveUserId, periods);
-  }
 
                 return (
                   <div
@@ -5204,6 +5193,18 @@ function RoadmapView({
 /* ─── Main Component ───────────────────── */
 export default function Roadmap() {
   const { user } = useAuth();
+
+  // Sim slots at TOP LEVEL where effectiveUserId is always correct
+  const [topLevelSimSlots, setTopLevelSimSlots] = useState<StudyPeriod[]>([]);
+  useEffect(() => {
+    if (effectiveUserId) {
+      setTopLevelSimSlots(loadStudyPeriods(effectiveUserId));
+    }
+  }, [effectiveUserId]);
+  function topLevelSaveSimSlots(periods: StudyPeriod[]) {
+    setTopLevelSimSlots(periods);
+    saveStudyPeriods(effectiveUserId, periods);
+  }
   const userId = user?.id ? String(user.id) : (() => {
     try {
       const stored = localStorage.getItem("heartspace_user");
