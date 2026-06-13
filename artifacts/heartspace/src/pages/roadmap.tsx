@@ -5188,6 +5188,7 @@ export default function Roadmap() {
   })();
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? userId;
+  console.log("[DEBUG] effectiveUserId:", effectiveUserId, "userId:", userId, "user?.id:", user?.id);
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
