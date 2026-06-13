@@ -2837,7 +2837,10 @@ function LiveScheduleTab({
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showSimPanel, setShowSimPanel] = useState(false);
-  const [simSlots, setSimSlots] = useState<StudyPeriod[]>(() => loadStudyPeriods(effectiveUserId));
+  const [simSlots, setSimSlots] = useState<StudyPeriod[]>(() => {
+    const uid = effectiveUserId || (() => { try { const s = localStorage.getItem("heartspace_user"); return s ? JSON.parse(s).id : ""; } catch { return ""; } })();
+    return loadStudyPeriods(uid);
+  });
   console.log("[DEBUG LiveScheduleTab] effectiveUserId:", effectiveUserId);
   useEffect(() => {
     if (effectiveUserId) {
