@@ -2841,14 +2841,11 @@ function LiveScheduleTab({
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showSimPanel, setShowSimPanel] = useState(false);
-  const [simSlots, setSimSlots] = useState<StudyPeriod[]>(() => {
-    const uid = effectiveUserId || (() => { try { const s = localStorage.getItem("heartspace_user"); return s ? JSON.parse(s).id : ""; } catch { return ""; } })();
-    return loadStudyPeriods(uid);
-  });
-  console.log("[DEBUG LiveScheduleTab] effectiveUserId:", effectiveUserId);
+  const [simSlots, setSimSlots] = useState<StudyPeriod[]>([]);
   useEffect(() => {
-    setSimSlots(topLevelSimSlots);
-  }, [topLevelSimSlots]);
+    const uid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })();
+    if (uid) setSimSlots(loadStudyPeriods(uid));
+  }, []);
   const [simForm, setSimForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string, number> });
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(effectiveUserId);
