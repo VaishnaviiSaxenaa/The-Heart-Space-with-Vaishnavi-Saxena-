@@ -2432,7 +2432,7 @@ function UnavailablePeriodsManager({
                 color: "#fff",
               }}
             >
-              <Save className="w-3 h-3" /> Add Simultaneous Period
+              <Save className="w-3 h-3" /> Add Unavailable Period
             </button>
             <button
               onClick={() => setShow(false)}
@@ -2726,7 +2726,7 @@ function VariableWeeksManager({
                 color: "#fff",
               }}
             >
-              <Save className="w-3 h-3" /> Add Simultaneous Period
+              <Save className="w-3 h-3" /> Add Unavailable Period
             </button>
             <button
               onClick={() => setShow(false)}
@@ -3361,7 +3361,7 @@ function LiveScheduleTab({
               style={{ background: CREAM, border: `1px solid ${BORDER}` }}
             >
               <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>
-                Add Simultaneous Study Period
+                Add Simultaneous Study Slot
               </p>
               <div>
                 <label
@@ -3623,7 +3623,7 @@ function LiveScheduleTab({
                   color: "#fff",
                 }}
               >
-                <Plus className="w-3 h-3" /> Add Simultaneous Period
+                <Plus className="w-3 h-3" /> Add Unavailable Period
               </button>
             </div>
             {studyPeriods.length === 0 ? (
@@ -4937,7 +4937,7 @@ function RoadmapView({
                       color: "#fff",
                     }}
                   >
-                    <Save className="w-3 h-3" /> Add Week
+                    <Save className="w-3 h-3" /> Add Variable Intensity Period
                   </button>
                   <button
                     onClick={() => setShowVarWeek(false)}
@@ -5190,7 +5190,13 @@ function RoadmapView({
 /* ─── Main Component ───────────────────── */
 export default function Roadmap() {
   const { user } = useAuth();
-  const userId = user?.id ? String(user.id) : "";
+  const userId = user?.id ? String(user.id) : (() => {
+    try {
+      const stored = localStorage.getItem("heartspace_user");
+      if (stored) { const p = JSON.parse(stored); return p.id ? String(p.id) : ""; }
+    } catch {}
+    return "";
+  })();
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? userId;
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
