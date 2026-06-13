@@ -2811,8 +2811,6 @@ function LiveScheduleTab({
   startDate,
   syllabusProgress,
   effectiveUserId,
-  topLevelSimSlots,
-  topLevelSaveSimSlots,
   onSave,
   unavailablePeriods,
   variableWeeks,
@@ -2823,8 +2821,6 @@ function LiveScheduleTab({
   startDate: string;
   syllabusProgress: SyllabusProgress;
   effectiveUserId: string;
-  topLevelSimSlots: StudyPeriod[];
-  topLevelSaveSimSlots: (periods: StudyPeriod[]) => void;
   onSave: (schedule: SmartSchedule) => void;
   unavailablePeriods: UnavailablePeriod[];
   variableWeeks: VariableWeek[];
@@ -2913,7 +2909,8 @@ function LiveScheduleTab({
 
   function updateStudyPeriods(periods: StudyPeriod[]) {
     setSimSlots(periods);
-    topLevelSaveSimSlots(periods);
+    const _saveUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })();
+    saveStudyPeriods(_saveUid, periods);
     onSave(
       generateSmartSchedule(
         examType,
@@ -5165,8 +5162,6 @@ function RoadmapView({
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
           effectiveUserId={effectiveUserId}
-          topLevelSimSlots={topLevelSimSlots}
-          topLevelSaveSimSlots={topLevelSaveSimSlots}
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
@@ -5201,16 +5196,6 @@ export default function Roadmap() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? userId;
   // Sim slots at TOP LEVEL where effectiveUserId is always correct
-  const [topLevelSimSlots, setTopLevelSimSlots] = useState<StudyPeriod[]>([]);
-  useEffect(() => {
-    if (effectiveUserId) {
-      setTopLevelSimSlots(loadStudyPeriods(effectiveUserId));
-    }
-  }, [effectiveUserId]);
-  function topLevelSaveSimSlots(periods: StudyPeriod[]) {
-    setTopLevelSimSlots(periods);
-    saveStudyPeriods(effectiveUserId, periods);
-  }
 
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
