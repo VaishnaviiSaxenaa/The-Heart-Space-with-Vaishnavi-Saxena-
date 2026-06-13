@@ -5194,6 +5194,15 @@ function RoadmapView({
 export default function Roadmap() {
   const { user } = useAuth();
 
+  const userId = user?.id ? String(user.id) : (() => {
+    try {
+      const stored = localStorage.getItem("heartspace_user");
+      if (stored) { const p = JSON.parse(stored); return p.id ? String(p.id) : ""; }
+    } catch {}
+    return "";
+  })();
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const effectiveUserId = viewAsId ?? userId;
   // Sim slots at TOP LEVEL where effectiveUserId is always correct
   const [topLevelSimSlots, setTopLevelSimSlots] = useState<StudyPeriod[]>([]);
   useEffect(() => {
@@ -5205,15 +5214,6 @@ export default function Roadmap() {
     setTopLevelSimSlots(periods);
     saveStudyPeriods(effectiveUserId, periods);
   }
-  const userId = user?.id ? String(user.id) : (() => {
-    try {
-      const stored = localStorage.getItem("heartspace_user");
-      if (stored) { const p = JSON.parse(stored); return p.id ? String(p.id) : ""; }
-    } catch {}
-    return "";
-  })();
-  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
-  const effectiveUserId = viewAsId ?? userId;
   console.log("[DEBUG] effectiveUserId:", effectiveUserId, "userId:", userId, "user?.id:", user?.id);
 
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
