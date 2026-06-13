@@ -2909,8 +2909,12 @@ function LiveScheduleTab({
 
   function updateStudyPeriods(periods: StudyPeriod[]) {
     setSimSlots(periods);
-    const _saveUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })();
-    saveStudyPeriods(_saveUid, periods);
+    import("../lib/supabase").then(({ supabase }) => {
+      supabase.auth.getUser().then(({ data }) => {
+        const uid = data?.user?.id || effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })();
+        saveStudyPeriods(uid, periods);
+      });
+    });
     onSave(
       generateSmartSchedule(
         examType,
