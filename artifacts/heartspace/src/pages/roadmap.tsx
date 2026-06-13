@@ -2911,7 +2911,8 @@ function LiveScheduleTab({
 
   function updateStudyPeriods(periods: StudyPeriod[]) {
     setSimSlots(periods);
-    saveStudyPeriods(effectiveUserId, periods);
+    const uid = effectiveUserId || (() => { try { const s = localStorage.getItem("heartspace_user"); return s ? JSON.parse(s).id : ""; } catch { return ""; } })();
+    saveStudyPeriods(uid, periods);
     onSave(
       generateSmartSchedule(
         examType,
@@ -5157,7 +5158,7 @@ function RoadmapView({
 
       {/* SCHEDULE TAB — live, auto-updates */}
       {activeTab === "schedule" && (
-        effectiveUserId ? <LiveScheduleTab
+        <LiveScheduleTab
           examType={rm.examType}
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
@@ -5167,7 +5168,7 @@ function RoadmapView({
           variableWeeks={rm.variableWeeks ?? []}
           rm={rm}
           persist={persist}
-        /> : <div style={{padding:"2rem",color:"#8C7B70"}}>Loading...</div>
+        />
       )}
 
       {saved && (
