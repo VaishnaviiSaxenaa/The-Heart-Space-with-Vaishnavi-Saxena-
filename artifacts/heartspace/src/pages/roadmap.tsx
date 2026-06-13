@@ -5157,6 +5157,8 @@ function RoadmapView({
 
       {/* SCHEDULE TAB — live, auto-updates */}
       {activeTab === "schedule" && (
+        <>
+        <AIRoadmapAssistant examType={rm.examType} subjects={JAM_SUBJECTS.map(s => ({ name: s.name, studyWeeks: s.studyWeeks }))} />
         <LiveScheduleTab
           examType={rm.examType}
           startDate={rm.startDate}
@@ -5168,6 +5170,7 @@ function RoadmapView({
           rm={rm}
           persist={persist}
         />
+        </>
       )}
 
       {saved && (
@@ -5178,6 +5181,140 @@ function RoadmapView({
           ✓ Roadmap saved
         </div>
       )}
+    </div>
+  );
+}
+
+
+/* ─── AI Roadmap Assistant ─── */
+function AIRoadmapAssistant({ examType, subjects }: { examType: string; subjects: { name: string; studyWeeks: number }[] }) {
+  const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const GOLD = "#C9A84C";
+  const CHARCOAL = "#2D2A25";
+  const CREAM = "#F8F5F0";
+  const CARD = "#FFFDF9";
+  const BORDER = "#E5DDD0";
+  const MUTED = "#7A7267";
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function send() {
+    if (!input.trim() || loading) return;
+    const userMsg = input.trim();
+    setInput("");
+    setMessages(prev => [...prev, { role: "user", text: userMsg }]);
+    setLoading(true);
+
+    const subjectList = subjects.map(s => `${s.name} (${s.studyWeeks} weeks)`).join(", ");
+    const systemPrompt = `You are a friendly academic planning assistant for HeartSpace, helping students prepare for ${examType === "NET_GATE" ? "CSIR NET/GATE" : "IIT JAM"} mathematics exams.
+
+The student's subjects and estimated study times (at 5hrs/day, 5 days/week) are:
+${subjectList}
+
+Help the student plan their study schedule. You can:
+- Calculate how long topics will take based on their available hours
+- Suggest how to compensate for lost time
+- Help prioritize subjects
+- Give encouragement and practical advice
+- Calculate end dates based on start date and hours per day
+
+Keep responses concise, warm, and practical. Use bullet points when listing things.`;
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [
+            ...messages.map(m => ({ role: m.role, content: m.text })),
+            { role: "user", content: userMsg }
+          ]
+        })
+      });
+      const data = await response.json();
+      const reply = data.content?.[0]?.text ?? "Sorry, I couldn't respond. Please try again.";
+      setMessages(prev => [...prev, { role: "assistant", text: reply }]);
+    } catch {
+      setMessages(prev => [...prev, { role: "assistant", text: "Something went wrong. Please try again." }]);
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, marginBottom: "1.5rem", overflow: "hidden" }}>
+      <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <span style={{ fontSize: "1.1rem" }}>✨</span>
+        <div>
+          <div style={{ fontWeight: 700, color: CHARCOAL, fontSize: "0.95rem" }}>AI Study Planner</div>
+          <div style={{ fontSize: "0.75rem", color: MUTED }}>Ask me anything about your schedule, timing, or how to plan your preparation</div>
+        </div>
+      </div>
+
+      <div style={{ height: 300, overflowY: "auto", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        {messages.length === 0 && (
+          <div style={{ textAlign: "center", color: MUTED, fontSize: "0.85rem", marginTop: "2rem" }}>
+            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎓</div>
+            <div>Hi! I'm your AI study planner.</div>
+            <div style={{ marginTop: "0.5rem", fontSize: "0.8rem" }}>Try asking:</div>
+            <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+              {["I study 4 hours a day, 6 days a week. How long will it take?",
+                "I lost 2 weeks due to illness. How do I compensate?",
+                "Which subject should I start with?"].map(q => (
+                <button key={q} onClick={() => setInput(q)}
+                  style={{ background: CREAM, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0.4rem 0.75rem", fontSize: "0.78rem", color: CHARCOAL, cursor: "pointer" }}>
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+            <div style={{
+              maxWidth: "80%", padding: "0.6rem 0.9rem", borderRadius: 12,
+              background: m.role === "user" ? GOLD : CREAM,
+              color: m.role === "user" ? "#fff" : CHARCOAL,
+              fontSize: "0.85rem", lineHeight: 1.5,
+              borderBottomRightRadius: m.role === "user" ? 4 : 12,
+              borderBottomLeftRadius: m.role === "assistant" ? 4 : 12,
+              whiteSpace: "pre-wrap"
+            }}>
+              {m.text}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <div style={{ background: CREAM, borderRadius: 12, padding: "0.6rem 1rem", fontSize: "0.85rem", color: MUTED }}>
+              Thinking...
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      <div style={{ padding: "0.75rem 1rem", borderTop: `1px solid ${BORDER}`, display: "flex", gap: "0.5rem" }}>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
+          placeholder="Ask about your study plan..."
+          style={{ flex: 1, padding: "0.6rem 0.9rem", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: CREAM, color: CHARCOAL, fontSize: "0.85rem", outline: "none", fontFamily: "inherit" }}
+        />
+        <button onClick={send} disabled={loading || !input.trim()}
+          style={{ background: GOLD, color: "#fff", border: "none", borderRadius: 10, padding: "0.6rem 1rem", fontWeight: 600, cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 }}>
+          Send
+        </button>
+      </div>
     </div>
   );
 }
