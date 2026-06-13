@@ -2838,6 +2838,7 @@ function LiveScheduleTab({
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showSimPanel, setShowSimPanel] = useState(false);
   const [simSlots, setSimSlots] = useState<StudyPeriod[]>(() => loadStudyPeriods(effectiveUserId));
+  console.log("[DEBUG LiveScheduleTab] effectiveUserId:", effectiveUserId);
   const [simForm, setSimForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string, number> });
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(effectiveUserId);
