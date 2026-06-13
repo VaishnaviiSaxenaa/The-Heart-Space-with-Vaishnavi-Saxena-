@@ -2811,6 +2811,8 @@ function LiveScheduleTab({
   startDate,
   syllabusProgress,
   effectiveUserId,
+  topLevelSimSlots,
+  topLevelSaveSimSlots,
   onSave,
   unavailablePeriods,
   variableWeeks,
@@ -2821,6 +2823,8 @@ function LiveScheduleTab({
   startDate: string;
   syllabusProgress: SyllabusProgress;
   effectiveUserId: string;
+  topLevelSimSlots: StudyPeriod[];
+  topLevelSaveSimSlots: (periods: StudyPeriod[]) => void;
   onSave: (schedule: SmartSchedule) => void;
   unavailablePeriods: UnavailablePeriod[];
   variableWeeks: VariableWeek[];
@@ -2843,10 +2847,8 @@ function LiveScheduleTab({
   });
   console.log("[DEBUG LiveScheduleTab] effectiveUserId:", effectiveUserId);
   useEffect(() => {
-    if (effectiveUserId) {
-      setSimSlots(loadStudyPeriods(effectiveUserId));
-    }
-  }, [effectiveUserId]);
+    setSimSlots(topLevelSimSlots);
+  }, [topLevelSimSlots]);
   const [simForm, setSimForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string, number> });
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(effectiveUserId);
@@ -2914,8 +2916,7 @@ function LiveScheduleTab({
 
   function updateStudyPeriods(periods: StudyPeriod[]) {
     setSimSlots(periods);
-    const uid = effectiveUserId || (() => { try { const s = localStorage.getItem("heartspace_user"); return s ? JSON.parse(s).id : ""; } catch { return ""; } })();
-    saveStudyPeriods(uid, periods);
+    topLevelSaveSimSlots(periods);
     onSave(
       generateSmartSchedule(
         examType,
@@ -5166,6 +5167,8 @@ function RoadmapView({
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
           effectiveUserId={effectiveUserId}
+          topLevelSimSlots={topLevelSimSlots}
+          topLevelSaveSimSlots={topLevelSaveSimSlots}
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
@@ -5199,6 +5202,19 @@ export default function Roadmap() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? userId;
   console.log("[DEBUG] effectiveUserId:", effectiveUserId, "userId:", userId, "user?.id:", user?.id);
+
+  // Sim slots at TOP LEVEL where effectiveUserId is always correct
+  const [topLevelSimSlots, setTopLevelSimSlots] = useState<StudyPeriod[]>([]);
+  useEffect(() => {
+    if (effectiveUserId) {
+      setTopLevelSimSlots(loadStudyPeriods(effectiveUserId));
+    }
+  }, [effectiveUserId]);
+  function topLevelSaveSimSlots(periods: StudyPeriod[]) {
+    setTopLevelSimSlots(periods);
+    saveStudyPeriods(effectiveUserId, periods);
+  }
+
   const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
