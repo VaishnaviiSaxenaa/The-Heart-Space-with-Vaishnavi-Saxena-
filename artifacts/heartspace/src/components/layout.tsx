@@ -83,6 +83,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         key: "home",
         href: "/dashboard",
       },
+      { icon: Map, label: "My Roadmap (v2)", key: "roadmap-v2", href: "/roadmap-v2" },
       { icon: Map, label: "My Roadmap", key: "roadmap", href: "/roadmap" },
       {
         icon: GraduationCap,
