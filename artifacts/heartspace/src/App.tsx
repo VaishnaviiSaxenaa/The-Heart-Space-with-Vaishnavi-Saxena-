@@ -14,6 +14,7 @@ import ExamSelect from "./pages/exam-select";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import MySessions from "./pages/my-sessions";
+import RoadmapV2Page from "./pages/roadmap-v2";
 import RevisionTracker from "./pages/revision-tracker";
 import NoteTracker from "./pages/note-tracker";
 import CounsellorSessionsPage from "./pages/counsellor-sessions";
@@ -132,6 +133,9 @@ function Router() {
         <Route path="/self-dashboard">
           <StudentRoute component={StudentDashboard} />
         </Route>
+        <Route path="/roadmap-v2">
+          <ProtectedRoute component={RoadmapV2Page} allowedRole="student" />
+        </Route>
         <Route path="/revision-tracker">
           <ProtectedRoute component={RevisionTracker} allowedRole="student" />
         </Route>
@@ -140,6 +144,9 @@ function Router() {
         </Route>
         <Route path="/counsellor-sessions">
           <ProtectedRoute component={CounsellorSessionsPage} allowedRole="counsellor" />
+        </Route>
+        <Route path="/roadmap-v2">
+          <ProtectedRoute component={RoadmapV2Page} allowedRole="student" />
         </Route>
         <Route path="/revision-tracker">
           <ProtectedRoute component={RevisionTracker} allowedRole="student" />
