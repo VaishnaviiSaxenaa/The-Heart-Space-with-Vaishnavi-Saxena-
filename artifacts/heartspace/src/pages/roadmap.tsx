@@ -970,6 +970,10 @@ function generateSmartSchedule(
   /* Get active simultaneous study period for a calendar week */
   function getActivePeriod(weekOffset: number): StudyPeriod | null {
     const weekDate = addWeeks(start, weekOffset);
+    if (weekOffset === 0) {
+      console.log("[DEBUG] studyPeriods passed to engine:", JSON.stringify(studyPeriods));
+      console.log("[DEBUG] roadmap start date:", format(start, "yyyy-MM-dd"));
+    }
     for (const p of studyPeriods) {
       if (!p.startDate) continue;
       const pStart = parseISO(p.startDate);
