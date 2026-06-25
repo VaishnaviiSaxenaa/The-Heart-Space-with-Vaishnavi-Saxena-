@@ -3621,6 +3621,10 @@ function LiveScheduleTab({
                     !simForm.endDate
                   )
                     return;
+                  if (simForm.endDate !== "indefinite" && simForm.endDate < simForm.startDate) {
+                    alert("End date must be after start date. Please fix the dates and try again.");
+                    return;
+                  }
                   const newP: StudyPeriod = {
                     id: `${Date.now()}`,
                     label: simForm.label,
