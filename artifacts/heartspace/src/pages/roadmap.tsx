@@ -3966,6 +3966,8 @@ function LiveScheduleTab({
         const subjectWeeks = filtered.filter((w) => w.subject === subject);
         if (subjectWeeks.length === 0) return null;
         const allWeeks = schedule.weeks.filter((w) => w.subject === subject);
+        const subjHoursDef = rawSubjectsList.find((sub) => sub.name === subject);
+        const subjTotalHours = (subjHoursDef as any)?.totalHours;
         const isExpanded = expanded[subject] ?? false;
         return (
           <div
@@ -3992,7 +3994,7 @@ function LiveScheduleTab({
                     className="text-xs px-2 py-0.5 rounded-full"
                     style={{ background: `${GOLD}22`, color: DARK }}
                   >
-                    {allWeeks.length} week(s)
+                    {allWeeks.length} week(s){subjTotalHours ? ` · ${subjTotalHours} hrs` : ""}
                   </span>
                 </div>
                 <div className="flex gap-2 mt-1 flex-wrap">
