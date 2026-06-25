@@ -5244,12 +5244,16 @@ function RoadmapView({
 
       {/* SCHEDULE TAB — live, auto-updates */}
       {activeTab === "calendar" && (
-        <CalendarTabWrapper
-          examType={rm.examType}
-          startDate={rm.startDate}
-          syllabusProgress={syllabusProgress}
-          effectiveUserId={effectiveUserId}
-        />
+        effectiveUserId ? (
+          <CalendarTabWrapper
+            examType={rm.examType}
+            startDate={rm.startDate}
+            syllabusProgress={syllabusProgress}
+            effectiveUserId={effectiveUserId}
+          />
+        ) : (
+          <div style={{ padding: "2rem", textAlign: "center", color: MUTED }}>Loading your account...</div>
+        )
       )}
 
       {activeTab === "schedule" && (
