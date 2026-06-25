@@ -92,12 +92,25 @@ function saveCalendarLocal(uid: string, data: CalendarData) {
    study day with hoursPerDay, advancing to next subject once
    its remaining hours are consumed.
 ============================================================ */
+interface SimSlotForCalendar {
+  startDate: string;
+  endDate: string;
+  subjectIds: string[];
+  hoursPerSubject: Record<string, number>;
+}
+
+function isDateInSlot(dateStr: string, slot: SimSlotForCalendar): boolean {
+  if (slot.endDate === "indefinite" as any) return dateStr >= slot.startDate;
+  return dateStr >= slot.startDate && dateStr <= slot.endDate;
+}
+
 function autoGenerateCalendar(
   subjects: CalendarSubjectDef[],
   remainingHoursBySubject: Record<string, number>,
   startDate: string,
   hoursPerDay: number,
   daysPerWeek: number,
+  simSlots: SimSlotForCalendar[] = [],
   horizonDays: number = 365,
 ): CalendarData {
   const data: CalendarData = {};
@@ -123,8 +136,26 @@ function autoGenerateCalendar(
     const date = addDays(start, d);
     if (!isStudyDay(date)) continue;
 
-    let hoursLeftToday = hoursPerDay;
     const key = format(date, "yyyy-MM-dd");
+    const activeSlot = simSlots.find((s) => isDateInSlot(key, s));
+
+    if (activeSlot && activeSlot.subjectIds.length > 0) {
+      /* SIMULTANEOUS: allocate each subject's configured daily hours */
+      const entries: DayEntry[] = [];
+      activeSlot.subjectIds.forEach((sid) => {
+        const avail = remaining[sid] ?? 0;
+        if (avail <= 0.01) return;
+        const wantHrs = activeSlot.hoursPerSubject[sid] ?? 0;
+        const alloc = Math.min(wantHrs, avail);
+        if (alloc <= 0) return;
+        entries.push({ subjectId: sid, hours: Math.round(alloc * 10) / 10 });
+        remaining[sid] -= alloc;
+      });
+      if (entries.length > 0) data[key] = entries;
+      continue;
+    }
+
+    let hoursLeftToday = hoursPerDay;
     const entries: DayEntry[] = [];
 
     while (hoursLeftToday > 0.01 && qIdx < queue.length) {
@@ -157,6 +188,7 @@ interface RoadmapCalendarProps {
   startDate: string;
   hoursPerDay: number;
   daysPerWeek: number;
+  simSlots?: SimSlotForCalendar[];
 }
 
 export default function RoadmapCalendar({
@@ -166,6 +198,7 @@ export default function RoadmapCalendar({
   startDate,
   hoursPerDay,
   daysPerWeek,
+  simSlots = [],
 }: RoadmapCalendarProps) {
   const [view, setView] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState(new Date());
@@ -194,6 +227,7 @@ export default function RoadmapCalendar({
           startDate,
           hoursPerDay,
           daysPerWeek,
+          simSlots,
         );
         console.log("[CAL DEBUG] generated keys:", Object.keys(generated).length);
         setCalendar(generated);
@@ -226,6 +260,7 @@ export default function RoadmapCalendar({
       startDate,
       hoursPerDay,
       daysPerWeek,
+      simSlots,
     );
     persist(generated);
   }

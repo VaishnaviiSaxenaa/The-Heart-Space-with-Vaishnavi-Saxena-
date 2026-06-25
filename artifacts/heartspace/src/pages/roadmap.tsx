@@ -2868,6 +2868,16 @@ function CalendarTabWrapper({
     remainingHoursBySubject[s.id] = Math.max(0, total * (1 - pct / 100));
   });
 
+  const savedSimSlots = loadStudyPeriods(effectiveUserId);
+  const simSlotsForCalendar = savedSimSlots
+    .filter((p) => p.mode === "parallel" && p.subjectIds && p.subjectIds.length > 0)
+    .map((p) => ({
+      startDate: p.startDate,
+      endDate: p.endDate,
+      subjectIds: p.subjectIds!,
+      hoursPerSubject: p.hoursPerSubject,
+    }));
+
   return (
     <RoadmapCalendar
       uid={effectiveUserId}
@@ -2876,6 +2886,7 @@ function CalendarTabWrapper({
       startDate={startDate}
       hoursPerDay={inputs.hoursPerDay}
       daysPerWeek={inputs.daysPerWeek}
+      simSlots={simSlotsForCalendar}
     />
   );
 }
