@@ -25,6 +25,7 @@ import {
   Circle,
   PlayCircle,
 } from "lucide-react";
+import RoadmapCalendar from "./roadmap-calendar-view";
 import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 import {
   loadSyllabusProgress,
@@ -2831,6 +2832,49 @@ function VariableWeeksManager({
 }
 
 /* ─── Live Schedule Tab ─────────────────── */
+
+/* ─── Calendar Tab Wrapper — bridges Roadmap data into RoadmapCalendar ─── */
+function CalendarTabWrapper({
+  examType,
+  startDate,
+  syllabusProgress,
+  effectiveUserId,
+}: {
+  examType: string;
+  startDate: string;
+  syllabusProgress: SyllabusProgress;
+  effectiveUserId: string;
+}) {
+  const inputs = loadScheduleInputs(effectiveUserId);
+  const rawSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
+
+  const subjects = rawSubjects.map((s) => ({
+    id: s.id,
+    syllabusId: s.syllabusId,
+    name: s.name,
+    totalHours: (s as any).totalHours ?? 0,
+  }));
+
+  const remainingHoursBySubject: Record<string, number> = {};
+  rawSubjects.forEach((s) => {
+    const pct = syllabusPercs[s.syllabusId] ?? 0;
+    const total = (s as any).totalHours ?? 0;
+    remainingHoursBySubject[s.id] = Math.max(0, total * (1 - pct / 100));
+  });
+
+  return (
+    <RoadmapCalendar
+      uid={effectiveUserId}
+      subjects={subjects}
+      remainingHoursBySubject={remainingHoursBySubject}
+      startDate={startDate}
+      hoursPerDay={inputs.hoursPerDay}
+      daysPerWeek={inputs.daysPerWeek}
+    />
+  );
+}
+
 function LiveScheduleTab({
   examType,
   startDate,
@@ -4280,7 +4324,7 @@ function RoadmapView({
   const [expandPhase, setExpandPhase] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "progress" | "schedule"
+    "overview" | "progress" | "calendar" | "schedule"
   >("overview");
 
   const syllabusProgress = loadSyllabusProgress(effectiveUserId);
@@ -4360,7 +4404,7 @@ function RoadmapView({
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
-        {(["overview", "progress", "schedule"] as const).map((tab) => (
+        {(["overview", "progress", "calendar", "schedule"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -4375,7 +4419,9 @@ function RoadmapView({
               ? "📋 Overview"
               : tab === "progress"
                 ? "📊 My Progress"
-                : "📅 Schedule"}
+                : tab === "calendar"
+                  ? "🗓️ Calendar"
+                  : "📅 Schedule"}
           </button>
         ))}
       </div>
@@ -5197,6 +5243,15 @@ function RoadmapView({
       )}
 
       {/* SCHEDULE TAB — live, auto-updates */}
+      {activeTab === "calendar" && (
+        <CalendarTabWrapper
+          examType={rm.examType}
+          startDate={rm.startDate}
+          syllabusProgress={syllabusProgress}
+          effectiveUserId={effectiveUserId}
+        />
+      )}
+
       {activeTab === "schedule" && (
         <>
         <AIRoadmapAssistant examType={rm.examType} subjects={JAM_SUBJECTS.map(s => ({ name: s.name, studyWeeks: s.studyWeeks }))} />
