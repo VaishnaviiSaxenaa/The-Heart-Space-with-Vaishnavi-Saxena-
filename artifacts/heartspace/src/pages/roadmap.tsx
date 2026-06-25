@@ -2839,13 +2839,21 @@ function CalendarTabWrapper({
   startDate,
   syllabusProgress,
   effectiveUserId,
+  unavailablePeriods,
+  variableWeeks,
 }: {
   examType: string;
   startDate: string;
   syllabusProgress: SyllabusProgress;
   effectiveUserId: string;
+  unavailablePeriods: UnavailablePeriod[];
+  variableWeeks: VariableWeek[];
 }) {
-  const inputs = loadScheduleInputs(effectiveUserId);
+  const inputsReal = loadScheduleInputs(effectiveUserId);
+  const inputsFallback = loadScheduleInputs("undefined");
+  const inputs = (inputsReal.hoursPerDay === 2 && inputsReal.daysPerWeek === 5 && inputsFallback.hoursPerDay !== 2)
+    ? inputsFallback
+    : inputsReal;
   const rawSubjectsBase = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const defaultOrder = rawSubjectsBase.map((s) => s.id);
   const customOrder = loadSubjectOrder(effectiveUserId, defaultOrder);
@@ -2878,6 +2886,18 @@ function CalendarTabWrapper({
       hoursPerSubject: p.hoursPerSubject,
     }));
 
+  const unavailableForCalendar = unavailablePeriods.map((p) => ({
+    startDate: p.startDate,
+    endDate: p.endDate,
+  }));
+
+  const variableForCalendar = variableWeeks.map((p) => ({
+    startDate: p.startDate,
+    endDate: p.endDate,
+    customHoursPerDay: p.customHours,
+    multiplier: p.multiplier,
+  }));
+
   return (
     <RoadmapCalendar
       uid={effectiveUserId}
@@ -2887,6 +2907,8 @@ function CalendarTabWrapper({
       hoursPerDay={inputs.hoursPerDay}
       daysPerWeek={inputs.daysPerWeek}
       simSlots={simSlotsForCalendar}
+      unavailablePeriods={unavailableForCalendar}
+      variablePeriods={variableForCalendar}
     />
   );
 }
@@ -5265,6 +5287,8 @@ function RoadmapView({
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
           effectiveUserId={effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })()}
+          unavailablePeriods={rm.unavailablePeriods}
+          variableWeeks={rm.variableWeeks ?? []}
         />
       )}
 

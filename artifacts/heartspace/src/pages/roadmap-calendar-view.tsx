@@ -104,6 +104,20 @@ function isDateInSlot(dateStr: string, slot: SimSlotForCalendar): boolean {
   return dateStr >= slot.startDate && dateStr <= slot.endDate;
 }
 
+interface PeriodBase {
+  startDate: string;
+  endDate: string;
+}
+interface VariablePeriod extends PeriodBase {
+  customHoursPerDay?: number;
+  multiplier?: number;
+}
+
+function isDateInPeriod(dateStr: string, p: PeriodBase): boolean {
+  if ((p.endDate as any) === "indefinite") return dateStr >= p.startDate;
+  return dateStr >= p.startDate && dateStr <= p.endDate;
+}
+
 function autoGenerateCalendar(
   subjects: CalendarSubjectDef[],
   remainingHoursBySubject: Record<string, number>,
@@ -111,6 +125,8 @@ function autoGenerateCalendar(
   hoursPerDay: number,
   daysPerWeek: number,
   simSlots: SimSlotForCalendar[] = [],
+  unavailablePeriods: PeriodBase[] = [],
+  variablePeriods: VariablePeriod[] = [],
   horizonDays: number = 365,
 ): CalendarData {
   const data: CalendarData = {};
@@ -137,6 +153,15 @@ function autoGenerateCalendar(
     if (!isStudyDay(date)) continue;
 
     const key = format(date, "yyyy-MM-dd");
+
+    const isUnavailable = unavailablePeriods.some((p) => isDateInPeriod(key, p));
+    if (isUnavailable) continue;
+
+    const activeVariable = variablePeriods.find((p) => isDateInPeriod(key, p));
+    const effectiveHoursPerDay = activeVariable
+      ? (activeVariable.customHoursPerDay ?? hoursPerDay * (activeVariable.multiplier ?? 1))
+      : hoursPerDay;
+
     const activeSlot = simSlots.find((s) => isDateInSlot(key, s));
 
     if (activeSlot && activeSlot.subjectIds.length > 0) {
@@ -155,7 +180,7 @@ function autoGenerateCalendar(
       continue;
     }
 
-    let hoursLeftToday = hoursPerDay;
+    let hoursLeftToday = effectiveHoursPerDay;
     const entries: DayEntry[] = [];
 
     while (hoursLeftToday > 0.01 && qIdx < queue.length) {
@@ -189,6 +214,8 @@ interface RoadmapCalendarProps {
   hoursPerDay: number;
   daysPerWeek: number;
   simSlots?: SimSlotForCalendar[];
+  unavailablePeriods?: PeriodBase[];
+  variablePeriods?: VariablePeriod[];
 }
 
 export default function RoadmapCalendar({
@@ -199,6 +226,8 @@ export default function RoadmapCalendar({
   hoursPerDay,
   daysPerWeek,
   simSlots = [],
+  unavailablePeriods = [],
+  variablePeriods = [],
 }: RoadmapCalendarProps) {
   const [view, setView] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState(new Date());
@@ -228,6 +257,8 @@ export default function RoadmapCalendar({
           hoursPerDay,
           daysPerWeek,
           simSlots,
+          unavailablePeriods,
+          variablePeriods,
         );
         console.log("[CAL DEBUG] generated keys:", Object.keys(generated).length);
         setCalendar(generated);
@@ -261,6 +292,8 @@ export default function RoadmapCalendar({
       hoursPerDay,
       daysPerWeek,
       simSlots,
+      unavailablePeriods,
+      variablePeriods,
     );
     persist(generated);
   }
