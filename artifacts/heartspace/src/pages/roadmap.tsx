@@ -5244,16 +5244,12 @@ function RoadmapView({
 
       {/* SCHEDULE TAB — live, auto-updates */}
       {activeTab === "calendar" && (
-        effectiveUserId ? (
-          <CalendarTabWrapper
-            examType={rm.examType}
-            startDate={rm.startDate}
-            syllabusProgress={syllabusProgress}
-            effectiveUserId={effectiveUserId}
-          />
-        ) : (
-          <div style={{ padding: "2rem", textAlign: "center", color: MUTED }}>Loading your account...</div>
-        )
+        <CalendarTabWrapper
+          examType={rm.examType}
+          startDate={rm.startDate}
+          syllabusProgress={syllabusProgress}
+          effectiveUserId={effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })()}
+        />
       )}
 
       {activeTab === "schedule" && (
