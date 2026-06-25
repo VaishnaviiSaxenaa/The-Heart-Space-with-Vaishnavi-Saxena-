@@ -2866,7 +2866,7 @@ function LiveScheduleTab({
   useEffect(() => {
     const uid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })();
     if (uid) setSimSlots(loadStudyPeriods(uid));
-  }, []);
+  }, [effectiveUserId]);
   const [simForm, setSimForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string, number> });
   /* Live loads — always fresh */
   const topicSpeed = loadTopicSpeed(effectiveUserId);
