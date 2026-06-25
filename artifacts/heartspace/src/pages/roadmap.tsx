@@ -349,6 +349,7 @@ const JAM_SUBJECTS = [
     id: "la",
     syllabusId: "linear_algebra",
     name: "Linear Algebra",
+    totalHours: 60,
     studyWeeks: 4,
     assignmentWeeks: 0.5,
   },
@@ -356,6 +357,7 @@ const JAM_SUBJECTS = [
     id: "ra",
     syllabusId: "real_analysis",
     name: "Real Analysis",
+    totalHours: 60,
     studyWeeks: 4,
     assignmentWeeks: 0.5,
   },
@@ -363,6 +365,7 @@ const JAM_SUBJECTS = [
     id: "dc",
     syllabusId: "differential_calculus",
     name: "Functions of One Variable",
+    totalHours: 50,
     studyWeeks: 4.5,
     assignmentWeeks: 0.5,
   },
@@ -370,6 +373,7 @@ const JAM_SUBJECTS = [
     id: "gt",
     syllabusId: "abstract_algebra",
     name: "Group Theory",
+    totalHours: 50,
     studyWeeks: 2.5,
     assignmentWeeks: 0.5,
   },
@@ -377,6 +381,7 @@ const JAM_SUBJECTS = [
     id: "ode",
     syllabusId: "ode",
     name: "ODE",
+    totalHours: 40,
     studyWeeks: 2,
     assignmentWeeks: 0.5,
   },
@@ -384,6 +389,7 @@ const JAM_SUBJECTS = [
     id: "mvc",
     syllabusId: "real_analysis",
     name: "Functions of Two Variables",
+    totalHours: 25,
     studyWeeks: 2,
     assignmentWeeks: 0.5,
   },
@@ -391,6 +397,7 @@ const JAM_SUBJECTS = [
     id: "mi",
     syllabusId: "integration",
     name: "Multiple Integration",
+    totalHours: 30,
     studyWeeks: 2,
     assignmentWeeks: 0.5,
   },
@@ -401,6 +408,7 @@ const NET_SUBJECTS = [
     id: "ra",
     syllabusId: "real_analysis",
     name: "Real Analysis",
+    totalHours: 60,
     studyWeeks: 4.5,
     assignmentWeeks: 0.5,
   },
@@ -408,6 +416,7 @@ const NET_SUBJECTS = [
     id: "la",
     syllabusId: "linear_algebra",
     name: "Linear Algebra",
+    totalHours: 60,
     studyWeeks: 4,
     assignmentWeeks: 0.5,
   },
@@ -415,6 +424,7 @@ const NET_SUBJECTS = [
     id: "ca",
     syllabusId: "complex_analysis",
     name: "Complex Analysis",
+    totalHours: 50,
     studyWeeks: 2,
     assignmentWeeks: 0.5,
   },
@@ -422,6 +432,7 @@ const NET_SUBJECTS = [
     id: "ma",
     syllabusId: "abstract_algebra",
     name: "Modern Algebra (Group + Ring + Field)",
+    totalHours: 90,
     studyWeeks: 4.5,
     assignmentWeeks: 1.0,
   },
@@ -429,6 +440,7 @@ const NET_SUBJECTS = [
     id: "top",
     syllabusId: "topology",
     name: "Topology",
+    totalHours: 40,
     studyWeeks: 3,
     assignmentWeeks: 0.5,
   },
@@ -436,6 +448,7 @@ const NET_SUBJECTS = [
     id: "fa",
     syllabusId: "functional_analysis",
     name: "Functional Analysis",
+    totalHours: 40,
     studyWeeks: 2,
     assignmentWeeks: 0.5,
   },
@@ -443,6 +456,7 @@ const NET_SUBJECTS = [
     id: "ode",
     syllabusId: "ode",
     name: "ODE",
+    totalHours: 40,
     studyWeeks: 2,
     assignmentWeeks: 0.5,
   },
@@ -450,6 +464,7 @@ const NET_SUBJECTS = [
     id: "pde",
     syllabusId: "pde",
     name: "PDE",
+    totalHours: 40,
     studyWeeks: 1.5,
     assignmentWeeks: 0.5,
   },
@@ -457,6 +472,7 @@ const NET_SUBJECTS = [
     id: "na",
     syllabusId: "numerical_analysis",
     name: "Numerical Analysis",
+    totalHours: 30,
     studyWeeks: 1,
     assignmentWeeks: 0.25,
   },
@@ -464,6 +480,7 @@ const NET_SUBJECTS = [
     id: "ie",
     syllabusId: "calculus_of_variations",
     name: "Integral Equations",
+    totalHours: 30,
     studyWeeks: 1,
     assignmentWeeks: 0.25,
   },
@@ -471,6 +488,7 @@ const NET_SUBJECTS = [
     id: "cov",
     syllabusId: "calculus_of_variations",
     name: "Calculus of Variations",
+    totalHours: 30,
     studyWeeks: 1,
     assignmentWeeks: 0.25,
   },
@@ -834,7 +852,10 @@ function generateSmartSchedule(
   const subjectsWithAdjusted = allSubjects.map((s) => {
     const pct = syllabusPercs[s.syllabusId] ?? 0;
     const remaining = Math.max(0, 1 - pct / 100);
-    const baseWeeks = baseWeeksOverride[s.id] ?? s.studyWeeks;
+    const computedWeeksFromHours = (s as any).totalHours
+      ? (s as any).totalHours / baseHoursPerWeek
+      : s.studyWeeks;
+    const baseWeeks = baseWeeksOverride[s.id] ?? computedWeeksFromHours;
     const speedKey = (topicSpeed[s.id] ?? "first_normal") as TopicSpeedKey;
     const speedMult = SPEED_MULTIPLIERS[speedKey] ?? 1.0;
     const adjStudy = Math.max(0, Math.ceil(baseWeeks * remaining * speedMult));
@@ -3158,7 +3179,10 @@ function LiveScheduleTab({
                 const current = (topicSpeed[s.id] ??
                   "first_normal") as TopicSpeedKey;
                 const cfg = SPEED_CFG[current];
-                const baseW = baseWeeksOverride[s.id] ?? s.studyWeeks;
+                const computedWeeksFromHours2 = (s as any).totalHours
+                  ? (s as any).totalHours / (hoursPerDay * daysPerWeek)
+                  : s.studyWeeks;
+                const baseW = baseWeeksOverride[s.id] ?? computedWeeksFromHours2;
                 const mult = SPEED_MULTIPLIERS[current];
                 const effectW = Math.ceil(baseW * mult);
                 return (
