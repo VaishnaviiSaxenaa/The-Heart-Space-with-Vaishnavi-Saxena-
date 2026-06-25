@@ -2901,6 +2901,7 @@ function LiveScheduleTab({
         practiceProgress,
         newOrder,
         parallelCfg,
+        simSlots,
       ),
     );
   }
@@ -2924,6 +2925,7 @@ function LiveScheduleTab({
         practiceProgress,
         subjectOrder,
         cfg,
+        simSlots,
       ),
     );
   }
@@ -2951,6 +2953,7 @@ function LiveScheduleTab({
         baseWeeksOverride,
         practiceProgress,
         subjectOrder,
+        parallelCfg,
         periods,
       ),
     );
