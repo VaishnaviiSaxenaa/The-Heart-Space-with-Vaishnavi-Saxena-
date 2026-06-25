@@ -2419,6 +2419,168 @@ function MyScheduleTabV2({
 /* ============================================================
    MAIN PAGE COMPONENT
 ============================================================ */
+/* ============================================================
+   WEEK-BY-WEEK TIMELINE (hours-based)
+============================================================ */
+type WeekBlockType = "study" | "assignment" | "revision" | "buffer";
+
+interface WeekTimelineEntry {
+  weekNumber: number;
+  weekStartDate: string;
+  type: WeekBlockType;
+  subjectNames: string[];
+  hoursAvailable: number;
+  isSimultaneous: boolean;
+}
+
+function buildWeeklyTimeline(rm: RoadmapV2, syllabus: SyllabusData): WeekTimelineEntry[] {
+  const subjects = getSubjects(rm.examType);
+  const orderedIds = rm.subjectOrder.length > 0 ? rm.subjectOrder : subjects.map((s) => s.id);
+  const orderedSubjects = orderedIds.map((id) => subjects.find((s) => s.id === id)).filter((s): s is SubjectDef => !!s);
+
+  const remaining: Record<string, number> = {};
+  for (const subj of orderedSubjects) {
+    const pct = getSubjectCompletionPercent(syllabus, subj.id) / 100;
+    const speed = rm.topicSpeed[subj.id] ?? "normal";
+    const revisionMultiplier = 1 + rm.revisionPercent / 100;
+    remaining[subj.id] = subj.totalHours * (1 - pct) * SPEED_MULTIPLIER[speed] * revisionMultiplier;
+  }
+
+  const start = parseISO(rm.startDate);
+  const entries: WeekTimelineEntry[] = [];
+  let dayOffset = 0;
+  let cursor = orderedSubjects.map((s) => s.id).filter((id) => remaining[id] > 0.01);
+  let weekNum = 1;
+  const MAX_WEEKS = 200;
+
+  while (cursor.length > 0 && weekNum <= MAX_WEEKS) {
+    const weekStart = addDays(start, dayOffset);
+    let weekHours = 0;
+    const subjectsThisWeek = new Set<string>();
+    let weekIsSimultaneous = false;
+
+    for (let d = 0; d < 7; d++) {
+      const date = addDays(weekStart, d);
+      const dayHours = hoursAvailableOnDate(date, rm.hoursPerDay, rm.daysPerWeek, rm.unavailablePeriods, rm.variableIntensityPeriods);
+      weekHours += dayHours;
+      if (dayHours <= 0) continue;
+
+      const slot = getActiveSimSlot(date, rm.simSlots);
+      if (slot && slot.mode === "multiple" && slot.subjectIds.length > 0) {
+        weekIsSimultaneous = true;
+        for (const sid of slot.subjectIds) {
+          if (remaining[sid] > 0) {
+            const alloc = Math.min(slot.hoursPerSubject[sid] ?? 0, remaining[sid]);
+            remaining[sid] -= alloc;
+            subjectsThisWeek.add(sid);
+          }
+        }
+      } else {
+        let hoursLeft = dayHours;
+        while (hoursLeft > 0 && cursor.length > 0) {
+          const sid = cursor[0];
+          if (!(sid in remaining) || remaining[sid] <= 0) { cursor.shift(); continue; }
+          subjectsThisWeek.add(sid);
+          const alloc = Math.min(hoursLeft, remaining[sid]);
+          remaining[sid] -= alloc;
+          hoursLeft -= alloc;
+          if (remaining[sid] <= 0.01) cursor.shift();
+        }
+      }
+    }
+
+    cursor = cursor.filter((id) => remaining[id] > 0.01);
+
+    const subjectNames = Array.from(subjectsThisWeek).map((id) => orderedSubjects.find((s) => s.id === id)?.name ?? id);
+    entries.push({
+      weekNumber: weekNum,
+      weekStartDate: format(weekStart, "MMM d"),
+      type: weekHours <= 0 ? "buffer" : "study",
+      subjectNames,
+      hoursAvailable: Math.round(weekHours * 10) / 10,
+      isSimultaneous: weekIsSimultaneous,
+    });
+
+    dayOffset += 7;
+    weekNum++;
+    const stillRemaining = Object.values(remaining).some((v) => v > 0.01);
+    if (!stillRemaining) break;
+  }
+
+  return entries;
+}
+
+function ScheduleTimelineV2({ rm, syllabus }: { rm: RoadmapV2; syllabus: SyllabusData }) {
+  const [filter, setFilter] = useState<WeekBlockType | "all">("all");
+  const timeline = buildWeeklyTimeline(rm, syllabus);
+  const filtered = filter === "all" ? timeline : timeline.filter((w) => w.type === filter);
+
+  const typeColor: Record<WeekBlockType, string> = {
+    study: GOLD,
+    assignment: "#7B6FD0",
+    revision: OLIVE,
+    buffer: MUTED,
+  };
+  const typeLabel: Record<WeekBlockType, string> = {
+    study: "Study",
+    assignment: "Assignment",
+    revision: "Revision",
+    buffer: "Buffer",
+  };
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+        <h3 style={{ fontSize: "1rem", fontWeight: 700, color: CHARCOAL, margin: 0 }}>📅 Week-by-Week Schedule</h3>
+        <div style={{ display: "flex", gap: "0.35rem" }}>
+          {(["all", "study", "assignment", "revision", "buffer"] as const).map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{
+                background: filter === f ? CHARCOAL : CREAM,
+                color: filter === f ? "#fff" : MUTED,
+                border: `1px solid ${filter === f ? CHARCOAL : BORDER}`,
+                borderRadius: 8, padding: "0.3rem 0.65rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", textTransform: "capitalize",
+              }}>
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+        {filtered.map((w) => (
+          <div key={w.weekNumber} style={{
+            background: CREAM, borderRadius: 12, padding: "0.85rem 1rem",
+            borderLeft: `4px solid ${typeColor[w.type]}`,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.4rem" }}>
+              <div>
+                <div style={{ fontWeight: 700, color: CHARCOAL, fontSize: "0.88rem" }}>
+                  Week {w.weekNumber} <span style={{ color: MUTED, fontWeight: 500 }}>· {w.weekStartDate}</span>
+                </div>
+                <div style={{ fontSize: "0.82rem", color: CHARCOAL, marginTop: "0.25rem" }}>
+                  {w.subjectNames.length > 0 ? w.subjectNames.join(w.isSimultaneous ? "  +  " : ", ") : "—"}
+                  {w.isSimultaneous && <span style={{ color: GOLD, fontWeight: 600, marginLeft: "0.4rem" }}>📚 simultaneous</span>}
+                </div>
+              </div>
+              <span style={{
+                background: `${typeColor[w.type]}1A`, color: typeColor[w.type], fontWeight: 700,
+                fontSize: "0.7rem", borderRadius: 20, padding: "0.25rem 0.65rem", whiteSpace: "nowrap",
+              }}>
+                {typeLabel[w.type]}
+              </span>
+            </div>
+            <div style={{ fontSize: "0.72rem", color: MUTED, marginTop: "0.4rem" }}>~{w.hoursAvailable} hrs available</div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p style={{ color: MUTED, fontSize: "0.85rem", textAlign: "center", padding: "1rem" }}>No weeks match this filter.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RoadmapV2Page() {
   const { user } = useAuth();
   const examType = (((user as any)?.exam_type as string | null) ?? "JAM") as
