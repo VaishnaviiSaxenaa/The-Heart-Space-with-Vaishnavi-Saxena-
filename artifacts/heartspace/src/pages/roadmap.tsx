@@ -2846,7 +2846,12 @@ function CalendarTabWrapper({
   effectiveUserId: string;
 }) {
   const inputs = loadScheduleInputs(effectiveUserId);
-  const rawSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const rawSubjectsBase = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
+  const defaultOrder = rawSubjectsBase.map((s) => s.id);
+  const customOrder = loadSubjectOrder(effectiveUserId, defaultOrder);
+  const rawSubjects = customOrder
+    .map((id) => rawSubjectsBase.find((s) => s.id === id))
+    .filter((s): s is typeof rawSubjectsBase[number] => !!s);
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
 
   const subjects = rawSubjects.map((s) => ({
