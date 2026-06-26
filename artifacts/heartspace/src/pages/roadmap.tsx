@@ -3770,7 +3770,7 @@ function LiveScheduleTab({
                   color: "#fff",
                 }}
               >
-                <Plus className="w-3 h-3" /> Add Unavailable Period
+                <Plus className="w-3 h-3" /> Add Simultaneous Study Period
               </button>
             </div>
             {simSlots.length === 0 ? (
