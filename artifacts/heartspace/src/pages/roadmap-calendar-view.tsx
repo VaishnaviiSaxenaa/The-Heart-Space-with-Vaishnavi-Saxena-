@@ -127,9 +127,10 @@ function autoGenerateCalendar(
   simSlots: SimSlotForCalendar[] = [],
   unavailablePeriods: PeriodBase[] = [],
   variablePeriods: VariablePeriod[] = [],
+  existingData: CalendarData = {},
   horizonDays: number = 365,
 ): CalendarData {
-  const data: CalendarData = {};
+  const data: CalendarData = { ...existingData };
   const remaining: Record<string, number> = { ...remainingHoursBySubject };
   const queue = subjects
     .map((s) => s.id)
@@ -156,6 +157,10 @@ function autoGenerateCalendar(
 
     const isUnavailable = unavailablePeriods.some((p) => isDateInPeriod(key, p));
     if (isUnavailable) continue;
+
+    if (data[key] && data[key].length > 0) continue; // preserve existing manual entries
+
+    if (data[key] && data[key].length > 0) continue; // preserve existing manual entries
 
     const activeVariable = variablePeriods.find((p) => isDateInPeriod(key, p));
     const effectiveHoursPerDay = activeVariable
@@ -281,19 +286,25 @@ export default function RoadmapCalendar({
   function regenerateBaseline() {
     if (
       !confirm(
-        "This will replace your current calendar with a fresh auto-generated plan based on remaining hours. Continue?",
+        "This will fill in any remaining unscheduled hours into open days. Your existing entries will NOT be changed. Continue?",
       )
     )
       return;
+    const trueRemaining: Record<string, number> = {};
+    subjects.forEach((s) => {
+      const consumed = getConsumedHoursForSubject(s.id);
+      trueRemaining[s.id] = Math.max(0, s.totalHours - consumed);
+    });
     const generated = autoGenerateCalendar(
       subjects,
-      remainingHoursBySubject,
+      trueRemaining,
       startDate,
       hoursPerDay,
       daysPerWeek,
       simSlots,
       unavailablePeriods,
       variablePeriods,
+      calendar,
     );
     persist(generated);
   }
