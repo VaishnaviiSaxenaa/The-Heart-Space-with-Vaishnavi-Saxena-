@@ -211,6 +211,7 @@ export default function RevisionTracker() {
     if (inputs.hoursPerDay) revisionHoursPerDay = inputs.hoursPerDay;
     if (inputs.daysPerWeek) revisionDaysPerWeek = inputs.daysPerWeek;
   } catch {}
+  const [activeTab, setActiveTab] = useState<"log" | "calendar">("log");
 
   const [logs, setLogs] = useState<RevisionLog[]>([]);
   const [methodResponses, setMethodResponses] = useState<string[]>([]);
@@ -353,9 +354,30 @@ export default function RevisionTracker() {
           </p>
         </div>
 
-        {/* Revision Calendar */}
-        {userId && (
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem", marginBottom: "1.5rem" }}>
+        {/* Tab Switcher */}
+        <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1.5rem" }}>
+          {(["log", "calendar"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                background: activeTab === tab ? DARK : `${BORDER}88`,
+                color: activeTab === tab ? CREAM : MUTED,
+                border: "none",
+                borderRadius: 12,
+                padding: "0.5rem 1.1rem",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                cursor: "pointer",
+              }}
+            >
+              {tab === "log" ? "📝 Revision Log" : "📅 Calendar"}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "calendar" && userId && (
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem" }}>
             <GenericCalendar
               namespace="revision"
               uid={userId}
@@ -368,6 +390,8 @@ export default function RevisionTracker() {
           </div>
         )}
 
+        {activeTab === "log" && (
+        <>
         {/* Stats */}
         <div
           style={{
@@ -888,6 +912,8 @@ export default function RevisionTracker() {
             </div>
           );
         })}
+      </>
+        )}
       </div>
     </div>
   );
