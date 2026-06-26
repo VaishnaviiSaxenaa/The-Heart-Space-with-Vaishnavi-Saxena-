@@ -181,8 +181,8 @@ interface GenericCalendarProps {
   uid: string;
   subjects: GenericSubjectDef[];
   startDate: string;
-  hoursPerDay: number;
-  daysPerWeek: number;
+  hoursPerDay: number; // initial default, overridable per-calendar below
+  daysPerWeek: number; // initial default, overridable per-calendar below
   unavailablePeriods?: PeriodBase[];
   title?: string;
 }
@@ -192,11 +192,32 @@ export default function GenericCalendar({
   uid,
   subjects,
   startDate,
-  hoursPerDay,
-  daysPerWeek,
+  hoursPerDay: defaultHoursPerDay,
+  daysPerWeek: defaultDaysPerWeek,
   unavailablePeriods = [],
   title = "Calendar",
 }: GenericCalendarProps) {
+  const paceKey = `hs_cal_pace_${namespace}_${uid}`;
+  const [hoursPerDay, setHoursPerDay] = useState<number>(() => {
+    try {
+      const r = localStorage.getItem(paceKey);
+      if (r) return JSON.parse(r).hoursPerDay ?? defaultHoursPerDay;
+    } catch {}
+    return defaultHoursPerDay;
+  });
+  const [daysPerWeek, setDaysPerWeek] = useState<number>(() => {
+    try {
+      const r = localStorage.getItem(paceKey);
+      if (r) return JSON.parse(r).daysPerWeek ?? defaultDaysPerWeek;
+    } catch {}
+    return defaultDaysPerWeek;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(paceKey, JSON.stringify({ hoursPerDay, daysPerWeek }));
+    } catch {}
+  }, [hoursPerDay, daysPerWeek, paceKey]);
+
   const [view, setView] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState(new Date());
   const [calendar, setCalendar] = useState<CalendarData>({});
@@ -463,6 +484,37 @@ export default function GenericCalendar({
           >
             ↺ Auto-fill
           </button>
+        </div>
+      </div>
+
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.9rem 1rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div>
+          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.3rem" }}>
+            Hours per day: <span style={{ color: GOLD }}>{hoursPerDay} hrs</span>
+          </label>
+          <input
+            type="range"
+            min={0.5}
+            max={12}
+            step={0.5}
+            value={hoursPerDay}
+            onChange={(e) => setHoursPerDay(parseFloat(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.3rem" }}>
+            Days per week: <span style={{ color: GOLD }}>{daysPerWeek} days</span>
+          </label>
+          <input
+            type="range"
+            min={1}
+            max={7}
+            step={1}
+            value={daysPerWeek}
+            onChange={(e) => setDaysPerWeek(parseInt(e.target.value))}
+            style={{ width: "100%" }}
+          />
         </div>
       </div>
 
