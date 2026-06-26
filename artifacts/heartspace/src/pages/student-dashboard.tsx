@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Calendar, LeafyGreen, Plus, Trash2 } from "lucide-react";
+import DashboardCalendar from "./dashboard-calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -592,6 +593,33 @@ export default function StudentDashboard() {
   const space = (user as any)?.space as string | null;
   const examType = (user as any)?.exam_type as string | null;
 
+  const ROADMAP_SUBJECTS_JAM_DASH = [
+    { id: "la", name: "Linear Algebra", totalHours: 60 },
+    { id: "ra", name: "Real Analysis", totalHours: 60 },
+    { id: "dc", name: "Functions of One Variable", totalHours: 50 },
+    { id: "gt", name: "Group Theory", totalHours: 50 },
+    { id: "ode", name: "ODE", totalHours: 40 },
+    { id: "mvc", name: "Functions of Two Variables", totalHours: 25 },
+    { id: "mi", name: "Multiple Integration", totalHours: 30 },
+  ];
+  const ROADMAP_SUBJECTS_NET_DASH = [
+    { id: "ra", name: "Real Analysis", totalHours: 60 },
+    { id: "la", name: "Linear Algebra", totalHours: 60 },
+    { id: "ca", name: "Complex Analysis", totalHours: 50 },
+    { id: "ma", name: "Modern Algebra (Group + Ring + Field)", totalHours: 90 },
+    { id: "tp", name: "Topology", totalHours: 40 },
+    { id: "fa", name: "Functional Analysis", totalHours: 40 },
+    { id: "ode", name: "ODE", totalHours: 40 },
+    { id: "pde", name: "PDE", totalHours: 40 },
+    { id: "na", name: "Numerical Analysis", totalHours: 30 },
+    { id: "ie", name: "Integral Equations", totalHours: 30 },
+    { id: "cv", name: "Calculus of Variations", totalHours: 30 },
+  ];
+  const dashRoadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET_DASH : ROADMAP_SUBJECTS_JAM_DASH;
+  const dashStudySubjects = dashRoadmapSubjects.map((s) => ({ id: s.id, name: s.name, totalHours: s.totalHours }));
+  const dashRevisionSubjects = dashRoadmapSubjects.map((s) => ({ id: s.id, name: s.name, totalHours: Math.round(s.totalHours * 0.4 * 10) / 10 }));
+  const dashPracticeSubjects = dashRoadmapSubjects.map((s) => ({ id: s.id, name: s.name, totalHours: Math.round(s.totalHours * 0.7 * 10) / 10 }));
+
   const SERVICE: Record<
     string,
     { name: string; emoji: string; color: string; sub: string }
@@ -718,6 +746,18 @@ export default function StudentDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* ── Combined Calendar ── */}
+      {user?.id && (
+        <Card className="p-6" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          <DashboardCalendar
+            uid={String(user.id)}
+            studySubjects={dashStudySubjects}
+            revisionSubjects={dashRevisionSubjects}
+            practiceSubjects={dashPracticeSubjects}
+          />
+        </Card>
+      )}
 
       {/* ── Today's Plan + Next Session ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
