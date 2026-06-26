@@ -2757,7 +2757,7 @@ function VariableWeeksManager({
                 color: "#fff",
               }}
             >
-              <Save className="w-3 h-3" /> Add Unavailable Period
+              <Save className="w-3 h-3" /> Add Variable Intensity Period
             </button>
             <button
               onClick={() => setShow(false)}
