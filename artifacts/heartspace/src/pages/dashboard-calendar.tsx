@@ -36,9 +36,9 @@ const TYPE_CONFIG: Record<
   SourceType,
   { label: string; color: string; emoji: string }
 > = {
-  study: { label: "Study", color: "#4A90D9", emoji: "📖" },
-  revision: { label: "Revision", color: "#5CB85C", emoji: "🔁" },
-  practice: { label: "Practice", color: "#E07B9A", emoji: "✏️" },
+  study: { label: "Study", color: "#2C4A73", emoji: "📖" },
+  revision: { label: "Revision", color: "#E07A28", emoji: "🔁" },
+  practice: { label: "Practice", color: "#E0B428", emoji: "✏️" },
 };
 
 /* roadmap.tsx uses namespace key "study" via hs_calendar_${uid} (legacy key from before
