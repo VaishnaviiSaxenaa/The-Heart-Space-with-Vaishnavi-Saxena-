@@ -33,6 +33,17 @@ import {
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
+/* 5-color system: blue=study, orange=revision, yellow=practice, purple=progress, green=completed */
+const STUDY_BLUE = "#2C4A73";
+const STUDY_BLUE_LIGHT = "#4A6B96";
+const REVISION_ORANGE = "#E07A28";
+const REVISION_ORANGE_LIGHT = "#F2A24E";
+const PRACTICE_YELLOW = "#E0B428";
+const PRACTICE_YELLOW_LIGHT = "#F2D060";
+const PROGRESS_PURPLE = "#6B568F";
+const PROGRESS_PURPLE_LIGHT = "#B8A8E0";
+const COMPLETED_GREEN = "#4A8F5C";
+const COMPLETED_GREEN_LIGHT = "#7CC08E";
 const CARD = "#FFFDF9";
 const SIDEBAR = "#F0E8D8";
 const SIDEBAR_HEADER = "#2D2A25";
@@ -281,8 +292,8 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                     style={
                       active
                         ? {
-                            background: `${GOLD}22`,
-                            borderLeft: `3px solid ${GOLD}`,
+                            background: `${PROGRESS_PURPLE}22`,
+                            borderLeft: `3px solid ${PROGRESS_PURPLE}`,
                             paddingLeft: "9px",
                             color: SIDEBAR_HEADER,
                             fontWeight: 600,
@@ -293,7 +304,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                   >
                     <Icon
                       className="w-4 h-4 flex-shrink-0"
-                      style={{ color: active ? GOLD : MUTED }}
+                      style={{ color: active ? PROGRESS_PURPLE : MUTED }}
                     />
                     <span className="text-sm font-medium">{label}</span>
                   </div>
