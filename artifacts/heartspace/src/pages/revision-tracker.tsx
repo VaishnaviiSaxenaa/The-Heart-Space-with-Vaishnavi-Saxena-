@@ -3,6 +3,7 @@ import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import { format, differenceInDays } from "date-fns";
 import { ChevronDown, ChevronUp, RotateCcw, Send } from "lucide-react";
+import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
 
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
@@ -12,6 +13,31 @@ const CARD = "#FFFDF9";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
 const OLIVE = "#6E8B6B";
+
+/* Roadmap subjects with hours, used ONLY for the Revision Calendar below.
+   These match roadmap.tsx exactly so revision hours = 40% of study hours. */
+const ROADMAP_SUBJECTS_JAM = [
+  { id: "la", name: "Linear Algebra", totalHours: 60 },
+  { id: "ra", name: "Real Analysis", totalHours: 60 },
+  { id: "dc", name: "Functions of One Variable", totalHours: 50 },
+  { id: "gt", name: "Group Theory", totalHours: 50 },
+  { id: "ode", name: "ODE", totalHours: 40 },
+  { id: "mvc", name: "Functions of Two Variables", totalHours: 25 },
+  { id: "mi", name: "Multiple Integration", totalHours: 30 },
+];
+const ROADMAP_SUBJECTS_NET = [
+  { id: "ra", name: "Real Analysis", totalHours: 60 },
+  { id: "la", name: "Linear Algebra", totalHours: 60 },
+  { id: "ca", name: "Complex Analysis", totalHours: 50 },
+  { id: "ma", name: "Modern Algebra (Group + Ring + Field)", totalHours: 90 },
+  { id: "tp", name: "Topology", totalHours: 40 },
+  { id: "fa", name: "Functional Analysis", totalHours: 40 },
+  { id: "ode", name: "ODE", totalHours: 40 },
+  { id: "pde", name: "PDE", totalHours: 40 },
+  { id: "na", name: "Numerical Analysis", totalHours: 30 },
+  { id: "ie", name: "Integral Equations", totalHours: 30 },
+  { id: "cv", name: "Calculus of Variations", totalHours: 30 },
+];
 
 // JAM subjects and topics (matches syllabus tracker)
 const JAM_SUBJECTS = [
@@ -168,6 +194,24 @@ export default function RevisionTracker() {
   const subjects =
     examType === "NET_GATE" ? [...JAM_SUBJECTS, ...NET_EXTRA] : JAM_SUBJECTS;
 
+  /* Revision calendar setup: 40% of each subject's study hours */
+  const roadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET : ROADMAP_SUBJECTS_JAM;
+  const revisionSubjects: GenericSubjectDef[] = roadmapSubjects.map((s) => ({
+    id: s.id,
+    name: s.name,
+    totalHours: Math.round(s.totalHours * 0.4 * 10) / 10,
+  }));
+  let revisionStartDate = format(new Date(), "yyyy-MM-dd");
+  let revisionHoursPerDay = 2;
+  let revisionDaysPerWeek = 5;
+  try {
+    const rm = JSON.parse(localStorage.getItem(`hs_roadmap_${userId}`) || "{}");
+    if (rm.startDate) revisionStartDate = rm.startDate;
+    const inputs = JSON.parse(localStorage.getItem(`hs_schedule_inputs_${userId}`) || "{}");
+    if (inputs.hoursPerDay) revisionHoursPerDay = inputs.hoursPerDay;
+    if (inputs.daysPerWeek) revisionDaysPerWeek = inputs.daysPerWeek;
+  } catch {}
+
   const [logs, setLogs] = useState<RevisionLog[]>([]);
   const [methodResponses, setMethodResponses] = useState<string[]>([]);
   const [newMethod, setNewMethod] = useState("");
@@ -308,6 +352,21 @@ export default function RevisionTracker() {
             Track your revisions and stay on schedule
           </p>
         </div>
+
+        {/* Revision Calendar */}
+        {userId && (
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem", marginBottom: "1.5rem" }}>
+            <GenericCalendar
+              namespace="revision"
+              uid={userId}
+              subjects={revisionSubjects}
+              startDate={revisionStartDate}
+              hoursPerDay={revisionHoursPerDay}
+              daysPerWeek={revisionDaysPerWeek}
+              title="📅 Revision Calendar (40% of study hours)"
+            />
+          </div>
+        )}
 
         {/* Stats */}
         <div
