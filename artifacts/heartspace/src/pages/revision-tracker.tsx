@@ -8,6 +8,7 @@ import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
+const PROGRESS_PURPLE = "#6B568F";
 const DARK = "#2D2A25";
 const CARD = "#FFFDF9";
 const MUTED = "#7A7267";
@@ -402,7 +403,7 @@ export default function RevisionTracker() {
           }}
         >
           {[
-            { label: "Topics Revised", value: revisedOnce, color: GOLD },
+            { label: "Topics Revised", value: revisedOnce, color: PROGRESS_PURPLE },
             { label: "Total Topics", value: totalTopics, color: CHARCOAL },
             {
               label: "Due for Revision",
@@ -461,7 +462,7 @@ export default function RevisionTracker() {
             <button
               onClick={() => setShowMethodInput((p) => !p)}
               style={{
-                background: GOLD,
+                background: PROGRESS_PURPLE,
                 color: "#fff",
                 border: "none",
                 borderRadius: 8,
@@ -544,7 +545,7 @@ export default function RevisionTracker() {
                     <span
                       style={{
                         fontSize: "0.7rem",
-                        color: GOLD,
+                        color: PROGRESS_PURPLE,
                         fontWeight: 600,
                         marginRight: 6,
                       }}
@@ -760,7 +761,7 @@ export default function RevisionTracker() {
                             {topicLogs.length > 0 ? (
                               <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
                                 <button onClick={() => setExpandedHistory(prev => { const n = new Set(prev); n.has(topicKey) ? n.delete(topicKey) : n.add(topicKey); return n; })}
-                                  style={{ background: "none", border: "none", padding: 0, fontSize: "0.75rem", color: GOLD, cursor: "pointer", fontWeight: 600, textDecoration: "underline" }}>
+                                  style={{ background: "none", border: "none", padding: 0, fontSize: "0.75rem", color: PROGRESS_PURPLE, cursor: "pointer", fontWeight: 600, textDecoration: "underline" }}>
                                   Revised {topicLogs.length}×
                                 </button>
                                 <span>· Last: {format(new Date(topicLogs[0].revised_at), "MMM d, yyyy")}</span>

@@ -21,6 +21,7 @@ const CREAM = "#F8F5F0";
 const CARD = "#FFFDF9";
 const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
+const PROGRESS_PURPLE = "#6B568F";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
 
@@ -36,7 +37,7 @@ const SUBJECT_COLORS = [
 ];
 function colorForSubject(id: string, allIds: string[]): string {
   const idx = allIds.indexOf(id);
-  return SUBJECT_COLORS[idx % SUBJECT_COLORS.length] ?? GOLD;
+  return SUBJECT_COLORS[idx % SUBJECT_COLORS.length] ?? PROGRESS_PURPLE;
 }
 
 /* ============================================================
@@ -478,8 +479,8 @@ export default function GenericCalendar({
             onClick={regenerateBaseline}
             style={{
               background: CARD,
-              color: GOLD,
-              border: `1px solid ${GOLD}`,
+              color: PROGRESS_PURPLE,
+              border: `1px solid ${PROGRESS_PURPLE}`,
               borderRadius: 8,
               padding: "0.35rem 0.7rem",
               cursor: "pointer",
@@ -495,7 +496,7 @@ export default function GenericCalendar({
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.9rem 1rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
         <div>
           <label style={{ fontSize: "0.78rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.3rem" }}>
-            Hours per day: <span style={{ color: GOLD }}>{hoursPerDay} hrs</span>
+            Hours per day: <span style={{ color: PROGRESS_PURPLE }}>{hoursPerDay} hrs</span>
           </label>
           <input
             type="range"
@@ -509,7 +510,7 @@ export default function GenericCalendar({
         </div>
         <div>
           <label style={{ fontSize: "0.78rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.3rem" }}>
-            Days per week: <span style={{ color: GOLD }}>{daysPerWeek} days</span>
+            Days per week: <span style={{ color: PROGRESS_PURPLE }}>{daysPerWeek} days</span>
           </label>
           <input
             type="range"
@@ -621,7 +622,7 @@ export default function GenericCalendar({
                   style={{
                     fontSize: "0.7rem",
                     fontWeight: today ? 800 : 600,
-                    color: today ? GOLD : CHARCOAL,
+                    color: today ? PROGRESS_PURPLE : CHARCOAL,
                   }}
                 >
                   {format(day, "d")}
