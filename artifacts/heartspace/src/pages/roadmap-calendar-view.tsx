@@ -52,11 +52,11 @@ export interface CalendarSubjectDef {
   totalHours: number;
 }
 
-interface DayEntry {
+export interface DayEntry {
   subjectId: string;
   hours: number;
 }
-type CalendarData = Record<string, DayEntry[]>; // key = "yyyy-MM-dd"
+export type CalendarData = Record<string, DayEntry[]>; // key = "yyyy-MM-dd"
 
 /* ============================================================
    STORAGE
@@ -64,7 +64,7 @@ type CalendarData = Record<string, DayEntry[]>; // key = "yyyy-MM-dd"
 function lsKey(uid: string) {
   return `hs_calendar_${uid}`;
 }
-function loadCalendar(uid: string): CalendarData {
+export function loadCalendar(uid: string): CalendarData {
   try {
     const r = localStorage.getItem(lsKey(uid));
     return r ? JSON.parse(r) : {};
@@ -298,20 +298,53 @@ export default function RoadmapCalendar({
     persist(generated);
   }
 
+  function getTotalHoursForSubject(subjectId: string): number {
+    const subj = subjects.find((s) => s.id === subjectId);
+    return subj?.totalHours ?? Infinity;
+  }
+
+  function getConsumedHoursForSubject(subjectId: string, excludeDayKey?: string, excludeIdx?: number): number {
+    let total = 0;
+    Object.entries(calendar).forEach(([dayKey, entries]) => {
+      entries.forEach((e, i) => {
+        if (e.subjectId !== subjectId) return;
+        if (dayKey === excludeDayKey && i === excludeIdx) return;
+        total += e.hours;
+      });
+    });
+    return total;
+  }
+
   function addEntryToDay(dayKey: string, subjectId: string, hours: number) {
+    const cap = getTotalHoursForSubject(subjectId);
+    const consumed = getConsumedHoursForSubject(subjectId);
+    const remaining = Math.max(0, cap - consumed);
+    if (remaining <= 0) {
+      alert(`This subject's ${cap} hour total is already fully scheduled. Remove some existing hours first.`);
+      return;
+    }
+    const allowedHours = Math.min(hours, remaining);
     const next = { ...calendar };
     const existing = next[dayKey] ?? [];
-    next[dayKey] = [...existing, { subjectId, hours }];
+    next[dayKey] = [...existing, { subjectId, hours: allowedHours }];
     persist(next);
   }
 
   function updateEntryHours(dayKey: string, idx: number, hours: number) {
     const next = { ...calendar };
     const entries = [...(next[dayKey] ?? [])];
+    const subjectId = entries[idx]?.subjectId;
     if (hours <= 0) {
       entries.splice(idx, 1);
     } else {
-      entries[idx] = { ...entries[idx], hours };
+      const cap = getTotalHoursForSubject(subjectId);
+      const consumedElsewhere = getConsumedHoursForSubject(subjectId, dayKey, idx);
+      const remaining = Math.max(0, cap - consumedElsewhere);
+      const allowedHours = Math.min(hours, remaining);
+      if (allowedHours < hours) {
+        alert(`Capped at ${allowedHours}h — this subject's total is ${cap} hours.`);
+      }
+      entries[idx] = { ...entries[idx], hours: allowedHours };
     }
     next[dayKey] = entries;
     if (entries.length === 0) delete next[dayKey];

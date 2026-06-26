@@ -25,7 +25,7 @@ import {
   Circle,
   PlayCircle,
 } from "lucide-react";
-import RoadmapCalendar from "./roadmap-calendar-view";
+import RoadmapCalendar, { loadCalendar } from "./roadmap-calendar-view";
 import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 import {
   loadSyllabusProgress,
@@ -784,6 +784,7 @@ function generateSmartSchedule(
     hoursPerSubject: {},
   },
   studyPeriods: StudyPeriod[] = [],
+  consumedHoursBySubject: Record<string, number> = {},
 ): SmartSchedule {
   const rawSubjects = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   /* Apply custom subject order */
@@ -852,7 +853,11 @@ function generateSmartSchedule(
 
   const subjectsWithAdjusted = allSubjects.map((s) => {
     const pct = syllabusPercs[s.syllabusId] ?? 0;
-    const remaining = Math.max(0, 1 - pct / 100);
+    const totalH = (s as any).totalHours ?? 0;
+    const consumedH = consumedHoursBySubject[s.id] ?? 0;
+    const remaining = totalH > 0
+      ? Math.max(0, 1 - consumedH / totalH)
+      : Math.max(0, 1 - pct / 100);
     const computedWeeksFromHours = (s as any).totalHours
       ? (s as any).totalHours / baseHoursPerWeek
       : s.studyWeeks;
@@ -2869,11 +2874,20 @@ function CalendarTabWrapper({
     totalHours: (s as any).totalHours ?? 0,
   }));
 
+  /* Calendar is the single source of truth for hours consumed per subject */
+  const savedCalendar = loadCalendar(effectiveUserId);
+  const consumedHoursBySubject: Record<string, number> = {};
+  Object.values(savedCalendar).forEach((entries) => {
+    entries.forEach((e) => {
+      consumedHoursBySubject[e.subjectId] = (consumedHoursBySubject[e.subjectId] ?? 0) + e.hours;
+    });
+  });
+
   const remainingHoursBySubject: Record<string, number> = {};
   rawSubjects.forEach((s) => {
-    const pct = syllabusPercs[s.syllabusId] ?? 0;
     const total = (s as any).totalHours ?? 0;
-    remainingHoursBySubject[s.id] = Math.max(0, total * (1 - pct / 100));
+    const consumed = consumedHoursBySubject[s.id] ?? 0;
+    remainingHoursBySubject[s.id] = Math.max(0, total - consumed);
   });
 
   const savedSimSlots = loadStudyPeriods(effectiveUserId);
@@ -2956,6 +2970,13 @@ function LiveScheduleTab({
   const practiceProgress = loadPracticeProgress(effectiveUserId);
   const rawSubjectsList = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const defaultOrder = rawSubjectsList.map((s) => s.id);
+  const liveCalendarData = loadCalendar(effectiveUserId);
+  const consumedHoursBySubject: Record<string, number> = {};
+  Object.values(liveCalendarData).forEach((entries) => {
+    entries.forEach((e) => {
+      consumedHoursBySubject[e.subjectId] = (consumedHoursBySubject[e.subjectId] ?? 0) + e.hours;
+    });
+  });
   const [subjectOrder, setSubjectOrderState] = useState<string[]>(() =>
     loadSubjectOrder(effectiveUserId, defaultOrder),
   );
@@ -2988,6 +3009,7 @@ function LiveScheduleTab({
         newOrder,
         parallelCfg,
         simSlots,
+        consumedHoursBySubject,
       ),
     );
   }
@@ -3012,6 +3034,7 @@ function LiveScheduleTab({
         subjectOrder,
         cfg,
         simSlots,
+        consumedHoursBySubject,
       ),
     );
   }
@@ -3041,6 +3064,7 @@ function LiveScheduleTab({
         subjectOrder,
         parallelCfg,
         periods,
+        consumedHoursBySubject,
       ),
     );
   }
@@ -3061,6 +3085,7 @@ function LiveScheduleTab({
     practiceProgress,
     subjectOrder,
     simSlots,
+    consumedHoursBySubject,
   );
 
   /* Save inputs + notify parent whenever anything changes */
@@ -3101,6 +3126,7 @@ function LiveScheduleTab({
         practiceProgress,
         subjectOrder,
         simSlots,
+        consumedHoursBySubject,
       ),
     );
   }
@@ -3124,6 +3150,7 @@ function LiveScheduleTab({
         practiceProgress,
         subjectOrder,
         simSlots,
+        consumedHoursBySubject,
       ),
     );
   }
@@ -3147,6 +3174,7 @@ function LiveScheduleTab({
         practiceProgress,
         subjectOrder,
         simSlots,
+        consumedHoursBySubject,
       ),
     );
   }
