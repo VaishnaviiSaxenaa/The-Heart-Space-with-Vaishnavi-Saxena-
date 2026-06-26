@@ -132,9 +132,10 @@ export function autoGenerateGeneric(
   hoursPerDay: number,
   daysPerWeek: number,
   unavailablePeriods: PeriodBase[] = [],
+  existingData: CalendarData = {},
   horizonDays: number = 365,
 ): CalendarData {
-  const data: CalendarData = {};
+  const data: CalendarData = { ...existingData };
   const remaining: Record<string, number> = { ...remainingHoursBySubject };
   let queue = subjects
     .map((s) => s.id)
@@ -149,6 +150,8 @@ export function autoGenerateGeneric(
     if (!isStudyDay(date, daysPerWeek)) continue;
     const key = format(date, "yyyy-MM-dd");
     if (unavailablePeriods.some((p) => isDateInPeriod(key, p))) continue;
+
+    if (data[key] && data[key].length > 0) continue; // preserve existing manual entries
 
     let hoursLeftToday = hoursPerDay;
     const entries: DayEntry[] = [];
@@ -260,13 +263,14 @@ export default function GenericCalendar({
   function regenerateBaseline() {
     if (
       !confirm(
-        "This will replace your current calendar with a fresh auto-generated plan. Continue?",
+        "This will fill in any remaining unscheduled hours into open days. Your existing entries will NOT be changed. Continue?",
       )
     )
       return;
     const remainingHoursBySubject: Record<string, number> = {};
     subjects.forEach((s) => {
-      remainingHoursBySubject[s.id] = s.totalHours;
+      const consumed = getConsumedHoursForSubject(s.id);
+      remainingHoursBySubject[s.id] = Math.max(0, s.totalHours - consumed);
     });
     const generated = autoGenerateGeneric(
       subjects,
@@ -275,6 +279,7 @@ export default function GenericCalendar({
       hoursPerDay,
       daysPerWeek,
       unavailablePeriods,
+      calendar,
     );
     persist(generated);
   }
