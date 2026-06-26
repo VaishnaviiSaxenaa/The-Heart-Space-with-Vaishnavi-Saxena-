@@ -16,6 +16,7 @@ import {
   History,
 } from "lucide-react";
 import { SYLLABUS } from "./syllabus";
+import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
 
 /* ─── Brand tokens ─────────────────────── */
 const CREAM = "#F8F5F0";
@@ -1140,6 +1141,48 @@ export default function QuestionPractice() {
   const examType = (user as any)?.exam_type as string | null;
   const isJAM = examType === "JAM";
 
+  const [activeMainTab, setActiveMainTab] = useState<"log" | "calendar">("log");
+
+  /* Question Practice calendar setup: 70% of each subject's study hours */
+  const ROADMAP_SUBJECTS_JAM_QP = [
+    { id: "la", name: "Linear Algebra", totalHours: 60 },
+    { id: "ra", name: "Real Analysis", totalHours: 60 },
+    { id: "dc", name: "Functions of One Variable", totalHours: 50 },
+    { id: "gt", name: "Group Theory", totalHours: 50 },
+    { id: "ode", name: "ODE", totalHours: 40 },
+    { id: "mvc", name: "Functions of Two Variables", totalHours: 25 },
+    { id: "mi", name: "Multiple Integration", totalHours: 30 },
+  ];
+  const ROADMAP_SUBJECTS_NET_QP = [
+    { id: "ra", name: "Real Analysis", totalHours: 60 },
+    { id: "la", name: "Linear Algebra", totalHours: 60 },
+    { id: "ca", name: "Complex Analysis", totalHours: 50 },
+    { id: "ma", name: "Modern Algebra (Group + Ring + Field)", totalHours: 90 },
+    { id: "tp", name: "Topology", totalHours: 40 },
+    { id: "fa", name: "Functional Analysis", totalHours: 40 },
+    { id: "ode", name: "ODE", totalHours: 40 },
+    { id: "pde", name: "PDE", totalHours: 40 },
+    { id: "na", name: "Numerical Analysis", totalHours: 30 },
+    { id: "ie", name: "Integral Equations", totalHours: 30 },
+    { id: "cv", name: "Calculus of Variations", totalHours: 30 },
+  ];
+  const qpRoadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET_QP : ROADMAP_SUBJECTS_JAM_QP;
+  const practiceSubjects: GenericSubjectDef[] = qpRoadmapSubjects.map((s) => ({
+    id: s.id,
+    name: s.name,
+    totalHours: Math.round(s.totalHours * 0.7 * 10) / 10,
+  }));
+  let practiceStartDate = format(new Date(), "yyyy-MM-dd");
+  let practiceHoursPerDay = 2;
+  let practiceDaysPerWeek = 5;
+  try {
+    const rm = JSON.parse(localStorage.getItem(`hs_roadmap_${effectiveUserId}`) || "{}");
+    if (rm.startDate) practiceStartDate = rm.startDate;
+    const inputs = JSON.parse(localStorage.getItem(`hs_schedule_inputs_${effectiveUserId}`) || "{}");
+    if (inputs.hoursPerDay) practiceHoursPerDay = inputs.hoursPerDay;
+    if (inputs.daysPerWeek) practiceDaysPerWeek = inputs.daysPerWeek;
+  } catch {}
+
   const [progress, setProgress] = useState<PracticeProgress>(() =>
     loadProgress(effectiveUserId),
   );
@@ -1256,6 +1299,40 @@ export default function QuestionPractice() {
         </div>
       </div>
 
+      {/* Tab Switcher */}
+      <div className="flex gap-2">
+        {(["log", "calendar"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveMainTab(tab)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={
+              activeMainTab === tab
+                ? { background: CHARCOAL, color: CREAM }
+                : { background: `${BORDER}88`, color: MUTED }
+            }
+          >
+            {tab === "log" ? "📝 Practice Log" : "📅 Calendar"}
+          </button>
+        ))}
+      </div>
+
+      {activeMainTab === "calendar" && effectiveUserId && (
+        <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          <GenericCalendar
+            namespace="practice"
+            uid={effectiveUserId}
+            subjects={practiceSubjects}
+            startDate={practiceStartDate}
+            hoursPerDay={practiceHoursPerDay}
+            daysPerWeek={practiceDaysPerWeek}
+            title="📅 Question Practice Calendar (70% of study hours)"
+          />
+        </div>
+      )}
+
+      {activeMainTab === "log" && (
+      <>
       {/* Legend */}
       <div
         className="flex flex-wrap gap-4 px-4 py-3 rounded-2xl"
@@ -1379,6 +1456,8 @@ export default function QuestionPractice() {
             Subject / + Topic to log custom attempts.
           </p>
         </div>
+      )}
+      </>
       )}
     </div>
   );
