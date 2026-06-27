@@ -45,8 +45,8 @@ const PROGRESS_PURPLE_LIGHT = "#B8A8E0";
 const COMPLETED_GREEN = "#4A8F5C";
 const COMPLETED_GREEN_LIGHT = "#7CC08E";
 const CARD = "#FFFDF9";
-const SIDEBAR = "#F0E8D8";
-const SIDEBAR_HEADER = "#2D2A25";
+const SIDEBAR = "#3D5E8C"; // blue-to-purple gradient top color
+const SIDEBAR_HEADER = "#FFFFFF";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
 
@@ -171,7 +171,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
     <div
       className="flex flex-col h-full overflow-y-auto"
       style={{
-        background: `linear-gradient(180deg, ${SIDEBAR} 0%, #E8DFD0 100%)`,
+        background: `linear-gradient(180deg, ${SIDEBAR} 0%, #6B5B9C 100%)`,
         borderRight: `1px solid ${BORDER}`,
       }}
     >
@@ -292,19 +292,19 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                     style={
                       active
                         ? {
-                            background: `${PROGRESS_PURPLE}22`,
-                            borderLeft: `3px solid ${PROGRESS_PURPLE}`,
+                            background: "rgba(255,255,255,0.22)",
+                            borderLeft: "3px solid #E0B428",
                             paddingLeft: "9px",
                             color: SIDEBAR_HEADER,
                             fontWeight: 600,
                           }
-                        : { color: CHARCOAL }
+                        : { color: "rgba(255,255,255,0.85)" }
                     }
                     onClick={onClose}
                   >
                     <Icon
                       className="w-4 h-4 flex-shrink-0"
-                      style={{ color: active ? PROGRESS_PURPLE : MUTED }}
+                      style={{ color: active ? "#FFFFFF" : "rgba(255,255,255,0.7)" }}
                     />
                     <span className="text-sm font-medium">{label}</span>
                   </div>
