@@ -52,6 +52,7 @@ export interface GenericSubjectDef {
 export interface DayEntry {
   subjectId: string;
   hours: number;
+  source?: "auto" | "manual";
 }
 export type CalendarData = Record<string, DayEntry[]>;
 
@@ -164,7 +165,7 @@ export function autoGenerateGeneric(
         continue;
       }
       const alloc = Math.min(hoursLeftToday, avail);
-      entries.push({ subjectId: sid, hours: Math.round(alloc * 10) / 10 });
+      entries.push({ subjectId: sid, hours: Math.round(alloc * 10) / 10, source: "auto" });
       remaining[sid] -= alloc;
       hoursLeftToday -= alloc;
       if (remaining[sid] <= 0.01) qIdx++;
@@ -242,6 +243,42 @@ export default function GenericCalendar({
     }
     setSelectedDays(pendingDays);
     setDayPickError("");
+
+    /* From today onward: wipe auto-filled entries (keep manual ones and all past days),
+       then regenerate fresh using the new selected days */
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const baseData: CalendarData = {};
+    Object.entries(calendar).forEach(([dayKey, entries]) => {
+      if (dayKey < todayKey) {
+        baseData[dayKey] = entries; // past days untouched
+        return;
+      }
+      const manualOnly = entries.filter((e) => e.source === "manual");
+      if (manualOnly.length > 0) baseData[dayKey] = manualOnly;
+    });
+
+    const consumedBySubject: Record<string, number> = {};
+    Object.values(baseData).forEach((entries) => {
+      entries.forEach((e) => {
+        consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours;
+      });
+    });
+    const remainingHoursBySubject: Record<string, number> = {};
+    subjects.forEach((s) => {
+      const consumed = consumedBySubject[s.id] ?? 0;
+      remainingHoursBySubject[s.id] = Math.max(0, s.totalHours - consumed);
+    });
+
+    const generated = autoGenerateGeneric(
+      subjects,
+      remainingHoursBySubject,
+      startDate,
+      hoursPerDay,
+      pendingDays,
+      unavailablePeriods,
+      baseData,
+    );
+    persist(generated);
   }
 
   useEffect(() => {
@@ -346,7 +383,7 @@ export default function GenericCalendar({
     const allowedHours = Math.min(hours, remaining);
     const next = { ...calendar };
     const existing = next[dayKey] ?? [];
-    next[dayKey] = [...existing, { subjectId, hours: allowedHours }];
+    next[dayKey] = [...existing, { subjectId, hours: allowedHours, source: "manual" }];
     persist(next);
   }
 
@@ -370,7 +407,7 @@ export default function GenericCalendar({
           `Capped at ${Math.round(allowedHours * 10) / 10}h \u2014 total is ${Math.round(cap * 10) / 10} hours.`,
         );
       }
-      entries[idx] = { ...entries[idx], hours: allowedHours };
+      entries[idx] = { ...entries[idx], hours: allowedHours, source: "manual" };
     }
     next[dayKey] = entries;
     if (entries.length === 0) delete next[dayKey];
