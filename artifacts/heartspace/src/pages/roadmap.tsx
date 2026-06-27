@@ -5396,7 +5396,7 @@ function RoadmapView({
           examType={rm.examType}
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
-          effectiveUserId={effectiveUserId}
+          effectiveUserId={effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })()}
           onSave={saveSchedule}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
