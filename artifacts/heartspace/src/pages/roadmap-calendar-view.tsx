@@ -22,6 +22,7 @@ const CREAM = "#F8F5F0";
 const CARD = "#FFFDF9";
 const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
+const PROGRESS_PURPLE = "#6B568F";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
 const OLIVE = "#6E8B6B";
@@ -39,7 +40,7 @@ const SUBJECT_COLORS = [
 ];
 function colorForSubject(id: string, allIds: string[]): string {
   const idx = allIds.indexOf(id);
-  return SUBJECT_COLORS[idx % SUBJECT_COLORS.length] ?? GOLD;
+  return SUBJECT_COLORS[idx % SUBJECT_COLORS.length] ?? PROGRESS_PURPLE;
 }
 
 /* ============================================================
@@ -519,8 +520,8 @@ export default function RoadmapCalendar({
             onClick={regenerateBaseline}
             style={{
               background: CARD,
-              color: GOLD,
-              border: `1px solid ${GOLD}`,
+              color: PROGRESS_PURPLE,
+              border: `1px solid ${PROGRESS_PURPLE}`,
               borderRadius: 8,
               padding: "0.4rem 0.9rem",
               cursor: "pointer",
@@ -658,7 +659,7 @@ export default function RoadmapCalendar({
                   style={{
                     fontSize: "0.75rem",
                     fontWeight: today ? 800 : 600,
-                    color: today ? GOLD : CHARCOAL,
+                    color: today ? PROGRESS_PURPLE : CHARCOAL,
                   }}
                 >
                   {format(day, "d")}
