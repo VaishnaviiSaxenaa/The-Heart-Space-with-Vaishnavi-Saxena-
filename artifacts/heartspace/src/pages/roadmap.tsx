@@ -37,11 +37,12 @@ import {
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
+const PROGRESS_PURPLE = "#6B568F";
 const DARK = "#2D2A25";
 const CARD = "#FFFDF9";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
-const OLIVE = "#6E8B6B";
+const OLIVE = "#4A8F5C"; // now = COMPLETED_GREEN
 const ROSE = "#D4A5A5";
 
 /* ─── Types ────────────────────────────── */
@@ -146,10 +147,10 @@ const SPEED_CFG: Record<
   { emoji: string; label: string; color: string }
 > = {
   first_slow: { emoji: "🐢", label: "Slow (1st)", color: "#C0392B" },
-  first_normal: { emoji: "🚶", label: "Normal (1st)", color: GOLD },
+  first_normal: { emoji: "🚶", label: "Normal (1st)", color: PROGRESS_PURPLE },
   first_fast: { emoji: "⚡", label: "Fast (1st)", color: OLIVE },
   second_slow: { emoji: "🐢", label: "Slow (2nd)", color: "#C0392B" },
-  second_normal: { emoji: "🚶", label: "Normal (2nd)", color: GOLD },
+  second_normal: { emoji: "🚶", label: "Normal (2nd)", color: PROGRESS_PURPLE },
   second_fast: { emoji: "⚡", label: "Fast (2nd)", color: OLIVE },
 };
 
@@ -1207,7 +1208,7 @@ function generateSmartSchedule(
 
 /* ─── Week type config ─────────────────── */
 const WEEK_TYPE_CFG = {
-  study: { label: "Study", color: DARK, bg: `${GOLD}15`, icon: BookOpen },
+  study: { label: "Study", color: DARK, bg: `${PROGRESS_PURPLE}15`, icon: BookOpen },
   assignment: {
     label: "Assignment",
     color: "#7A5A10",
@@ -1278,7 +1279,7 @@ const STATUS_CFG = {
 
 const PHASE_STATUS = {
   not_started: { label: "—", color: MUTED },
-  in_progress: { label: "▶", color: GOLD },
+  in_progress: { label: "▶", color: PROGRESS_PURPLE },
   done: { label: "✓", color: OLIVE },
 };
 
@@ -1382,7 +1383,7 @@ function TickButton({
       title={allDone ? "Unmark all" : "Mark all as done"}
       className={`flex-shrink-0 ${dim} rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110`}
       style={{
-        borderColor: allDone ? OLIVE : anyDone ? GOLD : BORDER,
+        borderColor: allDone ? OLIVE : anyDone ? PROGRESS_PURPLE : BORDER,
         background: allDone ? OLIVE : "transparent",
         boxShadow: allDone ? `0 0 0 3px ${OLIVE}22` : "none",
       }}
@@ -1398,7 +1399,7 @@ function TickButton({
           />
         </svg>
       ) : anyDone ? (
-        <div className="w-2 h-2 rounded-full" style={{ background: GOLD }} />
+        <div className="w-2 h-2 rounded-full" style={{ background: PROGRESS_PURPLE }} />
       ) : null}
     </button>
   );
@@ -1521,7 +1522,7 @@ function MyProgressTab({
           {
             label: "In Progress",
             value: inProgSubs,
-            color: GOLD,
+            color: PROGRESS_PURPLE,
             sub: "subtopics",
           },
           {
@@ -1573,7 +1574,7 @@ function MyProgressTab({
             className="h-full rounded-full transition-all duration-700"
             style={{
               width: `${overallPct}%`,
-              background: `linear-gradient(90deg, ${OLIVE} 0%, ${GOLD} 100%)`,
+              background: `linear-gradient(90deg, ${OLIVE} 0%, ${PROGRESS_PURPLE} 100%)`,
             }}
           />
         </div>
@@ -1666,7 +1667,7 @@ function MyProgressTab({
                 {/* Subject header */}
                 <div
                   className="flex items-center gap-3 px-4"
-                  style={{ background: isOpen ? `${GOLD}08` : CARD }}
+                  style={{ background: isOpen ? `${PROGRESS_PURPLE}08` : CARD }}
                 >
                   <TickButton
                     allDone={allSubtopics.every(
@@ -1718,7 +1719,7 @@ function MyProgressTab({
                             className="h-full rounded-full"
                             style={{
                               width: `${pct}%`,
-                              background: pct === 100 ? OLIVE : GOLD,
+                              background: pct === 100 ? OLIVE : PROGRESS_PURPLE,
                             }}
                           />
                         </div>
@@ -1774,7 +1775,7 @@ function MyProgressTab({
                           <div
                             className="flex items-center gap-2 px-4"
                             style={{
-                              background: isTopicOpen ? `${GOLD}06` : CREAM,
+                              background: isTopicOpen ? `${PROGRESS_PURPLE}06` : CREAM,
                             }}
                           >
                             {/* Topic tick button */}
@@ -1852,13 +1853,13 @@ function MyProgressTab({
                                   status === "done"
                                     ? OLIVE
                                     : status === "in_progress"
-                                      ? GOLD
+                                      ? PROGRESS_PURPLE
                                       : MUTED;
                                 const bg =
                                   status === "done"
                                     ? `${OLIVE}12`
                                     : status === "in_progress"
-                                      ? `${GOLD}12`
+                                      ? `${PROGRESS_PURPLE}12`
                                       : `${BORDER}55`;
 
                                 return (
@@ -1908,7 +1909,7 @@ function MyProgressTab({
                                       {status === "in_progress" && (
                                         <p
                                           className="text-[10px] mt-0.5"
-                                          style={{ color: GOLD }}
+                                          style={{ color: PROGRESS_PURPLE }}
                                         >
                                           In Progress
                                         </p>
@@ -1950,7 +1951,7 @@ function MyProgressTab({
         >
           <BarChart2
             className="w-10 h-10 mx-auto mb-3 opacity-30"
-            style={{ color: GOLD }}
+            style={{ color: PROGRESS_PURPLE }}
           />
           <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
             No topics completed yet
@@ -1986,10 +1987,10 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
   return (
     <div
       className="rounded-2xl p-5 space-y-4"
-      style={{ background: `${GOLD}08`, border: `1.5px solid ${GOLD}44` }}
+      style={{ background: `${PROGRESS_PURPLE}08`, border: `1.5px solid ${PROGRESS_PURPLE}44` }}
     >
       <div className="flex items-center gap-2">
-        <Target className="w-4 h-4" style={{ color: GOLD }} />
+        <Target className="w-4 h-4" style={{ color: PROGRESS_PURPLE }} />
         <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
           What You Can Complete
         </h3>
@@ -2110,7 +2111,7 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
       <button
         onClick={() => setShowBreakdown(!showBreakdown)}
         className="flex items-center gap-2 text-xs font-semibold"
-        style={{ color: GOLD }}
+        style={{ color: PROGRESS_PURPLE }}
       >
         {showBreakdown ? (
           <ChevronDown className="w-3.5 h-3.5" />
@@ -2158,7 +2159,7 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
                   {sf.syllabusPercent > 0 && sf.syllabusPercent < 100 && (
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                      style={{ background: `${GOLD}22`, color: DARK }}
+                      style={{ background: `${PROGRESS_PURPLE}22`, color: DARK }}
                     >
                       {sf.syllabusPercent}% done in syllabus
                     </span>
@@ -2268,7 +2269,7 @@ function VariableWeeksPanel({
   return (
     <div
       className="rounded-2xl p-4 space-y-2"
-      style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}33` }}
+      style={{ background: `${PROGRESS_PURPLE}08`, border: `1px solid ${PROGRESS_PURPLE}33` }}
     >
       <p className="text-xs font-semibold" style={{ color: CHARCOAL }}>
         Special Weeks in Schedule
@@ -2459,7 +2460,7 @@ function UnavailablePeriodsManager({
               onClick={add}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
               style={{
-                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
                 color: "#fff",
               }}
             >
@@ -2576,7 +2577,7 @@ function VariableWeeksManager({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4" style={{ color: GOLD }} />
+          <Zap className="w-4 h-4" style={{ color: PROGRESS_PURPLE }} />
           <h3 className="font-semibold text-sm" style={{ color: CHARCOAL }}>
             Variable Intensity Periods
           </h3>
@@ -2585,7 +2586,7 @@ function VariableWeeksManager({
           <button
             onClick={() => setShow(true)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-            style={{ background: `${GOLD}22`, color: DARK }}
+            style={{ background: `${PROGRESS_PURPLE}22`, color: DARK }}
           >
             <Plus className="w-3 h-3" /> Add
           </button>
@@ -2698,7 +2699,7 @@ function VariableWeeksManager({
                 style={{ color: MUTED }}
               >
                 Multiplier:{" "}
-                <span style={{ color: GOLD }}>{multiplier}× normal hours</span>
+                <span style={{ color: PROGRESS_PURPLE }}>{multiplier}× normal hours</span>
                 <span className="ml-2 text-[10px]" style={{ color: MUTED }}>
                   (0.5× = half, 1× = same, 2× = double)
                 </span>
@@ -2727,7 +2728,7 @@ function VariableWeeksManager({
                 style={{ color: MUTED }}
               >
                 Custom hours per day:{" "}
-                <span style={{ color: GOLD }}>{customHours} hrs/day</span>
+                <span style={{ color: PROGRESS_PURPLE }}>{customHours} hrs/day</span>
               </label>
               <input
                 type="range"
@@ -2753,7 +2754,7 @@ function VariableWeeksManager({
               onClick={add}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
               style={{
-                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
                 color: "#fff",
               }}
             >
@@ -2796,7 +2797,7 @@ function VariableWeeksManager({
             <div
               key={vw.id}
               className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-              style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}33` }}
+              style={{ background: `${PROGRESS_PURPLE}10`, border: `1px solid ${PROGRESS_PURPLE}33` }}
             >
               <div>
                 <span
@@ -3203,9 +3204,9 @@ function LiveScheduleTab({
         <button
           onClick={() => setShowSpeedPanel(!showSpeedPanel)}
           className="w-full flex items-center gap-3 px-5 py-4 text-left"
-          style={{ background: showSpeedPanel ? `${GOLD}08` : CARD }}
+          style={{ background: showSpeedPanel ? `${PROGRESS_PURPLE}08` : CARD }}
         >
-          <Brain className="w-4 h-4" style={{ color: GOLD }} />
+          <Brain className="w-4 h-4" style={{ color: PROGRESS_PURPLE }} />
           <div className="flex-1">
             <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>
               Topic Learning Speed
@@ -3286,7 +3287,7 @@ function LiveScheduleTab({
                       <span
                         key={opt.k}
                         className="text-[10px] px-2 py-1 rounded-lg font-semibold"
-                        style={{ background: `${GOLD}22`, color: DARK }}
+                        style={{ background: `${PROGRESS_PURPLE}22`, color: DARK }}
                       >
                         {opt.e} {opt.l}
                       </span>
@@ -3374,9 +3375,9 @@ function LiveScheduleTab({
         <button
           onClick={() => setShowOrderPanel(!showOrderPanel)}
           className="w-full flex items-center gap-3 px-5 py-4 text-left"
-          style={{ background: showOrderPanel ? `${GOLD}08` : CARD }}
+          style={{ background: showOrderPanel ? `${PROGRESS_PURPLE}08` : CARD }}
         >
-          <Target className="w-4 h-4" style={{ color: GOLD }} />
+          <Target className="w-4 h-4" style={{ color: PROGRESS_PURPLE }} />
           <div className="flex-1">
             <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>
               Subject Study Order
@@ -3471,9 +3472,9 @@ function LiveScheduleTab({
         <button
           onClick={() => setShowSimPanel(!showSimPanel)}
           className="w-full flex items-center gap-3 px-5 py-4 text-left"
-          style={{ background: showSimPanel ? `${GOLD}08` : CARD }}
+          style={{ background: showSimPanel ? `${PROGRESS_PURPLE}08` : CARD }}
         >
-          <BookOpen className="w-4 h-4" style={{ color: GOLD }} />
+          <BookOpen className="w-4 h-4" style={{ color: PROGRESS_PURPLE }} />
           <div className="flex-1">
             <p className="font-semibold text-sm" style={{ color: CHARCOAL }}>
               Simultaneous Studies
@@ -3618,8 +3619,8 @@ function LiveScheduleTab({
                       style={
                         simForm.mode === opt.key
                           ? {
-                              background: `${GOLD}22`,
-                              border: `2px solid ${GOLD}`,
+                              background: `${PROGRESS_PURPLE}22`,
+                              border: `2px solid ${PROGRESS_PURPLE}`,
                               color: DARK,
                             }
                           : {
@@ -3766,7 +3767,7 @@ function LiveScheduleTab({
                 }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
                 style={{
-                  background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                  background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
                   color: "#fff",
                 }}
               >
@@ -3785,8 +3786,8 @@ function LiveScheduleTab({
                     key={p.id}
                     className="rounded-xl px-4 py-3"
                     style={{
-                      background: `${GOLD}10`,
-                      border: `1px solid ${GOLD}33`,
+                      background: `${PROGRESS_PURPLE}10`,
+                      border: `1px solid ${PROGRESS_PURPLE}33`,
                     }}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -3861,7 +3862,7 @@ function LiveScheduleTab({
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
       >
         <div className="flex items-center gap-2 flex-wrap">
-          <Calendar className="w-5 h-5" style={{ color: GOLD }} />
+          <Calendar className="w-5 h-5" style={{ color: PROGRESS_PURPLE }} />
           <h3
             className="font-serif text-lg font-semibold"
             style={{ color: CHARCOAL }}
@@ -3899,7 +3900,7 @@ function LiveScheduleTab({
               style={{ color: CHARCOAL }}
             >
               Study hours per day:{" "}
-              <span style={{ color: GOLD }}>{hoursPerDay} hrs</span>
+              <span style={{ color: PROGRESS_PURPLE }}>{hoursPerDay} hrs</span>
             </label>
             <input
               type="range"
@@ -3926,7 +3927,7 @@ function LiveScheduleTab({
               style={{ color: CHARCOAL }}
             >
               Study days per week:{" "}
-              <span style={{ color: GOLD }}>{daysPerWeek} days</span>
+              <span style={{ color: PROGRESS_PURPLE }}>{daysPerWeek} days</span>
             </label>
             <input
               type="range"
@@ -3953,7 +3954,7 @@ function LiveScheduleTab({
               style={{ color: CHARCOAL }}
             >
               Target completion:{" "}
-              <span style={{ color: GOLD }}>{targetMonths} months</span>
+              <span style={{ color: PROGRESS_PURPLE }}>{targetMonths} months</span>
             </label>
             <input
               type="range"
@@ -3980,7 +3981,7 @@ function LiveScheduleTab({
               style={{ color: CHARCOAL }}
             >
               Revision intensity:{" "}
-              <span style={{ color: GOLD }}>
+              <span style={{ color: PROGRESS_PURPLE }}>
                 {revisionPercent}% of study time
               </span>
             </label>
@@ -4105,7 +4106,7 @@ function LiveScheduleTab({
                 setExpanded((p) => ({ ...p, [subject]: !p[subject] }))
               }
               className="w-full flex items-center gap-3 px-5 py-4 text-left"
-              style={{ background: isExpanded ? `${GOLD}08` : CARD }}
+              style={{ background: isExpanded ? `${PROGRESS_PURPLE}08` : CARD }}
             >
               <div className="flex-1">
                 <div className="flex items-center gap-2">
@@ -4117,7 +4118,7 @@ function LiveScheduleTab({
                   </span>
                   <span
                     className="text-xs px-2 py-0.5 rounded-full"
-                    style={{ background: `${GOLD}22`, color: DARK }}
+                    style={{ background: `${PROGRESS_PURPLE}22`, color: DARK }}
                   >
                     {allWeeks.length} week(s){subjTotalHours ? ` · ${subjTotalHours} hrs` : ""}
                   </span>
@@ -4282,9 +4283,9 @@ function RoadmapSelector({
                 }}
                 className="flex items-start gap-3 p-4 rounded-xl text-left transition-all duration-150 hover:scale-[1.01]"
                 style={{
-                  background: isSelected ? `${GOLD}15` : CREAM,
-                  border: `2px solid ${isSelected ? GOLD : BORDER}`,
-                  boxShadow: isSelected ? `0 4px 16px ${GOLD}30` : "none",
+                  background: isSelected ? `${PROGRESS_PURPLE}15` : CREAM,
+                  border: `2px solid ${isSelected ? PROGRESS_PURPLE : BORDER}`,
+                  boxShadow: isSelected ? `0 4px 16px ${PROGRESS_PURPLE}30` : "none",
                 }}
               >
                 <span className="text-2xl flex-shrink-0">{cfg.emoji}</span>
@@ -4314,7 +4315,7 @@ function RoadmapSelector({
                 style={{ color: CHARCOAL }}
               >
                 Total preparation time:{" "}
-                <span style={{ color: GOLD }}>{months} months</span>
+                <span style={{ color: PROGRESS_PURPLE }}>{months} months</span>
               </label>
               <div className="flex items-center gap-4">
                 <input
@@ -4328,8 +4329,8 @@ function RoadmapSelector({
                 <div
                   className="px-4 py-2 rounded-xl flex items-center gap-1 min-w-[80px] justify-center"
                   style={{
-                    background: `${GOLD}22`,
-                    border: `1px solid ${GOLD}44`,
+                    background: `${PROGRESS_PURPLE}22`,
+                    border: `1px solid ${PROGRESS_PURPLE}44`,
                   }}
                 >
                   <span
@@ -4348,7 +4349,7 @@ function RoadmapSelector({
               onClick={() => onSelect(selected, months)}
               className="w-full h-12 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
               style={{
-                background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
                 color: "#fff",
                 boxShadow: "0 4px 16px rgba(201,169,110,.35)",
               }}
@@ -4547,7 +4548,7 @@ function RoadmapView({
                 {
                   label: "Weekly Target",
                   value: `${calc.weeklyTargetPercent}% / wk`,
-                  color: GOLD,
+                  color: PROGRESS_PURPLE,
                 },
                 {
                   label: "Paused",
@@ -4609,7 +4610,7 @@ function RoadmapView({
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" style={{ color: GOLD }} />
+                <Calendar className="w-4 h-4" style={{ color: PROGRESS_PURPLE }} />
                 <h3
                   className="font-semibold text-sm"
                   style={{ color: CHARCOAL }}
@@ -4624,7 +4625,7 @@ function RoadmapView({
                     setEditMonths(true);
                   }}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                  style={{ background: `${GOLD}22`, color: DARK }}
+                  style={{ background: `${PROGRESS_PURPLE}22`, color: DARK }}
                 >
                   <Edit3 className="w-3 h-3" /> Edit
                 </button>
@@ -4644,8 +4645,8 @@ function RoadmapView({
                   <div
                     className="px-4 py-2 rounded-xl flex items-center gap-1"
                     style={{
-                      background: `${GOLD}22`,
-                      border: `1px solid ${GOLD}44`,
+                      background: `${PROGRESS_PURPLE}22`,
+                      border: `1px solid ${PROGRESS_PURPLE}44`,
                     }}
                   >
                     <span
@@ -4664,7 +4665,7 @@ function RoadmapView({
                     onClick={applyNewMonths}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
                     style={{
-                      background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                      background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
                       color: "#fff",
                     }}
                   >
@@ -4814,7 +4815,7 @@ function RoadmapView({
                     onClick={addUnavailPeriod}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
                     style={{
-                      background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                      background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
                       color: "#fff",
                     }}
                   >
@@ -4885,7 +4886,7 @@ function RoadmapView({
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4" style={{ color: GOLD }} />
+                <Zap className="w-4 h-4" style={{ color: PROGRESS_PURPLE }} />
                 <h3
                   className="font-semibold text-sm"
                   style={{ color: CHARCOAL }}
@@ -4897,7 +4898,7 @@ function RoadmapView({
                 <button
                   onClick={() => setShowVarWeek(true)}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                  style={{ background: `${GOLD}22`, color: DARK }}
+                  style={{ background: `${PROGRESS_PURPLE}22`, color: DARK }}
                 >
                   <Plus className="w-3 h-3" /> Add
                 </button>
@@ -4997,7 +4998,7 @@ function RoadmapView({
                       style={{ color: MUTED }}
                     >
                       Multiplier:{" "}
-                      <span style={{ color: GOLD }}>
+                      <span style={{ color: PROGRESS_PURPLE }}>
                         {varWeekForm.multiplier}x normal hours
                       </span>
                     </label>
@@ -5030,7 +5031,7 @@ function RoadmapView({
                       style={{ color: MUTED }}
                     >
                       Custom hours per day:{" "}
-                      <span style={{ color: GOLD }}>
+                      <span style={{ color: PROGRESS_PURPLE }}>
                         {varWeekForm.customHours} hrs
                       </span>
                     </label>
@@ -5084,7 +5085,7 @@ function RoadmapView({
                     }}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
                     style={{
-                      background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+                      background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
                       color: "#fff",
                     }}
                   >
@@ -5111,8 +5112,8 @@ function RoadmapView({
                   key={vw.id}
                   className="flex items-center justify-between px-3 py-2.5 rounded-xl"
                   style={{
-                    background: `${GOLD}10`,
-                    border: `1px solid ${GOLD}33`,
+                    background: `${PROGRESS_PURPLE}10`,
+                    border: `1px solid ${PROGRESS_PURPLE}33`,
                   }}
                 >
                   <div>
@@ -5182,7 +5183,7 @@ function RoadmapView({
                           background:
                             phase.status === "done"
                               ? `${OLIVE}22`
-                              : `${GOLD}22`,
+                              : `${PROGRESS_PURPLE}22`,
                           color: phase.status === "done" ? OLIVE : DARK,
                         }}
                       >
@@ -5225,7 +5226,7 @@ function RoadmapView({
                           {(phase as any).marks && (
                             <span
                               className="text-[10px] px-1.5 py-0.5 rounded-full"
-                              style={{ background: `${GOLD}15`, color: DARK }}
+                              style={{ background: `${PROGRESS_PURPLE}15`, color: DARK }}
                             >
                               {(phase as any).marks}
                             </span>
@@ -5286,7 +5287,7 @@ function RoadmapView({
                             >
                               <div
                                 className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
-                                style={{ background: GOLD }}
+                                style={{ background: PROGRESS_PURPLE }}
                               />
                               <span
                                 className="text-xs leading-relaxed"
@@ -5449,7 +5450,7 @@ Keep responses concise, warm, and practical. Use bullet points when listing thin
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
             <div style={{
               maxWidth: "80%", padding: "0.6rem 0.9rem", borderRadius: 12,
-              background: m.role === "user" ? GOLD : CREAM,
+              background: m.role === "user" ? PROGRESS_PURPLE : CREAM,
               color: m.role === "user" ? "#fff" : CHARCOAL,
               fontSize: "0.85rem", lineHeight: 1.5,
               borderBottomRightRadius: m.role === "user" ? 4 : 12,
@@ -5479,7 +5480,7 @@ Keep responses concise, warm, and practical. Use bullet points when listing thin
           style={{ flex: 1, padding: "0.6rem 0.9rem", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: CREAM, color: CHARCOAL, fontSize: "0.85rem", outline: "none", fontFamily: "inherit" }}
         />
         <button onClick={send} disabled={loading || !input.trim()}
-          style={{ background: GOLD, color: "#fff", border: "none", borderRadius: 10, padding: "0.6rem 1rem", fontWeight: 600, cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 }}>
+          style={{ background: PROGRESS_PURPLE, color: "#fff", border: "none", borderRadius: 10, padding: "0.6rem 1rem", fontWeight: 600, cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 }}>
           Send
         </button>
       </div>
@@ -5559,7 +5560,7 @@ export default function Roadmap() {
         >
           <Map
             className="w-10 h-10 mx-auto mb-3 opacity-30"
-            style={{ color: GOLD }}
+            style={{ color: PROGRESS_PURPLE }}
           />
           <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
             Roadmap not available for HeartSpace
