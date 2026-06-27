@@ -22,6 +22,7 @@ import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
+const PROGRESS_PURPLE = "#6B568F";
 const DARK = "#2D2A25";
 const CARD = "#FFFDF9";
 const MUTED = "#7A7267";
@@ -120,7 +121,7 @@ function AttemptForm({
   return (
     <div
       className="rounded-2xl p-5 space-y-4 mt-2"
-      style={{ background: `${GOLD}08`, border: `1.5px solid ${GOLD}44` }}
+      style={{ background: `${PROGRESS_PURPLE}08`, border: `1.5px solid ${PROGRESS_PURPLE}44` }}
     >
       {label && (
         <p className="text-xs font-semibold" style={{ color: MUTED }}>
@@ -134,7 +135,7 @@ function AttemptForm({
           className="text-xs font-semibold mb-2 flex items-center gap-2"
           style={{ color: CHARCOAL }}
         >
-          <TrendingUp className="w-3.5 h-3.5" style={{ color: GOLD }} />
+          <TrendingUp className="w-3.5 h-3.5" style={{ color: PROGRESS_PURPLE }} />
           Accuracy
           <span
             className="ml-auto text-base font-bold font-serif"
@@ -191,7 +192,7 @@ function AttemptForm({
           className="text-xs font-semibold mb-2 flex items-center gap-2"
           style={{ color: CHARCOAL }}
         >
-          <Brain className="w-3.5 h-3.5" style={{ color: GOLD }} /> Concept
+          <Brain className="w-3.5 h-3.5" style={{ color: PROGRESS_PURPLE }} /> Concept
           Understanding
         </label>
         <div className="flex gap-2">
@@ -232,7 +233,7 @@ function AttemptForm({
           className="text-xs font-semibold mb-2 flex items-center gap-2"
           style={{ color: CHARCOAL }}
         >
-          <Zap className="w-3.5 h-3.5" style={{ color: GOLD }} /> Speed
+          <Zap className="w-3.5 h-3.5" style={{ color: PROGRESS_PURPLE }} /> Speed
         </label>
         <div className="flex gap-2">
           {(
@@ -291,7 +292,7 @@ function AttemptForm({
           }
           className="flex-1 h-10 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
           style={{
-            background: `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+            background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
             color: "#fff",
           }}
         >
@@ -430,7 +431,7 @@ function SubjectHistory({
       >
         <History
           className="w-8 h-8 mx-auto mb-2 opacity-30"
-          style={{ color: GOLD }}
+          style={{ color: PROGRESS_PURPLE }}
         />
         <p className="text-sm" style={{ color: MUTED }}>
           No attempts logged yet for this subject.
@@ -595,7 +596,7 @@ function SubtopicRow({
             {attemptCount > 0 && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{ background: `${GOLD}22`, color: DARK }}
+                style={{ background: `${PROGRESS_PURPLE}22`, color: DARK }}
               >
                 {attemptCount} attempt{attemptCount > 1 ? "s" : ""}
               </span>
@@ -607,7 +608,7 @@ function SubtopicRow({
           onClick={() => setShowForm(!showForm)}
           className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all hover:scale-110"
           style={{
-            background: showForm ? GOLD : `${GOLD}22`,
+            background: showForm ? PROGRESS_PURPLE : `${PROGRESS_PURPLE}22`,
             color: showForm ? "#fff" : DARK,
           }}
         >
@@ -722,7 +723,7 @@ function TopicBlock({
     >
       <div
         className="flex items-center gap-2 px-4 py-3"
-        style={{ background: expanded ? `${GOLD}06` : CREAM }}
+        style={{ background: expanded ? `${PROGRESS_PURPLE}06` : CREAM }}
       >
         <button
           type="button"
@@ -798,7 +799,7 @@ function TopicBlock({
           title="Log practice for entire topic"
           className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all"
           style={{
-            background: showTopicForm ? GOLD : `${GOLD}22`,
+            background: showTopicForm ? PROGRESS_PURPLE : `${PROGRESS_PURPLE}22`,
             color: showTopicForm ? "#fff" : DARK,
           }}
         >
@@ -957,7 +958,7 @@ function SubjectBlock({
             <div className="flex items-center gap-3 mb-1">
               <BookOpen
                 className="w-4 h-4 flex-shrink-0"
-                style={{ color: GOLD }}
+                style={{ color: PROGRESS_PURPLE }}
               />
               <span
                 className="font-serif text-base font-bold"
@@ -968,7 +969,7 @@ function SubjectBlock({
               {subject.jamOnly && (
                 <span
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: `${GOLD}22`, color: SIDEBAR }}
+                  style={{ background: `${PROGRESS_PURPLE}22`, color: SIDEBAR }}
                 >
                   JAM only
                 </span>
@@ -991,7 +992,7 @@ function SubjectBlock({
                   className="h-full rounded-full transition-all duration-500"
                   style={{
                     width: `${allSubtopicsInSubj.length ? Math.round((practicedInSubj / allSubtopicsInSubj.length) * 100) : 0}%`,
-                    background: GOLD,
+                    background: PROGRESS_PURPLE,
                   }}
                 />
               </div>
@@ -1053,7 +1054,7 @@ function SubjectBlock({
           title="Log custom attempt for entire subject"
           className="flex-shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-semibold transition-all"
           style={{
-            background: showSubjectForm ? GOLD : `${GOLD}22`,
+            background: showSubjectForm ? PROGRESS_PURPLE : `${PROGRESS_PURPLE}22`,
             color: showSubjectForm ? "#fff" : DARK,
           }}
         >
@@ -1272,7 +1273,7 @@ export default function QuestionPractice() {
           <div className="text-center">
             <div
               className="text-2xl font-bold font-serif"
-              style={{ color: GOLD }}
+              style={{ color: PROGRESS_PURPLE }}
             >
               {totalAttempts}
             </div>
@@ -1446,7 +1447,7 @@ export default function QuestionPractice() {
         >
           <BarChart2
             className="w-10 h-10 mx-auto mb-3 opacity-30"
-            style={{ color: GOLD }}
+            style={{ color: PROGRESS_PURPLE }}
           />
           <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
             No practice logged yet
