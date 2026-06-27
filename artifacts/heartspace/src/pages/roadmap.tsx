@@ -2212,16 +2212,19 @@ function CompletionForecast({ schedule }: { schedule: SmartSchedule }) {
 }
 
 /* ─── Schedule inputs localStorage ─────── */
+const DEFAULT_SCHEDULE_SELECTED_DAYS = [1, 2, 3, 4, 5]; // Mon-Fri
 function loadScheduleInputs(userId: string) {
   try {
     const r = localStorage.getItem(`hs_schedule_inputs_${userId}`);
-    return r
-      ? JSON.parse(r)
+    const parsed = r ? JSON.parse(r) : null;
+    return parsed
+      ? { selectedDays: DEFAULT_SCHEDULE_SELECTED_DAYS, ...parsed }
       : {
           hoursPerDay: 2,
           daysPerWeek: 5,
           targetMonths: 6,
           revisionPercent: 30,
+          selectedDays: DEFAULT_SCHEDULE_SELECTED_DAYS,
         };
   } catch {
     return {
@@ -2229,6 +2232,7 @@ function loadScheduleInputs(userId: string) {
       daysPerWeek: 5,
       targetMonths: 6,
       revisionPercent: 30,
+      selectedDays: DEFAULT_SCHEDULE_SELECTED_DAYS,
     };
   }
 }
@@ -2920,7 +2924,7 @@ function CalendarTabWrapper({
       remainingHoursBySubject={remainingHoursBySubject}
       startDate={startDate}
       hoursPerDay={inputs.hoursPerDay}
-      daysPerWeek={inputs.daysPerWeek}
+      selectedDays={inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS}
       simSlots={simSlotsForCalendar}
       unavailablePeriods={unavailableForCalendar}
       variablePeriods={variableForCalendar}
@@ -2952,6 +2956,9 @@ function LiveScheduleTab({
   const saved = loadScheduleInputs(effectiveUserId);
   const [hoursPerDay, setHoursPerDay] = useState(saved.hoursPerDay);
   const [daysPerWeek, setDaysPerWeek] = useState(saved.daysPerWeek);
+  const [selectedDays, setSelectedDays] = useState<number[]>(saved.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS);
+  const [pendingSchedDays, setPendingSchedDays] = useState<number[]>(saved.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS);
+  const [schedDayPickError, setSchedDayPickError] = useState<string>("");
   const [targetMonths, setTargetMonths] = useState(saved.targetMonths);
   const [revisionPercent, setRevisionPercent] = useState(saved.revisionPercent);
   const [filter, setFilter] = useState<WeekType | "all">("all");
@@ -3097,6 +3104,7 @@ function LiveScheduleTab({
       daysPerWeek: number;
       targetMonths: number;
       revisionPercent: number;
+      selectedDays: number[];
     }>,
   ) {
     const next = {
@@ -3104,6 +3112,7 @@ function LiveScheduleTab({
       daysPerWeek,
       targetMonths,
       revisionPercent,
+      selectedDays,
       ...patch,
     };
     if (patch.hoursPerDay !== undefined) setHoursPerDay(patch.hoursPerDay);
@@ -3111,6 +3120,7 @@ function LiveScheduleTab({
     if (patch.targetMonths !== undefined) setTargetMonths(patch.targetMonths);
     if (patch.revisionPercent !== undefined)
       setRevisionPercent(patch.revisionPercent);
+    if (patch.selectedDays !== undefined) setSelectedDays(patch.selectedDays);
     saveScheduleInputs(effectiveUserId, next);
     onSave(
       generateSmartSchedule(
@@ -3947,6 +3957,60 @@ function LiveScheduleTab({
               <span>1 day</span>
               <span>7 days</span>
             </div>
+          </div>
+
+          <div className="rounded-xl p-3" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+              Which {daysPerWeek} day{daysPerWeek !== 1 ? "s" : ""} of the week?
+            </label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label, dow) => {
+                const checked = pendingSchedDays.includes(dow);
+                return (
+                  <button
+                    key={dow}
+                    type="button"
+                    onClick={() => {
+                      setPendingSchedDays((prev) =>
+                        prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow].sort(),
+                      );
+                      setSchedDayPickError("");
+                    }}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                    style={{
+                      background: checked ? PROGRESS_PURPLE : CREAM,
+                      color: checked ? "#fff" : CHARCOAL,
+                      border: `1.5px solid ${checked ? PROGRESS_PURPLE : BORDER}`,
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {schedDayPickError && (
+              <p className="text-xs mb-2" style={{ color: "#C0392B" }}>{schedDayPickError}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (pendingSchedDays.length !== daysPerWeek) {
+                  setSchedDayPickError(
+                    `Please make sure your selected days match the number of days you've selected (${daysPerWeek}).`,
+                  );
+                  return;
+                }
+                setSchedDayPickError("");
+                update({ selectedDays: pendingSchedDays });
+              }}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style={{ background: PROGRESS_PURPLE, color: "#fff", border: "none" }}
+            >
+              Confirm days
+            </button>
+            {JSON.stringify(selectedDays) === JSON.stringify(pendingSchedDays) && (
+              <span className="text-xs font-semibold ml-2" style={{ color: "#4A8F5C" }}>✓ Saved</span>
+            )}
           </div>
           <div>
             <label

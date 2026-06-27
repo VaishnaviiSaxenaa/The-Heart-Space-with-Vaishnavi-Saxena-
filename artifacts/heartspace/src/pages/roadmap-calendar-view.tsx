@@ -124,7 +124,7 @@ function autoGenerateCalendar(
   remainingHoursBySubject: Record<string, number>,
   startDate: string,
   hoursPerDay: number,
-  daysPerWeek: number,
+  selectedDays: number[],
   simSlots: SimSlotForCalendar[] = [],
   unavailablePeriods: PeriodBase[] = [],
   variablePeriods: VariablePeriod[] = [],
@@ -142,12 +142,7 @@ function autoGenerateCalendar(
   let qIdx = 0;
 
   function isStudyDay(date: Date): boolean {
-    const dow = date.getDay(); // 0 = Sun
-    if (daysPerWeek >= 7) return true;
-    const skipCount = 7 - daysPerWeek;
-    const skipPriority = [0, 6, 5, 4, 3, 2, 1]; // Sun first, then Sat, Fri...
-    const skipDows = skipPriority.slice(0, skipCount);
-    return !skipDows.includes(dow);
+    return selectedDays.includes(date.getDay());
   }
 
   for (let d = 0; d < horizonDays && qIdx < queue.length; d++) {
@@ -218,7 +213,7 @@ interface RoadmapCalendarProps {
   remainingHoursBySubject: Record<string, number>;
   startDate: string;
   hoursPerDay: number;
-  daysPerWeek: number;
+  selectedDays: number[];
   simSlots?: SimSlotForCalendar[];
   unavailablePeriods?: PeriodBase[];
   variablePeriods?: VariablePeriod[];
@@ -230,7 +225,7 @@ export default function RoadmapCalendar({
   remainingHoursBySubject,
   startDate,
   hoursPerDay,
-  daysPerWeek,
+  selectedDays,
   simSlots = [],
   unavailablePeriods = [],
   variablePeriods = [],
@@ -261,7 +256,7 @@ export default function RoadmapCalendar({
           remainingHoursBySubject,
           startDate,
           hoursPerDay,
-          daysPerWeek,
+          selectedDays,
           simSlots,
           unavailablePeriods,
           variablePeriods,
@@ -301,7 +296,7 @@ export default function RoadmapCalendar({
       trueRemaining,
       startDate,
       hoursPerDay,
-      daysPerWeek,
+      selectedDays,
       simSlots,
       unavailablePeriods,
       variablePeriods,
