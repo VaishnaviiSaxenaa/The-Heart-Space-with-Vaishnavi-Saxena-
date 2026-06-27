@@ -2924,6 +2924,7 @@ function CalendarTabWrapper({
       remainingHoursBySubject={remainingHoursBySubject}
       startDate={startDate}
       hoursPerDay={inputs.hoursPerDay}
+      daysPerWeek={inputs.daysPerWeek}
       selectedDays={inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS}
       simSlots={simSlotsForCalendar}
       unavailablePeriods={unavailableForCalendar}
@@ -3959,60 +3960,7 @@ function LiveScheduleTab({
             </div>
           </div>
 
-          <div className="rounded-xl p-3" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
-            <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
-              Which {daysPerWeek} day{daysPerWeek !== 1 ? "s" : ""} of the week?
-            </label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label, dow) => {
-                const checked = pendingSchedDays.includes(dow);
-                return (
-                  <button
-                    key={dow}
-                    type="button"
-                    onClick={() => {
-                      setPendingSchedDays((prev) =>
-                        prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow].sort(),
-                      );
-                      setSchedDayPickError("");
-                    }}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                    style={{
-                      background: checked ? PROGRESS_PURPLE : CREAM,
-                      color: checked ? "#fff" : CHARCOAL,
-                      border: `1.5px solid ${checked ? PROGRESS_PURPLE : BORDER}`,
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            {schedDayPickError && (
-              <p className="text-xs mb-2" style={{ color: "#C0392B" }}>{schedDayPickError}</p>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (pendingSchedDays.length !== daysPerWeek) {
-                  setSchedDayPickError(
-                    `Please make sure your selected days match the number of days you've selected (${daysPerWeek}).`,
-                  );
-                  return;
-                }
-                setSchedDayPickError("");
-                update({ selectedDays: pendingSchedDays });
-              }}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-              style={{ background: PROGRESS_PURPLE, color: "#fff", border: "none" }}
-            >
-              Confirm days
-            </button>
-            {JSON.stringify(selectedDays) === JSON.stringify(pendingSchedDays) && (
-              <span className="text-xs font-semibold ml-2" style={{ color: "#4A8F5C" }}>✓ Saved</span>
-            )}
-          </div>
-          <div>
+                    <div>
             <label
               className="text-xs font-semibold mb-2 block"
               style={{ color: CHARCOAL }}

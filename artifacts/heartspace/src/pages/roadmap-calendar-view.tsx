@@ -213,6 +213,7 @@ interface RoadmapCalendarProps {
   remainingHoursBySubject: Record<string, number>;
   startDate: string;
   hoursPerDay: number;
+  daysPerWeek: number;
   selectedDays: number[];
   simSlots?: SimSlotForCalendar[];
   unavailablePeriods?: PeriodBase[];
@@ -225,11 +226,28 @@ export default function RoadmapCalendar({
   remainingHoursBySubject,
   startDate,
   hoursPerDay,
+  daysPerWeek,
   selectedDays,
   simSlots = [],
   unavailablePeriods = [],
   variablePeriods = [],
 }: RoadmapCalendarProps) {
+  const [pendingRoadmapDays, setPendingRoadmapDays] = useState<number[]>(selectedDays);
+  const [roadmapDayPickError, setRoadmapDayPickError] = useState<string>("");
+
+  function confirmRoadmapDayPick() {
+    if (pendingRoadmapDays.length !== daysPerWeek) {
+      setRoadmapDayPickError(`Please make sure your selected days match the number of days you've selected (${daysPerWeek}).`);
+      return;
+    }
+    setRoadmapDayPickError("");
+    try {
+      const key = `hs_schedule_inputs_${uid}`;
+      const existing = JSON.parse(localStorage.getItem(key) || "{}");
+      localStorage.setItem(key, JSON.stringify({ ...existing, selectedDays: pendingRoadmapDays }));
+    } catch {}
+    window.location.reload();
+  }
   const [view, setView] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState(new Date());
   const [calendar, setCalendar] = useState<CalendarData>({});
@@ -527,6 +545,48 @@ export default function RoadmapCalendar({
             ↺ Auto-fill
           </button>
         </div>
+      </div>
+
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.9rem 1rem" }}>
+        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.5rem" }}>
+          Which {daysPerWeek} day{daysPerWeek !== 1 ? "s" : ""} of the week?
+        </label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.6rem" }}>
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label, dow) => {
+            const checked = pendingRoadmapDays.includes(dow);
+            return (
+              <button
+                key={dow}
+                onClick={() =>
+                  setPendingRoadmapDays((prev) =>
+                    prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow].sort(),
+                  )
+                }
+                style={{
+                  background: checked ? PROGRESS_PURPLE : CREAM,
+                  color: checked ? "#fff" : CHARCOAL,
+                  border: `1.5px solid ${checked ? PROGRESS_PURPLE : BORDER}`,
+                  borderRadius: 8,
+                  padding: "0.4rem 0.8rem",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        {roadmapDayPickError && (
+          <p style={{ fontSize: "0.75rem", color: "#C0392B", marginBottom: "0.5rem" }}>{roadmapDayPickError}</p>
+        )}
+        <button
+          onClick={confirmRoadmapDayPick}
+          style={{ background: PROGRESS_PURPLE, color: "#fff", border: "none", borderRadius: 8, padding: "0.4rem 0.9rem", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}
+        >
+          Confirm days
+        </button>
       </div>
 
       {/* Subject legend / drag source */}
