@@ -31,6 +31,10 @@ import { useQueryClient } from "@tanstack/react-query";
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
+const PROGRESS_PURPLE = "#6B568F";
+const STUDY_BLUE = "#2C4A73";
+const REVISION_ORANGE = "#E07A28";
+const PRACTICE_YELLOW = "#E0B428";
 const CARD = "#FFFDF9";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
@@ -169,9 +173,9 @@ function AnalyticsSection({ userId }: { userId: string }) {
             <Line
               type="monotone"
               dataKey="mood"
-              stroke={GOLD}
+              stroke={PROGRESS_PURPLE}
               strokeWidth={2.5}
-              dot={{ fill: GOLD, r: 4 }}
+              dot={{ fill: PROGRESS_PURPLE, r: 4 }}
               connectNulls={false}
             />
           </LineChart>
@@ -265,9 +269,9 @@ const CAT_COLORS: Record<
   PlanCategory,
   { bg: string; text: string; active: string }
 > = {
-  Study: { bg: `${OLIVE}22`, text: OLIVE, active: OLIVE },
-  Revision: { bg: `${GOLD}22`, text: "#9A6010", active: "#9A6010" },
-  Practice: { bg: `${ROSE}22`, text: "#A05050", active: "#A05050" },
+  Study: { bg: `${STUDY_BLUE}1A`, text: STUDY_BLUE, active: STUDY_BLUE },
+  Revision: { bg: `${REVISION_ORANGE}1A`, text: REVISION_ORANGE, active: REVISION_ORANGE },
+  Practice: { bg: `${PRACTICE_YELLOW}1A`, text: "#9C7E10", active: "#9C7E10" },
   Physical: { bg: `${SAGE}22`, text: "#3A6A38", active: "#3A6A38" },
   Personal: { bg: "rgba(61,53,48,.08)", text: MUTED, active: MUTED },
 };
@@ -338,7 +342,7 @@ function TodaysPlan() {
             onClick={() => setAdding(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.03] active:scale-[0.98]"
             style={{
-              background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+              background: `linear-gradient(135deg, #C8922A 0%, ${PROGRESS_PURPLE} 100%)`,
               color: CREAM,
               boxShadow: "0 3px 10px rgba(230,167,86,.30)",
             }}
@@ -392,7 +396,7 @@ function TodaysPlan() {
             <button
               onClick={addTask}
               className="px-4 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-              style={{ background: `${GOLD}28`, color: "#9A6010" }}
+              style={{ background: `${PROGRESS_PURPLE}28`, color: "#9A6010" }}
             >
               Add
             </button>
@@ -415,11 +419,11 @@ function TodaysPlan() {
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
             style={{
-              background: `${GOLD}15`,
-              border: `1.5px dashed ${GOLD}55`,
+              background: `${PROGRESS_PURPLE}15`,
+              border: `1.5px dashed ${PROGRESS_PURPLE}55`,
             }}
           >
-            <Plus className="w-7 h-7" style={{ color: GOLD }} />
+            <Plus className="w-7 h-7" style={{ color: PROGRESS_PURPLE }} />
           </div>
           <p className="text-sm font-semibold mb-1" style={{ color: CHARCOAL }}>
             No tasks yet
@@ -431,7 +435,7 @@ function TodaysPlan() {
             onClick={() => setAdding(true)}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
             style={{
-              background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+              background: `linear-gradient(135deg, #C8922A 0%, ${PROGRESS_PURPLE} 100%)`,
               color: CREAM,
               boxShadow: "0 4px 14px rgba(230,167,86,.35)",
             }}
@@ -713,7 +717,7 @@ export default function StudentDashboard() {
             label: "Upcoming",
             value: summary?.upcomingSessions ?? 0,
             sub: "scheduled",
-            color: GOLD,
+            color: PROGRESS_PURPLE,
           },
           {
             label: "Completed",
@@ -860,7 +864,7 @@ export default function StudentDashboard() {
           className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
           style={{
             background: selectedMood
-              ? `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`
+              ? `linear-gradient(135deg, #C8922A 0%, ${PROGRESS_PURPLE} 100%)`
               : "#E8DDD0",
             color: selectedMood ? CREAM : MUTED,
             boxShadow: selectedMood
@@ -891,7 +895,7 @@ export default function StudentDashboard() {
                   </span>
                   <span
                     className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                    style={{ background: mood?.color ?? GOLD, color: "white" }}
+                    style={{ background: mood?.color ?? PROGRESS_PURPLE, color: "white" }}
                   >
                     {mood?.label ?? m.mood}
                   </span>
@@ -937,20 +941,20 @@ export default function StudentDashboard() {
                 >
                   <span
                     className="text-[11px] font-semibold"
-                    style={{ color: isToday ? GOLD : MUTED }}
+                    style={{ color: isToday ? PROGRESS_PURPLE : MUTED }}
                   >
                     {day}
                   </span>
                   <div
                     className="w-full aspect-square rounded-xl flex items-center justify-center"
                     style={{
-                      background: isToday ? `${GOLD}22` : CREAM,
-                      border: `1.5px solid ${isToday ? GOLD : BORDER}`,
+                      background: isToday ? `${PROGRESS_PURPLE}22` : CREAM,
+                      border: `1.5px solid ${isToday ? PROGRESS_PURPLE : BORDER}`,
                     }}
                   >
                     <span
                       className="text-[10px]"
-                      style={{ color: isToday ? GOLD : BORDER }}
+                      style={{ color: isToday ? PROGRESS_PURPLE : BORDER }}
                     >
                       {isToday ? "today" : "—"}
                     </span>
@@ -986,17 +990,17 @@ export default function StudentDashboard() {
         >
           <path
             d="M10 40 Q30 5 50 40"
-            stroke={GOLD}
+            stroke={PROGRESS_PURPLE}
             strokeWidth="1.5"
             fill="none"
           />
           <path
             d="M5 45 Q25 10 45 45"
-            stroke={GOLD}
+            stroke={PROGRESS_PURPLE}
             strokeWidth="1"
             fill="none"
           />
-          <circle cx="30" cy="10" r="3" fill={GOLD} />
+          <circle cx="30" cy="10" r="3" fill={PROGRESS_PURPLE} />
         </svg>
         <p
           className="font-serif italic text-lg leading-relaxed max-w-lg"
@@ -1004,7 +1008,7 @@ export default function StudentDashboard() {
         >
           "You don't have to do it all today. Just don't stop showing up."
         </p>
-        <p className="text-xs mt-3 font-medium" style={{ color: GOLD }}>
+        <p className="text-xs mt-3 font-medium" style={{ color: PROGRESS_PURPLE }}>
           Daily Affirmation
         </p>
       </Card>
