@@ -113,12 +113,11 @@ export function getConsumedHours(
 /* ============================================================
    AUTO-GENERATE
 ============================================================ */
-function isStudyDay(date: Date, daysPerWeek: number): boolean {
-  const dow = date.getDay();
-  if (daysPerWeek >= 7) return true;
-  const skipCount = 7 - daysPerWeek;
-  const skipDows = [0, 6, 5, 4, 3, 2, 1].slice(0, skipCount);
-  return !skipDows.includes(dow);
+export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export const DEFAULT_SELECTED_DAYS = [1, 2, 3, 4, 5]; // Mon-Fri, matches old default of 5 days/week
+
+function isStudyDay(date: Date, selectedDays: number[]): boolean {
+  return selectedDays.includes(date.getDay());
 }
 
 function isDateInPeriod(dateStr: string, p: PeriodBase): boolean {
@@ -131,7 +130,7 @@ export function autoGenerateGeneric(
   remainingHoursBySubject: Record<string, number>,
   startDate: string,
   hoursPerDay: number,
-  daysPerWeek: number,
+  selectedDaysParam: number[],
   unavailablePeriods: PeriodBase[] = [],
   existingData: CalendarData = {},
   horizonDays: number = 365,
@@ -148,7 +147,7 @@ export function autoGenerateGeneric(
 
   for (let d = 0; d < horizonDays && qIdx < queue.length; d++) {
     const date = addDays(start, d);
-    if (!isStudyDay(date, daysPerWeek)) continue;
+    if (!isStudyDay(date, selectedDaysParam)) continue;
     const key = format(date, "yyyy-MM-dd");
     if (unavailablePeriods.some((p) => isDateInPeriod(key, p))) continue;
 
@@ -216,11 +215,40 @@ export default function GenericCalendar({
     } catch {}
     return defaultDaysPerWeek;
   });
+  const [selectedDays, setSelectedDays] = useState<number[]>(() => {
+    try {
+      const r = localStorage.getItem(paceKey);
+      if (r) {
+        const parsed = JSON.parse(r).selectedDays;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_SELECTED_DAYS.slice(0, defaultDaysPerWeek);
+  });
+  const [pendingDays, setPendingDays] = useState<number[]>(selectedDays);
+  const [dayPickError, setDayPickError] = useState<string>("");
+
+  function toggleDay(dow: number) {
+    setPendingDays((prev) =>
+      prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow].sort()
+    );
+    setDayPickError("");
+  }
+
+  function confirmDayPick() {
+    if (pendingDays.length !== daysPerWeek) {
+      setDayPickError(`Please make sure your selected days match the number of days you've selected (${daysPerWeek}).`);
+      return;
+    }
+    setSelectedDays(pendingDays);
+    setDayPickError("");
+  }
+
   useEffect(() => {
     try {
-      localStorage.setItem(paceKey, JSON.stringify({ hoursPerDay, daysPerWeek }));
+      localStorage.setItem(paceKey, JSON.stringify({ hoursPerDay, daysPerWeek, selectedDays }));
     } catch {}
-  }, [hoursPerDay, daysPerWeek, paceKey]);
+  }, [hoursPerDay, daysPerWeek, selectedDays, paceKey]);
 
   const [view, setView] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState(new Date());
@@ -246,7 +274,7 @@ export default function GenericCalendar({
         remainingHoursBySubject,
         startDate,
         hoursPerDay,
-        daysPerWeek,
+        selectedDays,
         unavailablePeriods,
       );
       setCalendar(generated);
@@ -278,7 +306,7 @@ export default function GenericCalendar({
       remainingHoursBySubject,
       startDate,
       hoursPerDay,
-      daysPerWeek,
+      selectedDays,
       unavailablePeriods,
       calendar,
     );
@@ -522,6 +550,56 @@ export default function GenericCalendar({
             style={{ width: "100%" }}
           />
         </div>
+      </div>
+
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.9rem 1rem" }}>
+        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.5rem" }}>
+          Which {daysPerWeek} day{daysPerWeek !== 1 ? "s" : ""} of the week?
+        </label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.6rem" }}>
+          {WEEKDAY_LABELS.map((label, dow) => {
+            const checked = pendingDays.includes(dow);
+            return (
+              <button
+                key={dow}
+                onClick={() => toggleDay(dow)}
+                style={{
+                  background: checked ? PROGRESS_PURPLE : CREAM,
+                  color: checked ? "#fff" : CHARCOAL,
+                  border: `1.5px solid ${checked ? PROGRESS_PURPLE : BORDER}`,
+                  borderRadius: 8,
+                  padding: "0.4rem 0.8rem",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        {dayPickError && (
+          <p style={{ fontSize: "0.75rem", color: "#C0392B", marginBottom: "0.5rem" }}>{dayPickError}</p>
+        )}
+        <button
+          onClick={confirmDayPick}
+          style={{
+            background: PROGRESS_PURPLE,
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "0.4rem 0.9rem",
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Confirm days
+        </button>
+        {JSON.stringify(selectedDays) === JSON.stringify(pendingDays) && (
+          <span style={{ fontSize: "0.75rem", color: "#4A8F5C", marginLeft: "0.6rem", fontWeight: 600 }}>✓ Saved</span>
+        )}
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
