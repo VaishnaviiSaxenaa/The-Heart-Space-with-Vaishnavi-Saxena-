@@ -16,10 +16,11 @@ import {
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
+const PROGRESS_PURPLE = "#6B568F";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
 const SIDEBAR = "#3D2314";
-const OLIVE = "#6E8B6B";
+const OLIVE = "#4A8F5C"; // now = COMPLETED_GREEN
 const ROSE = "#D4A5A5";
 
 /* ─── Types ────────────────────────────── */
@@ -916,8 +917,8 @@ const STATUS_CONFIG = {
   },
   in_progress: {
     label: "In Progress",
-    color: GOLD,
-    bg: `${GOLD}22`,
+    color: PROGRESS_PURPLE,
+    bg: `${PROGRESS_PURPLE}22`,
     icon: PlayCircle,
   },
   done: { label: "Done", color: OLIVE, bg: `${OLIVE}22`, icon: CheckCircle2 },
@@ -1037,7 +1038,7 @@ function TickButton({
       title={allDone ? "Unmark all" : "Mark all as done"}
       className={`flex-shrink-0 ${dim} rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110`}
       style={{
-        borderColor: allDone ? OLIVE : anyDone ? GOLD : BORDER,
+        borderColor: allDone ? OLIVE : anyDone ? PROGRESS_PURPLE : BORDER,
         background: allDone ? OLIVE : "transparent",
         boxShadow: allDone ? `0 0 0 3px ${OLIVE}22` : "none",
       }}
@@ -1053,7 +1054,7 @@ function TickButton({
           />
         </svg>
       ) : anyDone ? (
-        <div className="w-2 h-2 rounded-full" style={{ background: GOLD }} />
+        <div className="w-2 h-2 rounded-full" style={{ background: PROGRESS_PURPLE }} />
       ) : null}
     </button>
   );
@@ -1238,7 +1239,7 @@ export default function Syllabus() {
                   <div className="flex items-center gap-3 mb-1">
                     <BookOpen
                       className="w-4 h-4 flex-shrink-0"
-                      style={{ color: GOLD }}
+                      style={{ color: PROGRESS_PURPLE }}
                     />
                     <span
                       className="font-serif text-base font-bold"
@@ -1249,7 +1250,7 @@ export default function Syllabus() {
                     {subject.jamOnly && (
                       <span
                         className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: `${GOLD}22`, color: SIDEBAR }}
+                        style={{ background: `${PROGRESS_PURPLE}22`, color: SIDEBAR }}
                       >
                         JAM only
                       </span>
@@ -1272,7 +1273,7 @@ export default function Syllabus() {
                         className="h-full rounded-full transition-all duration-500"
                         style={{
                           width: `${pct}%`,
-                          background: pct === 100 ? OLIVE : GOLD,
+                          background: pct === 100 ? OLIVE : PROGRESS_PURPLE,
                         }}
                       />
                     </div>
@@ -1324,7 +1325,7 @@ export default function Syllabus() {
                       <div
                         className="flex items-center gap-2 px-4"
                         style={{
-                          background: isTopicOpen ? `${GOLD}08` : CREAM,
+                          background: isTopicOpen ? `${PROGRESS_PURPLE}08` : CREAM,
                         }}
                       >
                         <TickButton
@@ -1391,7 +1392,7 @@ export default function Syllabus() {
                             <span
                               className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                               style={{
-                                background: `${GOLD}22`,
+                                background: `${PROGRESS_PURPLE}22`,
                                 color: SIDEBAR,
                               }}
                             >
@@ -1501,7 +1502,7 @@ export default function Syllabus() {
         >
           <BookOpen
             className="w-10 h-10 mx-auto mb-3 opacity-30"
-            style={{ color: GOLD }}
+            style={{ color: PROGRESS_PURPLE }}
           />
           <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
             No exam selected yet
