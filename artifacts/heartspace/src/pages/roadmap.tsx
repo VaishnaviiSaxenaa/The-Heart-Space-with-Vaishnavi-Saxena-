@@ -2918,18 +2918,179 @@ function CalendarTabWrapper({
   }));
 
   return (
-    <RoadmapCalendar
-      uid={effectiveUserId}
-      subjects={subjects}
-      remainingHoursBySubject={remainingHoursBySubject}
-      startDate={startDate}
-      hoursPerDay={inputs.hoursPerDay}
-      daysPerWeek={inputs.daysPerWeek}
-      selectedDays={inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS}
-      simSlots={simSlotsForCalendar}
-      unavailablePeriods={unavailableForCalendar}
-      variablePeriods={variableForCalendar}
-    />
+    <div className="space-y-5">
+      <StudySchedulePlanner uid={effectiveUserId} examType={examType} />
+      <RoadmapCalendar
+        uid={effectiveUserId}
+        subjects={subjects}
+        remainingHoursBySubject={remainingHoursBySubject}
+        startDate={startDate}
+        hoursPerDay={inputs.hoursPerDay}
+        daysPerWeek={inputs.daysPerWeek}
+        selectedDays={inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS}
+        simSlots={simSlotsForCalendar}
+        unavailablePeriods={unavailableForCalendar}
+        variablePeriods={variableForCalendar}
+      />
+    </div>
+  );
+}
+
+
+/* ─── Study Schedule Planner (self-contained, shared between Schedule & Calendar tabs) ─── */
+function StudySchedulePlanner({ uid, examType }: { uid: string; examType: string }) {
+  const inputs = loadScheduleInputs(uid);
+  const [hoursPerDay, setHoursPerDay] = useState(inputs.hoursPerDay);
+  const [daysPerWeek, setDaysPerWeek] = useState(inputs.daysPerWeek);
+  const [targetMonths, setTargetMonths] = useState(inputs.targetMonths);
+  const [pendingPlannerDays, setPendingPlannerDays] = useState<number[]>(inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS);
+  const [plannerDayPickError, setPlannerDayPickError] = useState<string>("");
+
+  const syllabusProgress = loadSyllabusProgress(uid);
+  const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
+  const skipped = Object.values(syllabusPercs).filter((p) => p === 100).length;
+  const hoursPerWeek = hoursPerDay * daysPerWeek;
+
+  function persistPlanner(patch: Partial<{ hoursPerDay: number; daysPerWeek: number; targetMonths: number; selectedDays: number[] }>) {
+    const next = { ...inputs, hoursPerDay, daysPerWeek, targetMonths, ...patch };
+    try {
+      localStorage.setItem(`hs_schedule_inputs_${uid}`, JSON.stringify(next));
+    } catch {}
+    if (patch.hoursPerDay !== undefined) setHoursPerDay(patch.hoursPerDay);
+    if (patch.daysPerWeek !== undefined) setDaysPerWeek(patch.daysPerWeek);
+    if (patch.targetMonths !== undefined) setTargetMonths(patch.targetMonths);
+  }
+
+  function confirmPlannerDays() {
+    if (pendingPlannerDays.length !== daysPerWeek) {
+      setPlannerDayPickError(`Please make sure your selected days match the number of days you've selected (${daysPerWeek}).`);
+      return;
+    }
+    setPlannerDayPickError("");
+    persistPlanner({ selectedDays: pendingPlannerDays });
+    window.location.reload();
+  }
+
+  return (
+    <div className="rounded-2xl p-5 space-y-4" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Calendar className="w-5 h-5" style={{ color: PROGRESS_PURPLE }} />
+        <h3 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>
+          Study Schedule Planner
+        </h3>
+        <span
+          className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold"
+          style={{ background: `${OLIVE}22`, color: OLIVE }}
+        >
+          ⚡ Auto-updates with syllabus
+        </span>
+      </div>
+      <p className="text-xs" style={{ color: MUTED }}>
+        Set your availability once. Schedule auto-recalculates whenever your syllabus progress changes or you adjust these inputs.
+      </p>
+
+      {skipped > 0 && (
+        <div className="rounded-xl px-4 py-3" style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}>
+          <p className="text-xs font-semibold" style={{ color: OLIVE }}>
+            ✅ {skipped} subject(s) 100% complete in syllabus — automatically skipped from schedule.
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+          <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+            Study hours per day: <span style={{ color: PROGRESS_PURPLE }}>{hoursPerDay} hrs</span>
+          </label>
+          <input
+            type="range" min={0.5} max={12} step={0.5} value={hoursPerDay}
+            onChange={(e) => persistPlanner({ hoursPerDay: parseFloat(e.target.value) })}
+            className="w-full accent-amber-600"
+          />
+          <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}>
+            <span>0.5 hrs</span><span>12 hrs</span>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+            Study days per week: <span style={{ color: PROGRESS_PURPLE }}>{daysPerWeek} days</span>
+          </label>
+          <input
+            type="range" min={1} max={7} step={1} value={daysPerWeek}
+            onChange={(e) => persistPlanner({ daysPerWeek: parseInt(e.target.value) })}
+            className="w-full accent-amber-600"
+          />
+          <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}>
+            <span>1 day</span><span>7 days</span>
+          </div>
+        </div>
+        <div className="md:col-span-2">
+          <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+            Target completion: <span style={{ color: PROGRESS_PURPLE }}>{targetMonths} months</span>
+          </label>
+          <input
+            type="range" min={1} max={36} step={1} value={targetMonths}
+            onChange={(e) => persistPlanner({ targetMonths: parseInt(e.target.value) })}
+            className="w-full accent-amber-600"
+          />
+          <div className="flex justify-between text-[10px] mt-1" style={{ color: MUTED }}>
+            <span>1 month</span><span>36 months</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl p-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+        <label className="text-xs font-semibold mb-2 block" style={{ color: CHARCOAL }}>
+          Which {daysPerWeek} day{daysPerWeek !== 1 ? "s" : ""} of the week?
+        </label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label, dow) => {
+            const checked = pendingPlannerDays.includes(dow);
+            return (
+              <button
+                key={dow} type="button"
+                onClick={() => {
+                  setPendingPlannerDays((prev) => (prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow].sort()));
+                  setPlannerDayPickError("");
+                }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style={{
+                  background: checked ? PROGRESS_PURPLE : CREAM,
+                  color: checked ? "#fff" : CHARCOAL,
+                  border: `1.5px solid ${checked ? PROGRESS_PURPLE : BORDER}`,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        {plannerDayPickError && <p className="text-xs mb-2" style={{ color: "#C0392B" }}>{plannerDayPickError}</p>}
+        <button
+          type="button" onClick={confirmPlannerDays}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+          style={{ background: PROGRESS_PURPLE, color: "#fff", border: "none" }}
+        >
+          Confirm days
+        </button>
+      </div>
+
+      <div className="rounded-xl p-4" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+        <p className="text-xs font-semibold mb-2" style={{ color: CHARCOAL }}>Your availability:</p>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Per Week", value: `${hoursPerWeek} hrs` },
+            { label: "Per Month", value: `${hoursPerWeek * 4} hrs` },
+            { label: "In Target", value: `${hoursPerWeek * targetMonths * 4} hrs total` },
+          ].map(({ label, value }) => (
+            <div key={label} className="text-center">
+              <div className="text-sm font-bold font-serif" style={{ color: DARK }}>{value}</div>
+              <div className="text-[10px]" style={{ color: MUTED }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -3867,188 +4028,7 @@ function LiveScheduleTab({
         </div>
       )}
 
-      {/* Inputs */}
-      <div
-        className="rounded-2xl p-6 space-y-5"
-        style={{ background: CARD, border: `1px solid ${BORDER}` }}
-      >
-        <div className="flex items-center gap-2 flex-wrap">
-          <Calendar className="w-5 h-5" style={{ color: PROGRESS_PURPLE }} />
-          <h3
-            className="font-serif text-lg font-semibold"
-            style={{ color: CHARCOAL }}
-          >
-            Study Schedule Planner
-          </h3>
-          <span
-            className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold"
-            style={{ background: `${OLIVE}22`, color: OLIVE }}
-          >
-            ⚡ Auto-updates with syllabus
-          </span>
-        </div>
-        <p className="text-xs" style={{ color: MUTED }}>
-          Set your availability once. Schedule auto-recalculates whenever your
-          syllabus progress changes or you adjust these inputs.
-        </p>
-
-        {skipped > 0 && (
-          <div
-            className="rounded-xl px-4 py-3"
-            style={{ background: `${OLIVE}12`, border: `1px solid ${OLIVE}33` }}
-          >
-            <p className="text-xs font-semibold" style={{ color: OLIVE }}>
-              ✅ {skipped} subject(s) 100% complete in syllabus — automatically
-              skipped from schedule.
-            </p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label
-              className="text-xs font-semibold mb-2 block"
-              style={{ color: CHARCOAL }}
-            >
-              Study hours per day:{" "}
-              <span style={{ color: PROGRESS_PURPLE }}>{hoursPerDay} hrs</span>
-            </label>
-            <input
-              type="range"
-              min={0.5}
-              max={12}
-              step={0.5}
-              value={hoursPerDay}
-              onChange={(e) =>
-                update({ hoursPerDay: parseFloat(e.target.value) })
-              }
-              className="w-full accent-amber-600"
-            />
-            <div
-              className="flex justify-between text-[10px] mt-1"
-              style={{ color: MUTED }}
-            >
-              <span>0.5 hrs</span>
-              <span>12 hrs</span>
-            </div>
-          </div>
-          <div>
-            <label
-              className="text-xs font-semibold mb-2 block"
-              style={{ color: CHARCOAL }}
-            >
-              Study days per week:{" "}
-              <span style={{ color: PROGRESS_PURPLE }}>{daysPerWeek} days</span>
-            </label>
-            <input
-              type="range"
-              min={1}
-              max={7}
-              step={1}
-              value={daysPerWeek}
-              onChange={(e) =>
-                update({ daysPerWeek: parseInt(e.target.value) })
-              }
-              className="w-full accent-amber-600"
-            />
-            <div
-              className="flex justify-between text-[10px] mt-1"
-              style={{ color: MUTED }}
-            >
-              <span>1 day</span>
-              <span>7 days</span>
-            </div>
-          </div>
-
-                    <div>
-            <label
-              className="text-xs font-semibold mb-2 block"
-              style={{ color: CHARCOAL }}
-            >
-              Target completion:{" "}
-              <span style={{ color: PROGRESS_PURPLE }}>{targetMonths} months</span>
-            </label>
-            <input
-              type="range"
-              min={1}
-              max={36}
-              step={1}
-              value={targetMonths}
-              onChange={(e) =>
-                update({ targetMonths: parseInt(e.target.value) })
-              }
-              className="w-full accent-amber-600"
-            />
-            <div
-              className="flex justify-between text-[10px] mt-1"
-              style={{ color: MUTED }}
-            >
-              <span>1 month</span>
-              <span>36 months</span>
-            </div>
-          </div>
-          <div>
-            <label
-              className="text-xs font-semibold mb-2 block"
-              style={{ color: CHARCOAL }}
-            >
-              Revision intensity:{" "}
-              <span style={{ color: PROGRESS_PURPLE }}>
-                {revisionPercent}% of study time
-              </span>
-            </label>
-            <input
-              type="range"
-              min={25}
-              max={100}
-              step={5}
-              value={revisionPercent}
-              onChange={(e) =>
-                update({ revisionPercent: parseInt(e.target.value) })
-              }
-              className="w-full accent-amber-600"
-            />
-            <div
-              className="flex justify-between text-[10px] mt-1"
-              style={{ color: MUTED }}
-            >
-              <span>25% (min)</span>
-              <span>100% (intensive)</span>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="rounded-xl p-4"
-          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-        >
-          <p className="text-xs font-semibold mb-2" style={{ color: CHARCOAL }}>
-            Your availability:
-          </p>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: "Per Week", value: `${hoursPerWeek} hrs` },
-              { label: "Per Month", value: `${hoursPerWeek * 4} hrs` },
-              {
-                label: "In Target",
-                value: `${hoursPerWeek * targetMonths * 4} hrs total`,
-              },
-            ].map(({ label, value }) => (
-              <div key={label} className="text-center">
-                <div
-                  className="text-sm font-bold font-serif"
-                  style={{ color: DARK }}
-                >
-                  {value}
-                </div>
-                <div className="text-[10px]" style={{ color: MUTED }}>
-                  {label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <StudySchedulePlanner uid={effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })()} examType={examType} />
 
       {/* Completion forecast — always live */}
       <CompletionForecast schedule={schedule} />
