@@ -145,6 +145,7 @@ function autoGenerateCalendar(
     return selectedDays.includes(date.getDay());
   }
 
+  console.log("[CAL GEN DEBUG] selectedDays at generation:", JSON.stringify(selectedDays));
   for (let d = 0; d < horizonDays && qIdx < queue.length; d++) {
     const date = addDays(start, d);
     if (!isStudyDay(date)) continue;
