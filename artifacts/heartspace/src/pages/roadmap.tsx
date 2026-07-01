@@ -2969,7 +2969,6 @@ function StudySchedulePlanner({ uid, examType }: { uid: string; examType: string
     }
     setPlannerDayPickError("");
     persistPlanner({ selectedDays: pendingPlannerDays });
-    window.location.reload();
   }
 
   return (
