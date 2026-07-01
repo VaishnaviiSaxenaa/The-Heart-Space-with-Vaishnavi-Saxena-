@@ -125,33 +125,30 @@ interface VariableWeek {
 
 /* ─── Topic speed types ─────────────────── */
 type TopicSpeedKey =
-  | "first_slow"
-  | "first_normal"
-  | "first_fast"
-  | "second_slow"
-  | "second_normal"
-  | "second_fast";
+  | "gentle"
+  | "steady"
+  | "standard"
+  | "accelerated"
+  | "rapid";
 type TopicSpeedMap = Record<string, TopicSpeedKey>;
 
 const SPEED_MULTIPLIERS: Record<TopicSpeedKey, number> = {
-  first_slow: 1.3,
-  first_normal: 1.0,
-  first_fast: 0.8,
-  second_slow: 1.0,
-  second_normal: 0.67,
-  second_fast: 0.5,
+  gentle: 0.30,
+  steady: 0.40,
+  standard: 1.00,
+  accelerated: 1.30,
+  rapid: 1.40,
 };
 
 const SPEED_CFG: Record<
   TopicSpeedKey,
   { emoji: string; label: string; color: string }
 > = {
-  first_slow: { emoji: "🐢", label: "Slow (1st)", color: "#C0392B" },
-  first_normal: { emoji: "🚶", label: "Normal (1st)", color: PROGRESS_PURPLE },
-  first_fast: { emoji: "⚡", label: "Fast (1st)", color: OLIVE },
-  second_slow: { emoji: "🐢", label: "Slow (2nd)", color: "#C0392B" },
-  second_normal: { emoji: "🚶", label: "Normal (2nd)", color: PROGRESS_PURPLE },
-  second_fast: { emoji: "⚡", label: "Fast (2nd)", color: OLIVE },
+  gentle:      { emoji: "🐢", label: "Gentle",      color: "#C0392B" },
+  steady:      { emoji: "🌿", label: "Steady",      color: OLIVE },
+  standard:    { emoji: "⚖️",  label: "Standard",    color: PROGRESS_PURPLE },
+  accelerated: { emoji: "⚡", label: "Accelerated", color: "#E67E22" },
+  rapid:       { emoji: "🚀", label: "Rapid",       color: "#27AE60" },
 };
 
 type BaseWeeksMap = Record<string, number>;
@@ -863,7 +860,7 @@ function generateSmartSchedule(
       ? (s as any).totalHours / baseHoursPerWeek
       : s.studyWeeks;
     const baseWeeks = baseWeeksOverride[s.id] ?? computedWeeksFromHours;
-    const speedKey = (topicSpeed[s.id] ?? "first_normal") as TopicSpeedKey;
+    const speedKey = (topicSpeed[s.id] ?? "standard") as TopicSpeedKey;
     const speedMult = SPEED_MULTIPLIERS[speedKey] ?? 1.0;
     const adjStudy = Math.max(0, Math.ceil(baseWeeks * remaining * speedMult));
     const adjAssign = pct >= 100 ? 0 : s.assignmentWeeks;
@@ -3404,42 +3401,11 @@ function LiveScheduleTab({
                   key: "first",
                   label: "First Time Learner",
                   options: [
-                    {
-                      k: "first_slow" as TopicSpeedKey,
-                      e: "🐢",
-                      l: "Slow ×1.3",
-                    },
-                    {
-                      k: "first_normal" as TopicSpeedKey,
-                      e: "🚶",
-                      l: "Normal ×1.0",
-                    },
-                    {
-                      k: "first_fast" as TopicSpeedKey,
-                      e: "⚡",
-                      l: "Fast ×0.8",
-                    },
-                  ],
-                },
-                {
-                  key: "second",
-                  label: "Second Time Learner",
-                  options: [
-                    {
-                      k: "second_slow" as TopicSpeedKey,
-                      e: "🐢",
-                      l: "Slow ×1.0",
-                    },
-                    {
-                      k: "second_normal" as TopicSpeedKey,
-                      e: "🚶",
-                      l: "Normal ×1.5",
-                    },
-                    {
-                      k: "second_fast" as TopicSpeedKey,
-                      e: "⚡",
-                      l: "Fast ×2.0",
-                    },
+                    { k: "gentle"      as TopicSpeedKey, e: "🐢", l: "Gentle ×0.30" },
+                    { k: "steady"      as TopicSpeedKey, e: "🌿", l: "Steady ×0.40" },
+                    { k: "standard"    as TopicSpeedKey, e: "⚖️",  l: "Standard ×1.00" },
+                    { k: "accelerated" as TopicSpeedKey, e: "⚡", l: "Accelerated ×1.30" },
+                    { k: "rapid"       as TopicSpeedKey, e: "🚀", l: "Rapid ×1.40" },
                   ],
                 },
               ].map((group) => (
@@ -3471,7 +3437,7 @@ function LiveScheduleTab({
             <div className="space-y-2">
               {allSubjects.map((s) => {
                 const current = (topicSpeed[s.id] ??
-                  "first_normal") as TopicSpeedKey;
+                  "standard") as TopicSpeedKey;
                 const cfg = SPEED_CFG[current];
                 const computedWeeksFromHours2 = (s as any).totalHours
                   ? (s as any).totalHours / (hoursPerDay * daysPerWeek)
@@ -3505,12 +3471,11 @@ function LiveScheduleTab({
                     <div className="flex flex-wrap gap-1">
                       {(
                         [
-                          "first_slow",
-                          "first_normal",
-                          "first_fast",
-                          "second_slow",
-                          "second_normal",
-                          "second_fast",
+                          "gentle",
+                          "steady",
+                          "standard",
+                          "accelerated",
+                          "rapid",
                         ] as TopicSpeedKey[]
                       ).map((key) => (
                         <button
