@@ -2859,6 +2859,7 @@ function CalendarTabWrapper({
   unavailablePeriods: UnavailablePeriod[];
   variableWeeks: VariableWeek[];
 }) {
+  const uid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const inputsReal = loadScheduleInputs(effectiveUserId);
   const inputsFallback = loadScheduleInputs("undefined");
   const inputs = (inputsReal.hoursPerDay === 2 && inputsReal.daysPerWeek === 5 && inputsFallback.hoursPerDay !== 2)
