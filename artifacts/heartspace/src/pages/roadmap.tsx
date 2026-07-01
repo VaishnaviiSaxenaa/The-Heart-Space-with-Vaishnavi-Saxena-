@@ -133,11 +133,11 @@ type TopicSpeedKey =
 type TopicSpeedMap = Record<string, TopicSpeedKey>;
 
 const SPEED_MULTIPLIERS: Record<TopicSpeedKey, number> = {
-  gentle: 0.30,
-  steady: 0.40,
+  gentle: 1.40,
+  steady: 1.30,
   standard: 1.00,
-  accelerated: 1.30,
-  rapid: 1.40,
+  accelerated: 0.70,
+  rapid: 0.60,
 };
 
 const SPEED_CFG: Record<
@@ -3401,11 +3401,11 @@ function LiveScheduleTab({
                   key: "first",
                   label: "First Time Learner",
                   options: [
-                    { k: "gentle"      as TopicSpeedKey, e: "🐢", l: "Gentle ×0.30" },
-                    { k: "steady"      as TopicSpeedKey, e: "🌿", l: "Steady ×0.40" },
-                    { k: "standard"    as TopicSpeedKey, e: "⚖️",  l: "Standard ×1.00" },
-                    { k: "accelerated" as TopicSpeedKey, e: "⚡", l: "Accelerated ×1.30" },
-                    { k: "rapid"       as TopicSpeedKey, e: "🚀", l: "Rapid ×1.40" },
+                    { k: "gentle"      as TopicSpeedKey, e: "🐢", l: "Gentle +40%" },
+                    { k: "steady"      as TopicSpeedKey, e: "🌿", l: "Steady +30%" },
+                    { k: "standard"    as TopicSpeedKey, e: "⚖️",  l: "Standard" },
+                    { k: "accelerated" as TopicSpeedKey, e: "⚡", l: "Accelerated -30%" },
+                    { k: "rapid"       as TopicSpeedKey, e: "🚀", l: "Rapid -40%" },
                   ],
                 },
               ].map((group) => (
@@ -3465,7 +3465,7 @@ function LiveScheduleTab({
                           color: cfg.color,
                         }}
                       >
-                        {cfg.emoji} {cfg.label} → {effectW} wks
+                        {cfg.emoji} {cfg.label} → {effectW} wks · {Math.round((s as any).totalHours * SPEED_MULTIPLIERS[current])} hrs
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
