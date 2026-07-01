@@ -324,6 +324,43 @@ export default function RoadmapCalendar({
     persist(generated);
   }
 
+  function resetCalendarFromToday() {
+    if (
+      !confirm(
+        "This will clear all auto-filled AND manual entries from today onward, then regenerate fresh using your current settings. Days before today will NOT be touched. Continue?",
+      )
+    )
+      return;
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const baseData: CalendarData = {};
+    Object.entries(calendar).forEach(([dayKey, entries]) => {
+      if (dayKey < todayKey) baseData[dayKey] = entries;
+    });
+    const consumedBySubject: Record<string, number> = {};
+    Object.values(baseData).forEach((entries) => {
+      entries.forEach((e) => {
+        consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours;
+      });
+    });
+    const remainingHoursBySubject: Record<string, number> = {};
+    subjects.forEach((s) => {
+      const consumed = consumedBySubject[s.id] ?? 0;
+      remainingHoursBySubject[s.id] = Math.max(0, s.totalHours - consumed);
+    });
+    const generated = autoGenerateCalendar(
+      subjects,
+      remainingHoursBySubject,
+      startDate,
+      hoursPerDay,
+      selectedDays,
+      simSlots,
+      unavailablePeriods,
+      variablePeriods,
+      baseData,
+    );
+    persist(generated);
+  }
+
   function getTotalHoursForSubject(subjectId: string): number {
     const subj = subjects.find((s) => s.id === subjectId);
     return subj?.totalHours ?? Infinity;
@@ -529,6 +566,21 @@ export default function RoadmapCalendar({
             }}
           >
             Week
+          </button>
+          <button
+            onClick={resetCalendarFromToday}
+            style={{
+              background: "#fff3f3",
+              color: "#c0392b",
+              border: "1px solid #e0b0b0",
+              borderRadius: "6px",
+              padding: "6px 14px",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+            }}
+          >
+            Reset from Today
           </button>
           <button
             onClick={regenerateBaseline}
