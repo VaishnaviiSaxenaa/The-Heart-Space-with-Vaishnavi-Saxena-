@@ -2928,7 +2928,7 @@ function CalendarTabWrapper({
         startDate={startDate}
         hoursPerDay={inputs.hoursPerDay}
         daysPerWeek={inputs.daysPerWeek}
-        selectedDays={activeSelectedDays}
+        selectedDays={inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS}
         simSlots={simSlotsForCalendar}
         unavailablePeriods={unavailableForCalendar}
         variablePeriods={variableForCalendar}
@@ -2944,7 +2944,6 @@ function StudySchedulePlanner({ uid, examType }: { uid: string; examType: string
   const [hoursPerDay, setHoursPerDay] = useState(inputs.hoursPerDay);
   const [daysPerWeek, setDaysPerWeek] = useState(inputs.daysPerWeek);
   const [targetMonths, setTargetMonths] = useState(inputs.targetMonths);
-  const [activeSelectedDays, setActiveSelectedDays] = useState<number[]>(inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS);
   const [pendingPlannerDays, setPendingPlannerDays] = useState<number[]>(inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS);
   const [plannerDayPickError, setPlannerDayPickError] = useState<string>("");
 
@@ -2970,7 +2969,6 @@ function StudySchedulePlanner({ uid, examType }: { uid: string; examType: string
     }
     setPlannerDayPickError("");
     persistPlanner({ selectedDays: pendingPlannerDays });
-    setActiveSelectedDays(pendingPlannerDays);
   }
 
   return (
