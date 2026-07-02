@@ -198,12 +198,13 @@ export default function RevisionTracker() {
   /* Revision calendar setup: 40% of each subject's study hours */
   const roadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET : ROADMAP_SUBJECTS_JAM;
   const _effectiveUid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
-  const _studySpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } })();
-  const _revSpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_revision_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } })();
   const SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
+  const SPEED_OPTS = [["gentle","🐢","Gentle +40%"],["steady","🌿","Steady +30%"],["standard","⚖️","Standard"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;
+  const [studySpeedMap, setStudySpeedMap] = useState<Record<string,string>>(() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } });
+  const [revSpeedMap, setRevSpeedMap] = useState<Record<string,string>>(() => { try { return JSON.parse(localStorage.getItem(`hs_revision_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } });
   const revisionSubjects: GenericSubjectDef[] = roadmapSubjects.map((s) => {
-    const studyMult = SPEED_MULTS[_studySpeedMap[s.id]] ?? 1.0;
-    const revMult = SPEED_MULTS[_revSpeedMap[s.id]] ?? 1.0;
+    const studyMult = SPEED_MULTS[studySpeedMap[s.id]] ?? 1.0;
+    const revMult = SPEED_MULTS[revSpeedMap[s.id]] ?? 1.0;
     return {
       id: s.id,
       name: s.name,
@@ -363,29 +364,33 @@ export default function RevisionTracker() {
           </p>
         </div>
 
-        {/* Revision Speed Picker */}
+        {/* Revision Speed Picker - Topic-wise */}
         <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
-          <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Revision Speed</p>
-          <div style={{ display: "flex", gap: "0.4rem" }}>
-            {([["gentle","🐢","Gentle +40%"],["steady","🌿","Steady +30%"],["standard","⚖️","Standard"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const).map(([key, emoji, label]) => {
-              const allSame = roadmapSubjects.every(s => (_revSpeedMap[s.id] ?? "standard") === key);
-              return (
-                <button key={key} onClick={() => {
-                  const next: Record<string,string> = {};
-                  roadmapSubjects.forEach(s => { next[s.id] = key; });
-                  localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(next));
-                  window.location.reload();
-                }}
-                style={{
-                  flex: 1, padding: "0.35rem", borderRadius: 8, fontSize: "0.65rem", fontWeight: 600, cursor: "pointer",
-                  background: allSame ? "#6B568F" : "#F8F5F0",
-                  color: allSame ? "#fff" : "#7A7267",
-                  border: `1px solid ${allSame ? "#6B568F" : "#E5DDD0"}`,
-                }}>
-                  {emoji} {label}
-                </button>
-              );
-            })}
+          <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Revision Speed per Subject</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {roadmapSubjects.map(s => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#2D2A25", minWidth: 120 }}>{s.name}</span>
+                <div style={{ display: "flex", gap: "0.25rem", flex: 1 }}>
+                  {SPEED_OPTS.map(([key, emoji, label]) => {
+                    const current = revSpeedMap[s.id] ?? "standard";
+                    return (
+                      <button key={key} onClick={() => {
+                        const next = { ...revSpeedMap, [s.id]: key };
+                        setRevSpeedMap(next);
+                        localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(next));
+                      }}
+                      style={{
+                        flex: 1, padding: "0.2rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
+                        background: current === key ? "#6B568F" : "#F8F5F0",
+                        color: current === key ? "#fff" : "#7A7267",
+                        border: `1px solid ${current === key ? "#6B568F" : "#E5DDD0"}`,
+                      }}>{emoji} {label}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
