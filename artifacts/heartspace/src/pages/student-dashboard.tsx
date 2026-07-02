@@ -323,8 +323,10 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
       addEntries(studyCal, studySubjects, "Study");
       addEntries(revCal, revisionSubjects, "Revision");
       addEntries(pracCal, practiceSubjects, "Practice");
+      // Always strip old cal_ tasks and replace with fresh ones
+      const manualTasks = existing.filter(t => !t.id.startsWith("cal_"));
       if (calTasks.length > 0) {
-        const merged = [...calTasks, ...existing.filter(t => !t.id.startsWith("cal_"))];
+        const merged = [...calTasks, ...manualTasks];
         savePlanTasks(merged);
         return merged;
       }
