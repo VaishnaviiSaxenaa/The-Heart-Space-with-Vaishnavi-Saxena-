@@ -300,13 +300,15 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
   revisionSubjects: Array<{id: string; name: string}>;
   practiceSubjects: Array<{id: string; name: string}>;
 }) {
-  const initializedRef = useRef(false);
-  const [tasks, setTasks] = useState<PlanTask[]>(() => {
-    const existing = loadPlanTasks();
-    if (!uid || initializedRef.current) return existing;
-    initializedRef.current = true;
+  const [tasks, setTasks] = useState<PlanTask[]>(() => loadPlanTasks());
+
+  // Sync calendar entries into today's plan once on mount
+  useEffect(() => {
+    if (!uid) return;
     try {
-      const todayKey = new Date().toISOString().split("T")[0];
+      const todayLocal = new Date();
+      const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+      const existing = loadPlanTasks();
       const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
       const revCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_revision_${uid}`) ?? "{}");
       const pracCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_practice_${uid}`) ?? "{}");
@@ -316,32 +318,28 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
         entries.forEach((e: any) => {
           const subj = subjects.find(s => s.id === e.subjectId);
           if (!subj) return;
-          const label = `${subj.name} (${e.hours}h)`;
-          if (!existing.some(t => t.name === label)) {
-            calTasks.push({ id: `cal_${cat}_${e.subjectId}`, name: label, category: cat, done: false });
-          }
+          calTasks.push({ id: `cal_${cat}_${e.subjectId}`, name: `${subj.name} (${e.hours}h)`, category: cat, done: false });
         });
       };
       addEntries(studyCal, studySubjects, "Study");
       addEntries(revCal, revisionSubjects, "Revision");
       addEntries(pracCal, practiceSubjects, "Practice");
-      // Always strip old cal_ tasks and replace with fresh ones
+      if (calTasks.length === 0) return;
+      // Keep done status from existing cal tasks, keep manual tasks
       const manualTasks = existing.filter(t => !t.id.startsWith("cal_"));
-      // Only update if cal tasks have changed (avoid duplicates on re-mount)
-      const existingCalIds = new Set(existing.filter(t => t.id.startsWith("cal_")).map(t => t.id));
-      const newCalIds = new Set(calTasks.map(t => t.id));
-      const calTasksChanged = calTasks.some(t => !existingCalIds.has(t.id)) || 
-                              [...existingCalIds].some(id => !newCalIds.has(id));
-      if (calTasks.length > 0 && calTasksChanged) {
-        const merged = [...calTasks, ...manualTasks];
+      const mergedCalTasks = calTasks.map(t => {
+        const prev = existing.find(e => e.id === t.id);
+        return prev ? { ...t, done: prev.done } : t;
+      });
+      const merged = [...mergedCalTasks, ...manualTasks];
+      // Only save if different from existing
+      const sameIds = merged.length === existing.length && merged.every((t, i) => t.id === existing[i]?.id);
+      if (!sameIds) {
         savePlanTasks(merged);
-        return merged;
-      } else if (calTasks.length > 0) {
-        return existing;
+        setTasks(merged);
       }
     } catch {}
-    return existing;
-  });
+  }, [uid]);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCat, setNewCat] = useState<PlanCategory>("Study");
