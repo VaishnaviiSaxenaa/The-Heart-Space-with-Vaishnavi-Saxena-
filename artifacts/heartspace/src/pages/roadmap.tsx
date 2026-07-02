@@ -2870,12 +2870,18 @@ function CalendarTabWrapper({
     .filter((s): s is typeof rawSubjectsBase[number] => !!s);
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
 
-  const subjects = rawSubjects.map((s) => ({
-    id: s.id,
-    syllabusId: s.syllabusId,
-    name: s.name,
-    totalHours: (s as any).totalHours ?? 0,
-  }));
+  const calTopicSpeed = loadTopicSpeed(uid);
+  const subjects = rawSubjects.map((s) => {
+    const speedKey = (calTopicSpeed[s.id] ?? "standard") as TopicSpeedKey;
+    const speedMult = SPEED_MULTIPLIERS[speedKey] ?? 1.0;
+    const baseHours = (s as any).totalHours ?? 0;
+    return {
+      id: s.id,
+      syllabusId: s.syllabusId,
+      name: s.name,
+      totalHours: Math.round(baseHours * speedMult),
+    };
+  });
 
   /* Calendar is the single source of truth for hours consumed per subject */
   const savedCalendar = loadCalendar(effectiveUserId);
