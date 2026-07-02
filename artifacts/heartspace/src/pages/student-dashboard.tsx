@@ -814,9 +814,10 @@ export default function StudentDashboard() {
       {/* ── Combined Calendar ── */}
       {user?.id && (
         <Card className="p-6" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
-          {/* Speed pickers for revision and practice */}
+          {/* Speed pickers for study, revision and practice */}
           <div className="flex gap-3 mb-4 flex-wrap">
             {[
+              { label: "Study Speed", key: `hs_topic_speed_${_uid}`, color: "#2C4A73" },
               { label: "Revision Speed", key: `hs_revision_speed_${_uid}`, color: "#E07A28" },
               { label: "Practice Speed", key: `hs_practice_speed_${_uid}`, color: "#E0B428" },
             ].map(({ label, key, color }) => {

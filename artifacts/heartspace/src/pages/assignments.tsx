@@ -1168,11 +1168,20 @@ export default function QuestionPractice() {
     { id: "cv", name: "Calculus of Variations", totalHours: 30 },
   ];
   const qpRoadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET_QP : ROADMAP_SUBJECTS_JAM_QP;
-  const practiceSubjects: GenericSubjectDef[] = qpRoadmapSubjects.map((s) => ({
-    id: s.id,
-    name: s.name,
-    totalHours: Math.round(s.totalHours * 0.7 * 10) / 10,
-  }));
+  const _effectiveUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
+  const QP_SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
+  const QP_SPEED_OPTS = [["gentle","🐢","+40%"],["steady","🌿","+30%"],["standard","⚖️","Std"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;
+  const [studySpeedMapQP, setStudySpeedMapQP] = useState<Record<string,string>>(() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } });
+  const [pracSpeedMap, setPracSpeedMap] = useState<Record<string,string>>(() => { try { return JSON.parse(localStorage.getItem(`hs_practice_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } });
+  const practiceSubjects: GenericSubjectDef[] = qpRoadmapSubjects.map((s) => {
+    const studyMult = QP_SPEED_MULTS[studySpeedMapQP[s.id]] ?? 1.0;
+    const pracMult = QP_SPEED_MULTS[pracSpeedMap[s.id]] ?? 1.0;
+    return {
+      id: s.id,
+      name: s.name,
+      totalHours: Math.round(s.totalHours * studyMult * 0.7 * pracMult * 10) / 10,
+    };
+  });
   let practiceStartDate = format(new Date(), "yyyy-MM-dd");
   let practiceHoursPerDay = 2;
   let practiceDaysPerWeek = 5;
@@ -1320,6 +1329,35 @@ export default function QuestionPractice() {
 
       {activeMainTab === "calendar" && effectiveUserId && (
         <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          {/* Practice Speed Picker */}
+          <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+            <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Practice Speed per Subject</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              {qpRoadmapSubjects.map(s => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#2D2A25", minWidth: 120 }}>{s.name}</span>
+                  <div style={{ display: "flex", gap: "0.25rem", flex: 1 }}>
+                    {QP_SPEED_OPTS.map(([key, emoji, label]) => {
+                      const current = pracSpeedMap[s.id] ?? "standard";
+                      return (
+                        <button key={key} onClick={() => {
+                          const next = { ...pracSpeedMap, [s.id]: key };
+                          setPracSpeedMap(next);
+                          localStorage.setItem(`hs_practice_speed_${_effectiveUid}`, JSON.stringify(next));
+                        }}
+                        style={{
+                          flex: 1, padding: "0.2rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
+                          background: current === key ? "#E0B428" : "#F8F5F0",
+                          color: current === key ? "#fff" : "#7A7267",
+                          border: `1px solid ${current === key ? "#E0B428" : "#E5DDD0"}`,
+                        }}>{emoji} {label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           <GenericCalendar
             namespace="practice"
             uid={effectiveUserId}
