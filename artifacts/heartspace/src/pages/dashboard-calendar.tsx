@@ -98,14 +98,22 @@ export default function DashboardCalendar({
   // Load today's plan tasks from localStorage
   const todayTasks = useMemo(() => {
     try {
+      const todayLocal = new Date();
+      const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
       const raw = localStorage.getItem("heartspace_today_plan");
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      const todayKey = new Date().toISOString().split("T")[0];
-      if (parsed.date !== todayKey) return [];
-      return parsed.tasks ?? [];
+      const parsed = raw ? JSON.parse(raw) : { date: todayKey, tasks: [] };
+      const planTasks = parsed.date === todayKey ? (parsed.tasks ?? []) : [];
+      return planTasks;
     } catch { return []; }
   }, [taskRefresh]);
+
+  // Get custom tasks for any date
+  function getCustomTasksForDate(dateKey: string): Array<{id:string;name:string;category:string;done:boolean}> {
+    try {
+      const raw = localStorage.getItem(`heartspace_custom_tasks_${dateKey}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
 
   const CAT_COLORS: Record<string, string> = {
     Study: "#2C4A73", Revision: "#E07A28", Practice: "#E0B428",
@@ -421,33 +429,37 @@ export default function DashboardCalendar({
                 >
                   {format(day, "d")}
                 </span>
-                {today && todayTasks.length > 0 && (
-                  <div style={{ marginTop: 2, marginBottom: 2 }}>
-                    {todayTasks.slice(0, view === "month" ? 2 : 5).map((t: any, i: number) => (
-                      <div key={i} style={{
-                        fontSize: "0.6rem",
-                        padding: "1px 4px",
-                        borderRadius: 4,
-                        marginBottom: 1,
-                        background: `${CAT_COLORS[t.category] ?? "#9B7BB0"}22`,
-                        color: CAT_COLORS[t.category] ?? "#9B7BB0",
-                        fontWeight: 600,
-                        textDecoration: t.done ? "line-through" : "none",
-                        opacity: t.done ? 0.6 : 1,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}>
-                        {t.done ? "✓ " : ""}{t.name}
-                      </div>
-                    ))}
-                    {todayTasks.length > (view === "month" ? 2 : 5) && (
-                      <div style={{ fontSize: "0.55rem", color: MUTED }}>
-                        +{todayTasks.length - (view === "month" ? 2 : 5)} more
-                      </div>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const cellTasks = today ? todayTasks : getCustomTasksForDate(key);
+                  if (cellTasks.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: 2, marginBottom: 2 }}>
+                      {cellTasks.slice(0, view === "month" ? 2 : 5).map((t: any, i: number) => (
+                        <div key={i} style={{
+                          fontSize: "0.6rem",
+                          padding: "1px 4px",
+                          borderRadius: 4,
+                          marginBottom: 1,
+                          background: `${CAT_COLORS[t.category] ?? "#9B7BB0"}22`,
+                          color: CAT_COLORS[t.category] ?? "#9B7BB0",
+                          fontWeight: 600,
+                          textDecoration: t.done ? "line-through" : "none",
+                          opacity: t.done ? 0.6 : 1,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}>
+                          {t.done ? "✓ " : ""}{t.name}
+                        </div>
+                      ))}
+                      {cellTasks.length > (view === "month" ? 2 : 5) && (
+                        <div style={{ fontSize: "0.55rem", color: MUTED }}>
+                          +{cellTasks.length - (view === "month" ? 2 : 5)} more
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {entries.slice(0, view === "month" ? 3 : 7).map((e, i) => {
                   const subj = subjectsFor(e.type).find(
                     (s) => s.id === e.subjectId,
@@ -731,11 +743,21 @@ export default function DashboardCalendar({
                   onChange={e => setCustomTaskName(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter" && customTaskName.trim()) {
-                      const raw = localStorage.getItem("heartspace_today_plan");
-                      const parsed = raw ? JSON.parse(raw) : { date: editingDay, tasks: [] };
-                      const tasks = parsed.date === editingDay ? parsed.tasks : [];
+                      const planKey = `heartspace_custom_tasks_${editingDay}`;
+                      const raw = localStorage.getItem(planKey);
+                      const tasks = raw ? JSON.parse(raw) : [];
                       tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
-                      localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: editingDay, tasks }));
+                      localStorage.setItem(planKey, JSON.stringify(tasks));
+                      // Also add to today's plan if editing today
+                      const todayLocal = new Date();
+                      const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+                      if (editingDay === todayKey) {
+                        const planRaw = localStorage.getItem("heartspace_today_plan");
+                        const plan = planRaw ? JSON.parse(planRaw) : { date: todayKey, tasks: [] };
+                        const planTasks = plan.date === todayKey ? plan.tasks : [];
+                        planTasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
+                        localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: todayKey, tasks: planTasks }));
+                      }
                       setCustomTaskName("");
                       setTaskRefresh(r => r + 1);
                     }
@@ -748,11 +770,20 @@ export default function DashboardCalendar({
                 <button
                   onClick={() => {
                     if (!customTaskName.trim()) return;
-                    const raw = localStorage.getItem("heartspace_today_plan");
-                    const parsed = raw ? JSON.parse(raw) : { date: editingDay, tasks: [] };
-                    const tasks = parsed.date === editingDay ? parsed.tasks : [];
+                    const planKey = `heartspace_custom_tasks_${editingDay}`;
+                    const raw = localStorage.getItem(planKey);
+                    const tasks = raw ? JSON.parse(raw) : [];
                     tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
-                    localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: editingDay, tasks }));
+                    localStorage.setItem(planKey, JSON.stringify(tasks));
+                    const todayLocal = new Date();
+                    const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+                    if (editingDay === todayKey) {
+                      const planRaw = localStorage.getItem("heartspace_today_plan");
+                      const plan = planRaw ? JSON.parse(planRaw) : { date: todayKey, tasks: [] };
+                      const planTasks = plan.date === todayKey ? plan.tasks : [];
+                      planTasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
+                      localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: todayKey, tasks: planTasks }));
+                    }
                     setCustomTaskName("");
                     setTaskRefresh(r => r + 1);
                   }}
