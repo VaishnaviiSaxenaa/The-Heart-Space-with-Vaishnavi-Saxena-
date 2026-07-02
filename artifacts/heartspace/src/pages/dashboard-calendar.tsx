@@ -83,6 +83,8 @@ export default function DashboardCalendar({
   const [loaded, setLoaded] = useState(false);
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [addType, setAddType] = useState<SourceType>("study");
+  const [customTaskName, setCustomTaskName] = useState("");
+  const [customTaskCat, setCustomTaskCat] = useState("Study");
 
   useEffect(() => {
     if (!uid) return;
@@ -701,6 +703,63 @@ export default function DashboardCalendar({
                   + {s.name}
                 </button>
               ))}
+            </div>
+
+            {/* Custom task section */}
+            <div style={{ marginTop: "1rem", borderTop: `1px solid ${BORDER}`, paddingTop: "0.8rem" }}>
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, color: CHARCOAL, display: "block", marginBottom: "0.4rem" }}>
+                ✏️ Add custom task for this day:
+              </label>
+              <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.4rem" }}>
+                {["Study", "Revision", "Practice", "Physical", "Personal"].map(cat => (
+                  <button key={cat} onClick={() => setCustomTaskCat(cat)}
+                    style={{
+                      flex: 1, padding: "0.3rem", borderRadius: 6, fontSize: "0.65rem", fontWeight: 600, cursor: "pointer",
+                      background: customTaskCat === cat ? CHARCOAL : CREAM,
+                      color: customTaskCat === cat ? "#fff" : MUTED,
+                      border: `1px solid ${customTaskCat === cat ? CHARCOAL : BORDER}`,
+                    }}
+                  >{cat}</button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: "0.4rem" }}>
+                <input
+                  type="text"
+                  placeholder="Task name..."
+                  value={customTaskName}
+                  onChange={e => setCustomTaskName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && customTaskName.trim()) {
+                      const todayKey = new Date().toISOString().split("T")[0];
+                      const raw = localStorage.getItem("heartspace_today_plan");
+                      const parsed = raw ? JSON.parse(raw) : { date: todayKey, tasks: [] };
+                      const tasks = parsed.date === editingDay ? parsed.tasks : [];
+                      tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
+                      localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: editingDay, tasks }));
+                      setCustomTaskName("");
+                    }
+                  }}
+                  style={{
+                    flex: 1, padding: "0.4rem 0.6rem", borderRadius: 8,
+                    border: `1px solid ${BORDER}`, fontSize: "0.8rem",
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (!customTaskName.trim()) return;
+                    const raw = localStorage.getItem("heartspace_today_plan");
+                    const parsed = raw ? JSON.parse(raw) : { date: editingDay, tasks: [] };
+                    const tasks = parsed.date === editingDay ? parsed.tasks : [];
+                    tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
+                    localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: editingDay, tasks }));
+                    setCustomTaskName("");
+                  }}
+                  style={{
+                    padding: "0.4rem 0.8rem", borderRadius: 8, fontWeight: 600,
+                    background: CHARCOAL, color: "#fff", border: "none", cursor: "pointer", fontSize: "0.8rem",
+                  }}
+                >Add</button>
+              </div>
             </div>
           </div>
         </div>
