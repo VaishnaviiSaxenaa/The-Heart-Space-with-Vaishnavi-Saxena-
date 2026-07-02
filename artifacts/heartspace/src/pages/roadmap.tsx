@@ -3132,7 +3132,7 @@ function LiveScheduleTab({
   }, [effectiveUserId]);
   const [simForm, setSimForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string, number> });
   /* Live loads — always fresh */
-  const topicSpeed = loadTopicSpeed(effectiveUserId);
+  const [topicSpeed, setTopicSpeed] = useState<TopicSpeedMap>(() => loadTopicSpeed(effectiveUserId));
   const baseWeeksOverride = loadBaseWeeks(effectiveUserId);
   const practiceProgress = loadPracticeProgress(effectiveUserId);
   const rawSubjectsList = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
@@ -3306,6 +3306,7 @@ function LiveScheduleTab({
   function updateSpeed(subjectId: string, key: TopicSpeedKey) {
     const next = { ...topicSpeed, [subjectId]: key };
     saveTopicSpeed(effectiveUserId, next);
+    setTopicSpeed(next);
     onSave(
       generateSmartSchedule(
         examType,
