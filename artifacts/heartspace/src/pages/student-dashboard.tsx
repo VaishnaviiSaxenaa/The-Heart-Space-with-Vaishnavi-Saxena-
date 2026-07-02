@@ -294,8 +294,43 @@ function savePlanTasks(tasks: PlanTask[]) {
   localStorage.setItem(PLAN_KEY, JSON.stringify({ date: todayDate(), tasks }));
 }
 
-function TodaysPlan() {
-  const [tasks, setTasks] = useState<PlanTask[]>(() => loadPlanTasks());
+function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: {
+  uid: string;
+  studySubjects: Array<{id: string; name: string}>;
+  revisionSubjects: Array<{id: string; name: string}>;
+  practiceSubjects: Array<{id: string; name: string}>;
+}) {
+  const [tasks, setTasks] = useState<PlanTask[]>(() => {
+    const existing = loadPlanTasks();
+    if (!uid) return existing;
+    try {
+      const todayKey = new Date().toISOString().split("T")[0];
+      const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
+      const revCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_revision_${uid}`) ?? "{}");
+      const pracCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_practice_${uid}`) ?? "{}");
+      const calTasks: PlanTask[] = [];
+      const addEntries = (cal: any, subjects: Array<{id:string;name:string}>, cat: PlanCategory) => {
+        const entries = cal[todayKey] ?? [];
+        entries.forEach((e: any) => {
+          const subj = subjects.find(s => s.id === e.subjectId);
+          if (!subj) return;
+          const label = `${subj.name} (${e.hours}h)`;
+          if (!existing.some(t => t.name === label)) {
+            calTasks.push({ id: `cal_${cat}_${e.subjectId}`, name: label, category: cat, done: false });
+          }
+        });
+      };
+      addEntries(studyCal, studySubjects, "Study");
+      addEntries(revCal, revisionSubjects, "Revision");
+      addEntries(pracCal, practiceSubjects, "Practice");
+      if (calTasks.length > 0) {
+        const merged = [...calTasks, ...existing.filter(t => !t.id.startsWith("cal_"))];
+        savePlanTasks(merged);
+        return merged;
+      }
+    } catch {}
+    return existing;
+  });
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCat, setNewCat] = useState<PlanCategory>("Study");
@@ -765,7 +800,7 @@ export default function StudentDashboard() {
 
       {/* ── Today's Plan + Next Session ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <TodaysPlan />
+        <TodaysPlan uid={String(user?.id ?? "")} studySubjects={dashStudySubjects} revisionSubjects={dashRevisionSubjects} practiceSubjects={dashPracticeSubjects} />
         <Card className="p-6 flex flex-col">
           <SectionTitle>Upcoming Session</SectionTitle>
           {/* Reschedule popup */}
