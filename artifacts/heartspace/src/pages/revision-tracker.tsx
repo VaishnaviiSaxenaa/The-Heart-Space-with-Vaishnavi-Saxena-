@@ -197,11 +197,18 @@ export default function RevisionTracker() {
 
   /* Revision calendar setup: 40% of each subject's study hours */
   const roadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET : ROADMAP_SUBJECTS_JAM;
-  const revisionSubjects: GenericSubjectDef[] = roadmapSubjects.map((s) => ({
-    id: s.id,
-    name: s.name,
-    totalHours: Math.round(s.totalHours * 0.4 * 10) / 10,
-  }));
+  const _studySpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${userId}`) ?? "{}"); } catch { return {}; } })();
+  const _revSpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_revision_speed_${userId}`) ?? "{}"); } catch { return {}; } })();
+  const SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
+  const revisionSubjects: GenericSubjectDef[] = roadmapSubjects.map((s) => {
+    const studyMult = SPEED_MULTS[_studySpeedMap[s.id]] ?? 1.0;
+    const revMult = SPEED_MULTS[_revSpeedMap[s.id]] ?? 1.0;
+    return {
+      id: s.id,
+      name: s.name,
+      totalHours: Math.round(s.totalHours * studyMult * 0.4 * revMult * 10) / 10,
+    };
+  });
   let revisionStartDate = format(new Date(), "yyyy-MM-dd");
   let revisionHoursPerDay = 2;
   let revisionDaysPerWeek = 5;
@@ -353,6 +360,32 @@ export default function RevisionTracker() {
           <p style={{ color: MUTED, margin: "0.4rem 0 0", fontSize: "0.9rem" }}>
             Track your revisions and stay on schedule
           </p>
+        </div>
+
+        {/* Revision Speed Picker */}
+        <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+          <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Revision Speed</p>
+          <div style={{ display: "flex", gap: "0.4rem" }}>
+            {([["gentle","🐢","Gentle +40%"],["steady","🌿","Steady +30%"],["standard","⚖️","Standard"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const).map(([key, emoji, label]) => {
+              const allSame = roadmapSubjects.every(s => (_revSpeedMap[s.id] ?? "standard") === key);
+              return (
+                <button key={key} onClick={() => {
+                  const next: Record<string,string> = {};
+                  roadmapSubjects.forEach(s => { next[s.id] = key; });
+                  localStorage.setItem(`hs_revision_speed_${userId}`, JSON.stringify(next));
+                  window.location.reload();
+                }}
+                style={{
+                  flex: 1, padding: "0.35rem", borderRadius: 8, fontSize: "0.65rem", fontWeight: 600, cursor: "pointer",
+                  background: allSame ? "#6B568F" : "#F8F5F0",
+                  color: allSame ? "#fff" : "#7A7267",
+                  border: `1px solid ${allSame ? "#6B568F" : "#E5DDD0"}`,
+                }}>
+                  {emoji} {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Tab Switcher */}

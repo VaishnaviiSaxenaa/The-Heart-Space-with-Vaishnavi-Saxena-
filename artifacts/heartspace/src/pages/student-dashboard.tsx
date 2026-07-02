@@ -665,9 +665,24 @@ export default function StudentDashboard() {
     { id: "cv", name: "Calculus of Variations", totalHours: 30 },
   ];
   const dashRoadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET_DASH : ROADMAP_SUBJECTS_JAM_DASH;
-  const dashStudySubjects = dashRoadmapSubjects.map((s) => ({ id: s.id, name: s.name, totalHours: s.totalHours }));
-  const dashRevisionSubjects = dashRoadmapSubjects.map((s) => ({ id: s.id, name: s.name, totalHours: Math.round(s.totalHours * 0.4 * 10) / 10 }));
-  const dashPracticeSubjects = dashRoadmapSubjects.map((s) => ({ id: s.id, name: s.name, totalHours: Math.round(s.totalHours * 0.7 * 10) / 10 }));
+  // Load speed multipliers
+  const _uid = String((user as any)?.id ?? "");
+  const _studySpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${_uid}`) ?? "{}"); } catch { return {}; } })();
+  const _revSpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_revision_speed_${_uid}`) ?? "{}"); } catch { return {}; } })();
+  const _pracSpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_practice_speed_${_uid}`) ?? "{}"); } catch { return {}; } })();
+  const SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
+  const dashStudySubjects = dashRoadmapSubjects.map((s) => ({
+    id: s.id, name: s.name,
+    totalHours: Math.round(s.totalHours * (SPEED_MULTS[_studySpeedMap[s.id]] ?? 1.0) * 10) / 10,
+  }));
+  const dashRevisionSubjects = dashRoadmapSubjects.map((s) => {
+    const studyHours = s.totalHours * (SPEED_MULTS[_studySpeedMap[s.id]] ?? 1.0);
+    return { id: s.id, name: s.name, totalHours: Math.round(studyHours * 0.4 * (SPEED_MULTS[_revSpeedMap[s.id]] ?? 1.0) * 10) / 10 };
+  });
+  const dashPracticeSubjects = dashRoadmapSubjects.map((s) => {
+    const studyHours = s.totalHours * (SPEED_MULTS[_studySpeedMap[s.id]] ?? 1.0);
+    return { id: s.id, name: s.name, totalHours: Math.round(studyHours * 0.7 * (SPEED_MULTS[_pracSpeedMap[s.id]] ?? 1.0) * 10) / 10 };
+  });
 
   const SERVICE: Record<
     string,
@@ -799,6 +814,36 @@ export default function StudentDashboard() {
       {/* ── Combined Calendar ── */}
       {user?.id && (
         <Card className="p-6" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          {/* Speed pickers for revision and practice */}
+          <div className="flex gap-3 mb-4 flex-wrap">
+            {[
+              { label: "Revision Speed", key: `hs_revision_speed_${_uid}`, color: "#E07A28" },
+              { label: "Practice Speed", key: `hs_practice_speed_${_uid}`, color: "#E0B428" },
+            ].map(({ label, key, color }) => {
+              const speedMap = (() => { try { return JSON.parse(localStorage.getItem(key) ?? "{}"); } catch { return {}; } })();
+              const current = speedMap[dashRoadmapSubjects[0]?.id] ?? "standard";
+              return (
+                <div key={key} style={{ flex: 1, minWidth: 200, background: CREAM, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "0.5rem 0.75rem" }}>
+                  <p style={{ fontSize: "0.65rem", fontWeight: 700, color: MUTED, margin: "0 0 0.35rem", textTransform: "uppercase" }}>{label}</p>
+                  <div style={{ display: "flex", gap: "0.3rem" }}>
+                    {[["gentle","🐢","+40%"],["steady","🌿","+30%"],["standard","⚖️","Std"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]].map(([k, e, l]) => (
+                      <button key={k} onClick={() => {
+                        const next: Record<string,string> = {};
+                        dashRoadmapSubjects.forEach(s => { next[s.id] = k; });
+                        localStorage.setItem(key, JSON.stringify(next));
+                        window.location.reload();
+                      }} style={{
+                        flex: 1, padding: "0.25rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
+                        background: current === k ? color : CREAM,
+                        color: current === k ? "#fff" : MUTED,
+                        border: `1px solid ${current === k ? color : BORDER}`,
+                      }}>{e} {l}</button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           <DashboardCalendar
             uid={String(user.id)}
             studySubjects={dashStudySubjects}
