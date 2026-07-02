@@ -325,10 +325,17 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
       addEntries(pracCal, practiceSubjects, "Practice");
       // Always strip old cal_ tasks and replace with fresh ones
       const manualTasks = existing.filter(t => !t.id.startsWith("cal_"));
-      if (calTasks.length > 0) {
+      // Only update if cal tasks have changed (avoid duplicates on re-mount)
+      const existingCalIds = new Set(existing.filter(t => t.id.startsWith("cal_")).map(t => t.id));
+      const newCalIds = new Set(calTasks.map(t => t.id));
+      const calTasksChanged = calTasks.some(t => !existingCalIds.has(t.id)) || 
+                              [...existingCalIds].some(id => !newCalIds.has(id));
+      if (calTasks.length > 0 && calTasksChanged) {
         const merged = [...calTasks, ...manualTasks];
         savePlanTasks(merged);
         return merged;
+      } else if (calTasks.length > 0) {
+        return existing;
       }
     } catch {}
     return existing;
