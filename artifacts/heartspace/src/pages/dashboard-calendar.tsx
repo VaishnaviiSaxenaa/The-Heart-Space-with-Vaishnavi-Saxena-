@@ -85,6 +85,7 @@ export default function DashboardCalendar({
   const [addType, setAddType] = useState<SourceType>("study");
   const [customTaskName, setCustomTaskName] = useState("");
   const [customTaskCat, setCustomTaskCat] = useState("Study");
+  const [taskRefresh, setTaskRefresh] = useState(0);
 
   useEffect(() => {
     if (!uid) return;
@@ -104,7 +105,7 @@ export default function DashboardCalendar({
       if (parsed.date !== todayKey) return [];
       return parsed.tasks ?? [];
     } catch { return []; }
-  }, []);
+  }, [taskRefresh]);
 
   const CAT_COLORS: Record<string, string> = {
     Study: "#2C4A73", Revision: "#E07A28", Practice: "#E0B428",
@@ -737,6 +738,7 @@ export default function DashboardCalendar({
                       tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
                       localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: editingDay, tasks }));
                       setCustomTaskName("");
+                      setTaskRefresh(r => r + 1);
                     }
                   }}
                   style={{
@@ -753,6 +755,7 @@ export default function DashboardCalendar({
                     tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
                     localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: editingDay, tasks }));
                     setCustomTaskName("");
+                    setTaskRefresh(r => r + 1);
                   }}
                   style={{
                     padding: "0.4rem 0.8rem", borderRadius: 8, fontWeight: 600,
