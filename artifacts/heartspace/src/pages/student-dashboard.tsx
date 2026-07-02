@@ -876,61 +876,42 @@ export default function StudentDashboard() {
           {(() => {
             try {
               const uid = String(user?.id ?? "");
-              const progress = loadSyllabusProgress(uid);
-              const examSubjects = SYLLABUS.filter(s =>
-                examType === "NET_GATE" ? !s.jamOnly : !s.netOnly
-              );
-              let totalTopics = 0;
-              let doneTopics = 0;
-              let totalSubtopics = 0;
-              let doneSubtopics = 0;
-              examSubjects.forEach(subject => {
-                subject.topics.forEach(topic => {
-                  const filtered = topic.subtopics.filter(st =>
-                    examType === "NET_GATE" ? !st.netOnly === false || true : !st.netOnly
-                  );
-                  filtered.forEach(st => {
-                    totalSubtopics++;
-                    if (progress[st.id]?.status === "done") doneSubtopics++;
+              const todayLocal = new Date();
+              const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+              const cal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
+              // Sum hours per subject up to and including today
+              const coveredHours: Record<string, number> = {};
+              Object.entries(cal).forEach(([day, entries]: [string, any]) => {
+                if (day <= todayKey) {
+                  entries.forEach((e: any) => {
+                    coveredHours[e.subjectId] = (coveredHours[e.subjectId] ?? 0) + e.hours;
                   });
-                  totalTopics++;
-                  const allDone = filtered.every(st => progress[st.id]?.status === "done");
-                  if (allDone && filtered.length > 0) doneTopics++;
-                });
+                }
               });
-              const overallPct = totalSubtopics > 0 ? Math.round((doneSubtopics / totalSubtopics) * 100) : 0;
+              const totalAllHours = dashStudySubjects.reduce((a, s) => a + s.totalHours, 0);
+              const coveredAllHours = Object.values(coveredHours).reduce((a: number, b: any) => a + b, 0);
+              const overallPct = totalAllHours > 0 ? Math.round((coveredAllHours / totalAllHours) * 100) : 0;
               return (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: CREAM }}>
-                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>📚 Overall Syllabus</span>
-                    <span className="text-xs font-bold" style={{ color: PROGRESS_PURPLE }}>{overallPct}% complete</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1 p-3 rounded-xl text-center" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
-                      <div className="text-lg font-bold" style={{ color: OLIVE }}>{doneTopics}</div>
-                      <div className="text-[10px]" style={{ color: MUTED }}>of {totalTopics} topics done</div>
-                    </div>
-                    <div className="flex-1 p-3 rounded-xl text-center" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
-                      <div className="text-lg font-bold" style={{ color: PROGRESS_PURPLE }}>{doneSubtopics}</div>
-                      <div className="text-[10px]" style={{ color: MUTED }}>of {totalSubtopics} subtopics done</div>
-                    </div>
+                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>📚 Overall Coverage</span>
+                    <span className="text-xs font-bold" style={{ color: PROGRESS_PURPLE }}>{coveredAllHours}h / {totalAllHours}h ({overallPct}%)</span>
                   </div>
                   <div className="space-y-2">
-                    {examSubjects.map(subject => {
-                      const subTopics = subject.topics.filter(t =>
-                        examType === "NET_GATE" ? !t.jamOnly : !t.netOnly
-                      );
-                      const subTotal = subTopics.reduce((a, t) => a + t.subtopics.filter(st => examType === "NET_GATE" ? true : !st.netOnly).length, 0);
-                      const subDone = subTopics.reduce((a, t) => a + t.subtopics.filter(st => (examType === "NET_GATE" ? true : !st.netOnly) && progress[st.id]?.status === "done").length, 0);
-                      const p = subTotal > 0 ? Math.round((subDone / subTotal) * 100) : 0;
+                    {dashStudySubjects.map(s => {
+                      const covered = Math.round((coveredHours[s.id] ?? 0) * 10) / 10;
+                      const total = s.totalHours;
+                      const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
                       return (
-                        <div key={subject.id} className="p-2.5 rounded-xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                        <div key={s.id} className="p-2.5 rounded-xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>{subject.name}</span>
-                            <span className="text-[10px] font-bold" style={{ color: p >= 100 ? OLIVE : PROGRESS_PURPLE }}>{subDone}/{subTotal}</span>
+                            <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>{s.name}</span>
+                            <span className="text-[10px] font-bold" style={{ color: pct >= 100 ? OLIVE : PROGRESS_PURPLE }}>
+                              {covered}/{total}h · {pct}%
+                            </span>
                           </div>
                           <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
-                            <div className="h-full rounded-full" style={{ width: `${Math.min(p, 100)}%`, background: p >= 100 ? OLIVE : PROGRESS_PURPLE }} />
+                            <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, background: pct >= 100 ? OLIVE : pct >= 50 ? PROGRESS_PURPLE : REVISION_ORANGE }} />
                           </div>
                         </div>
                       );
@@ -939,7 +920,7 @@ export default function StudentDashboard() {
                 </div>
               );
             } catch {
-              return <p className="text-xs" style={{ color: MUTED }}>No syllabus data yet.</p>;
+              return <p className="text-xs" style={{ color: MUTED }}>No calendar data yet. Set up your roadmap first.</p>;
             }
           })()}
         </Card>
