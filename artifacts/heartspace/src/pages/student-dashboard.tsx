@@ -909,23 +909,58 @@ export default function StudentDashboard() {
       {/* ── Wellbeing prompts ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
-          <SectionTitle>Habit Tracking</SectionTitle>
-          <div
-            className="flex flex-col items-center justify-center py-8 text-center rounded-2xl"
-            style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
-          >
-            <LeafyGreen
-              className="w-8 h-8 mb-3 opacity-30"
-              style={{ color: OLIVE }}
-            />
-            <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-              No habits tracked yet
-            </p>
-            <p className="text-xs mt-1" style={{ color: MUTED }}>
-              Log daily entries in the <strong>Daily Tracker</strong> to build
-              streaks here.
-            </p>
-          </div>
+          <SectionTitle>Reports Summary</SectionTitle>
+          {(() => {
+            try {
+              const uid = String(user?.id ?? "");
+              const cal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
+              const speedMap = JSON.parse(localStorage.getItem(`hs_topic_speed_${uid}`) ?? "{}");
+              const SPEED_LABELS: Record<string, string> = {
+                gentle: "🐢 Gentle", steady: "🌿 Steady", standard: "⚖️ Standard",
+                accelerated: "⚡ Accelerated", rapid: "🚀 Rapid",
+              };
+              const consumed: Record<string, number> = {};
+              Object.values(cal).forEach((entries: any) =>
+                entries.forEach((e: any) => {
+                  consumed[e.subjectId] = (consumed[e.subjectId] ?? 0) + e.hours;
+                })
+              );
+              const totalScheduled = Object.values(consumed).reduce((a: number, b: any) => a + b, 0);
+              const totalHours = dashStudySubjects.reduce((a, s) => a + s.totalHours, 0);
+              const pct = totalHours > 0 ? Math.round((totalScheduled / totalHours) * 100) : 0;
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: CREAM }}>
+                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>📅 Calendar Coverage</span>
+                    <span className="text-xs font-bold" style={{ color: PROGRESS_PURPLE }}>{totalScheduled}h / {totalHours}h ({pct}%)</span>
+                  </div>
+                  <div className="space-y-2">
+                    {dashStudySubjects.map((s) => {
+                      const done = consumed[s.id] ?? 0;
+                      const p = s.totalHours > 0 ? Math.round((done / s.totalHours) * 100) : 0;
+                      const speed = SPEED_LABELS[speedMap[s.id]] ?? "⚖️ Standard";
+                      return (
+                        <div key={s.id} className="p-2.5 rounded-xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>{s.name}</span>
+                            <span className="text-[10px]" style={{ color: MUTED }}>{speed}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 rounded-full" style={{ background: BORDER }}>
+                              <div className="h-full rounded-full" style={{ width: `${Math.min(p, 100)}%`, background: p >= 100 ? OLIVE : PROGRESS_PURPLE }} />
+                            </div>
+                            <span className="text-[10px] font-bold" style={{ color: p >= 100 ? OLIVE : PROGRESS_PURPLE }}>{done}h/{s.totalHours}h</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            } catch {
+              return <p className="text-xs" style={{ color: MUTED }}>No data yet. Start from My Roadmap.</p>;
+            }
+          })()}
         </Card>
 
         <Card className="p-6">
