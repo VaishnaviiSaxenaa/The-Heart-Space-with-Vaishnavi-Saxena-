@@ -197,8 +197,9 @@ export default function RevisionTracker() {
 
   /* Revision calendar setup: 40% of each subject's study hours */
   const roadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET : ROADMAP_SUBJECTS_JAM;
-  const _studySpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${userId}`) ?? "{}"); } catch { return {}; } })();
-  const _revSpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_revision_speed_${userId}`) ?? "{}"); } catch { return {}; } })();
+  const _effectiveUid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
+  const _studySpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } })();
+  const _revSpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_revision_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } })();
   const SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
   const revisionSubjects: GenericSubjectDef[] = roadmapSubjects.map((s) => {
     const studyMult = SPEED_MULTS[_studySpeedMap[s.id]] ?? 1.0;
@@ -372,7 +373,7 @@ export default function RevisionTracker() {
                 <button key={key} onClick={() => {
                   const next: Record<string,string> = {};
                   roadmapSubjects.forEach(s => { next[s.id] = key; });
-                  localStorage.setItem(`hs_revision_speed_${userId}`, JSON.stringify(next));
+                  localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(next));
                   window.location.reload();
                 }}
                 style={{
