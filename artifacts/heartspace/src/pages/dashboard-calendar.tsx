@@ -731,9 +731,8 @@ export default function DashboardCalendar({
                   onChange={e => setCustomTaskName(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter" && customTaskName.trim()) {
-                      const todayKey = new Date().toISOString().split("T")[0];
                       const raw = localStorage.getItem("heartspace_today_plan");
-                      const parsed = raw ? JSON.parse(raw) : { date: todayKey, tasks: [] };
+                      const parsed = raw ? JSON.parse(raw) : { date: editingDay, tasks: [] };
                       const tasks = parsed.date === editingDay ? parsed.tasks : [];
                       tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
                       localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: editingDay, tasks }));
