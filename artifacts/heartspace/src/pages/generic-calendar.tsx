@@ -350,6 +350,38 @@ export default function GenericCalendar({
     persist(generated);
   }
 
+  function resetFromToday() {
+    if (!confirm("This will clear all entries from today onward and regenerate fresh with current settings. Past entries will NOT be touched. Continue?"))
+      return;
+    const todayLocal = new Date();
+    const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+    const baseData: CalendarData = {};
+    Object.entries(calendar).forEach(([dayKey, entries]) => {
+      if (dayKey < todayKey) baseData[dayKey] = entries;
+    });
+    const consumedBySubject: Record<string, number> = {};
+    Object.values(baseData).forEach((entries) => {
+      entries.forEach((e) => {
+        consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours;
+      });
+    });
+    const remainingHoursBySubject: Record<string, number> = {};
+    subjects.forEach((s) => {
+      const consumed = consumedBySubject[s.id] ?? 0;
+      remainingHoursBySubject[s.id] = Math.max(0, s.totalHours - consumed);
+    });
+    const generated = autoGenerateGeneric(
+      subjects,
+      remainingHoursBySubject,
+      startDate,
+      hoursPerDay,
+      selectedDays,
+      unavailablePeriods,
+      baseData,
+    );
+    persist(generated);
+  }
+
   function getTotalHoursForSubject(subjectId: string): number {
     return subjects.find((s) => s.id === subjectId)?.totalHours ?? Infinity;
   }
@@ -539,6 +571,21 @@ export default function GenericCalendar({
             }}
           >
             {view === "month" ? "Week view" : "Month view"}
+          </button>
+          <button
+            onClick={resetFromToday}
+            style={{
+              background: "#fff3f3",
+              color: "#c0392b",
+              border: "1px solid #e0b0b0",
+              borderRadius: 8,
+              padding: "0.35rem 0.7rem",
+              cursor: "pointer",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+            }}
+          >
+            🔄 Reset from Today
           </button>
           <button
             onClick={regenerateBaseline}
