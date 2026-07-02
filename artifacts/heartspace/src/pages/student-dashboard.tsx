@@ -300,9 +300,11 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
   revisionSubjects: Array<{id: string; name: string}>;
   practiceSubjects: Array<{id: string; name: string}>;
 }) {
+  const initializedRef = useRef(false);
   const [tasks, setTasks] = useState<PlanTask[]>(() => {
     const existing = loadPlanTasks();
-    if (!uid) return existing;
+    if (!uid || initializedRef.current) return existing;
+    initializedRef.current = true;
     try {
       const todayKey = new Date().toISOString().split("T")[0];
       const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
