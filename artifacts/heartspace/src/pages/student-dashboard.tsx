@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Calendar, LeafyGreen, Plus, Trash2 } from "lucide-react";
+import { SYLLABUS, loadSyllabusProgress } from "./syllabus";
 import DashboardCalendar from "./dashboard-calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -875,43 +876,61 @@ export default function StudentDashboard() {
           {(() => {
             try {
               const uid = String(user?.id ?? "");
-              const cal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
-              const speedMap = JSON.parse(localStorage.getItem(`hs_topic_speed_${uid}`) ?? "{}");
-              const SPEED_LABELS: Record<string, string> = {
-                gentle: "🐢 Gentle", steady: "🌿 Steady", standard: "⚖️ Standard",
-                accelerated: "⚡ Accelerated", rapid: "🚀 Rapid",
-              };
-              const consumed: Record<string, number> = {};
-              Object.values(cal).forEach((entries: any) =>
-                entries.forEach((e: any) => {
-                  consumed[e.subjectId] = (consumed[e.subjectId] ?? 0) + e.hours;
-                })
+              const progress = loadSyllabusProgress(uid);
+              const examSubjects = SYLLABUS.filter(s =>
+                examType === "NET_GATE" ? !s.jamOnly : !s.netOnly
               );
-              const totalScheduled = Object.values(consumed).reduce((a: number, b: any) => a + b, 0);
-              const totalHours = dashStudySubjects.reduce((a, s) => a + s.totalHours, 0);
-              const pct = totalHours > 0 ? Math.round((totalScheduled / totalHours) * 100) : 0;
+              let totalTopics = 0;
+              let doneTopics = 0;
+              let totalSubtopics = 0;
+              let doneSubtopics = 0;
+              examSubjects.forEach(subject => {
+                subject.topics.forEach(topic => {
+                  const filtered = topic.subtopics.filter(st =>
+                    examType === "NET_GATE" ? !st.netOnly === false || true : !st.netOnly
+                  );
+                  filtered.forEach(st => {
+                    totalSubtopics++;
+                    if (progress[st.id]?.status === "done") doneSubtopics++;
+                  });
+                  totalTopics++;
+                  const allDone = filtered.every(st => progress[st.id]?.status === "done");
+                  if (allDone && filtered.length > 0) doneTopics++;
+                });
+              });
+              const overallPct = totalSubtopics > 0 ? Math.round((doneSubtopics / totalSubtopics) * 100) : 0;
               return (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: CREAM }}>
-                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>📅 Calendar Coverage</span>
-                    <span className="text-xs font-bold" style={{ color: PROGRESS_PURPLE }}>{totalScheduled}h / {totalHours}h ({pct}%)</span>
+                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>📚 Overall Syllabus</span>
+                    <span className="text-xs font-bold" style={{ color: PROGRESS_PURPLE }}>{overallPct}% complete</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 p-3 rounded-xl text-center" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                      <div className="text-lg font-bold" style={{ color: OLIVE }}>{doneTopics}</div>
+                      <div className="text-[10px]" style={{ color: MUTED }}>of {totalTopics} topics done</div>
+                    </div>
+                    <div className="flex-1 p-3 rounded-xl text-center" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                      <div className="text-lg font-bold" style={{ color: PROGRESS_PURPLE }}>{doneSubtopics}</div>
+                      <div className="text-[10px]" style={{ color: MUTED }}>of {totalSubtopics} subtopics done</div>
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    {dashStudySubjects.map((s) => {
-                      const done = consumed[s.id] ?? 0;
-                      const p = s.totalHours > 0 ? Math.round((done / s.totalHours) * 100) : 0;
-                      const speed = SPEED_LABELS[speedMap[s.id]] ?? "⚖️ Standard";
+                    {examSubjects.map(subject => {
+                      const subTopics = subject.topics.filter(t =>
+                        examType === "NET_GATE" ? !t.jamOnly : !t.netOnly
+                      );
+                      const subTotal = subTopics.reduce((a, t) => a + t.subtopics.filter(st => examType === "NET_GATE" ? true : !st.netOnly).length, 0);
+                      const subDone = subTopics.reduce((a, t) => a + t.subtopics.filter(st => (examType === "NET_GATE" ? true : !st.netOnly) && progress[st.id]?.status === "done").length, 0);
+                      const p = subTotal > 0 ? Math.round((subDone / subTotal) * 100) : 0;
                       return (
-                        <div key={s.id} className="p-2.5 rounded-xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                        <div key={subject.id} className="p-2.5 rounded-xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>{s.name}</span>
-                            <span className="text-[10px]" style={{ color: MUTED }}>{speed}</span>
+                            <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>{subject.name}</span>
+                            <span className="text-[10px] font-bold" style={{ color: p >= 100 ? OLIVE : PROGRESS_PURPLE }}>{subDone}/{subTotal}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 rounded-full" style={{ background: BORDER }}>
-                              <div className="h-full rounded-full" style={{ width: `${Math.min(p, 100)}%`, background: p >= 100 ? OLIVE : PROGRESS_PURPLE }} />
-                            </div>
-                            <span className="text-[10px] font-bold" style={{ color: p >= 100 ? OLIVE : PROGRESS_PURPLE }}>{done}h/{s.totalHours}h</span>
+                          <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
+                            <div className="h-full rounded-full" style={{ width: `${Math.min(p, 100)}%`, background: p >= 100 ? OLIVE : PROGRESS_PURPLE }} />
                           </div>
                         </div>
                       );
@@ -920,7 +939,7 @@ export default function StudentDashboard() {
                 </div>
               );
             } catch {
-              return <p className="text-xs" style={{ color: MUTED }}>No data yet. Start from My Roadmap.</p>;
+              return <p className="text-xs" style={{ color: MUTED }}>No syllabus data yet.</p>;
             }
           })()}
         </Card>
