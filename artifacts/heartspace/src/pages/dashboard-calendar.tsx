@@ -92,6 +92,23 @@ export default function DashboardCalendar({
     setLoaded(true);
   }, [uid]);
 
+  // Load today's plan tasks from localStorage
+  const todayTasks = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("heartspace_today_plan");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      const todayKey = new Date().toISOString().split("T")[0];
+      if (parsed.date !== todayKey) return [];
+      return parsed.tasks ?? [];
+    } catch { return []; }
+  }, []);
+
+  const CAT_COLORS: Record<string, string> = {
+    Study: "#2C4A73", Revision: "#E07A28", Practice: "#E0B428",
+    Physical: "#6E8B6B", Personal: "#9B7BB0",
+  };
+
   function subjectsFor(type: SourceType): GenericSubjectDef[] {
     if (type === "study") return studySubjects;
     if (type === "revision") return revisionSubjects;
@@ -401,6 +418,33 @@ export default function DashboardCalendar({
                 >
                   {format(day, "d")}
                 </span>
+                {today && todayTasks.length > 0 && (
+                  <div style={{ marginTop: 2, marginBottom: 2 }}>
+                    {todayTasks.slice(0, view === "month" ? 2 : 5).map((t: any, i: number) => (
+                      <div key={i} style={{
+                        fontSize: "0.6rem",
+                        padding: "1px 4px",
+                        borderRadius: 4,
+                        marginBottom: 1,
+                        background: `${CAT_COLORS[t.category] ?? "#9B7BB0"}22`,
+                        color: CAT_COLORS[t.category] ?? "#9B7BB0",
+                        fontWeight: 600,
+                        textDecoration: t.done ? "line-through" : "none",
+                        opacity: t.done ? 0.6 : 1,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}>
+                        {t.done ? "✓ " : ""}{t.name}
+                      </div>
+                    ))}
+                    {todayTasks.length > (view === "month" ? 2 : 5) && (
+                      <div style={{ fontSize: "0.55rem", color: MUTED }}>
+                        +{todayTasks.length - (view === "month" ? 2 : 5)} more
+                      </div>
+                    )}
+                  </div>
+                )}
                 {entries.slice(0, view === "month" ? 3 : 7).map((e, i) => {
                   const subj = subjectsFor(e.type).find(
                     (s) => s.id === e.subjectId,
