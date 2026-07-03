@@ -1021,7 +1021,7 @@ function SubjectBlock({
         <div style={{ borderTop: `1px solid ${BORDER}` }}>
           {/* Tab pills */}
           <div className="flex gap-2 px-5 pt-4">
-            {(["overview", "history"] as const).map((tab) => (
+            {(["overview"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1055,16 +1055,7 @@ function SubjectBlock({
             </div>
           )}
 
-          {/* History tab */}
-          {activeTab === "history" && (
-            <div className="px-5 pb-5 pt-3">
-              <SubjectHistory
-                subject={subject}
-                progress={progress}
-                onDelete={deleteAttempt}
-              />
-            </div>
-          )}
+
         </div>
       )}
     </div>
