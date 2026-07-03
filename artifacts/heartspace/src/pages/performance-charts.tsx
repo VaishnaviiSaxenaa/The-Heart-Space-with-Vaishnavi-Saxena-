@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../lib/auth";
 import { loadDailyAll } from "./daily-tracker";
+import { SYLLABUS, loadSyllabusProgress } from "./syllabus";
 import {
   LineChart,
   Line,
@@ -117,7 +118,7 @@ export default function PerformanceCharts() {
   const [range, setRange] = useState<14 | 30>(14);
 
   const daily = loadDailyAll(uid);
-  const syllabus = loadSyllabus(uid);
+  const syllabus = loadSyllabusProgress(uid);
   const practice = loadPractice(uid);
 
   const sortedDates = Object.keys(daily).sort().slice(-range);
@@ -126,7 +127,7 @@ export default function PerformanceCharts() {
   const studyData = sortedDates.map((d) => {
     const e = daily[d] as Record<string, unknown>;
     return {
-      date: d.slice(5),
+      date: new Date(d + 'T12:00:00').toLocaleDateString('en-IN', {day:'numeric',month:'short'}),
       fullDate: d,
       hours: (e?.studyHours as number) ?? 0,
     };
@@ -140,18 +141,24 @@ export default function PerformanceCharts() {
         date: d.slice(5),
         mood: (e?.mood as number) ?? null,
         stress: (e?.stressLevel as number) ?? null,
+        sleep: (e?.sleepHours as number) ?? null,
+        study: (e?.studyHours as number) ?? null,
+        meTime: e?.meTimeMinutes ? Math.round((e.meTimeMinutes as number)/60 * 10)/10 : null,
+        physical: (e?.physicalActivity as boolean) ? 1 : null,
       };
     })
-    .filter((d) => d.mood !== null || d.stress !== null);
+    .filter((d) => d.mood !== null || d.stress !== null || d.sleep !== null || d.study !== null);
 
   /* ── Syllabus progress ── */
-  const syllabusStats = JAM_SUBJECTS.map((s) => {
-    const subData = (syllabus[s.id] as Record<string, unknown>) ?? {};
-    const topics = Object.values(subData) as Record<string, unknown>[];
-    const done = topics.filter((t) => t?.status === "done").length;
-    const total = topics.length || 1;
+  const syllabusStats = SYLLABUS.filter(s => !s.netOnly).map((s) => {
+    const allSubtopicIds: string[] = [];
+    s.topics.forEach((t) => {
+      t.subtopics.forEach((st) => { allSubtopicIds.push(st.id); });
+    });
+    const total = allSubtopicIds.length || 1;
+    const done = allSubtopicIds.filter((id) => syllabus[id]?.status === "done").length;
     return {
-      name: s.short,
+      name: s.name.split(" ")[0],
       fullName: s.name,
       pct: Math.round((done / total) * 100),
       done,
@@ -159,29 +166,48 @@ export default function PerformanceCharts() {
     };
   });
 
-  /* ── Practice accuracy ── */
+  /* ── Practice improvement over time ── */
+  const practiceTimeline = (() => {
+    const allAttempts: { date: string; accuracy: number; concept: number; speed: number }[] = [];
+    JAM_SUBJECTS.forEach((s) => {
+      const subData = (practice[s.id] as Record<string, unknown>) ?? {};
+      Object.values(subData).forEach((topic: any) => {
+        (topic?.attempts ?? []).forEach((a: any) => {
+          if (a.date && a.accuracy != null) {
+            allAttempts.push({
+              date: a.date.slice(0, 10),
+              accuracy: a.accuracy,
+              concept: typeof a.concept === "number" ? a.concept : 0,
+              speed: typeof a.speed === "number" ? a.speed : 0,
+            });
+          }
+        });
+      });
+    });
+    // Group by date, average
+    const byDate: Record<string, { acc: number[]; concept: number[]; speed: number[] }> = {};
+    allAttempts.forEach(({ date, accuracy, concept, speed }) => {
+      if (!byDate[date]) byDate[date] = { acc: [], concept: [], speed: [] };
+      byDate[date].acc.push(accuracy);
+      byDate[date].concept.push(concept);
+      byDate[date].speed.push(speed);
+    });
+    return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).slice(-range).map(([date, v]) => ({
+      date: new Date(date + 'T12:00:00').toLocaleDateString('en-IN', {day:'numeric',month:'short'}),
+      accuracy: Math.round(v.acc.reduce((a,b) => a+b, 0) / v.acc.length),
+      concept: Math.round(v.concept.reduce((a,b) => a+b, 0) / v.concept.length),
+      speed: Math.round(v.speed.reduce((a,b) => a+b, 0) / v.speed.length),
+    }));
+  })();
+
+  /* ── Practice accuracy (kept for summary) ── */
   const practiceStats = JAM_SUBJECTS.map((s) => {
     const subData = (practice[s.id] as Record<string, unknown>) ?? {};
     const topics = Object.values(subData) as Record<string, unknown>[];
-    const attempts = topics.flatMap(
-      (t) => (t?.attempts as unknown[]) ?? [],
-    ) as Record<string, unknown>[];
-    if (!attempts.length)
-      return {
-        name: s.short,
-        fullName: s.name,
-        acc: 0,
-        attempts: 0,
-        hasData: false,
-      };
+    const attempts = topics.flatMap((t) => (t?.attempts as unknown[]) ?? []) as Record<string, unknown>[];
+    if (!attempts.length) return { name: s.short, fullName: s.name, acc: 0, attempts: 0, hasData: false };
     const latest = attempts[attempts.length - 1];
-    return {
-      name: s.short,
-      fullName: s.name,
-      acc: (latest?.accuracy as number) ?? 0,
-      attempts: attempts.length,
-      hasData: true,
-    };
+    return { name: s.short, fullName: s.name, acc: (latest?.accuracy as number) ?? 0, attempts: attempts.length, hasData: true };
   });
 
   /* ── Summary ── */
@@ -327,45 +353,26 @@ export default function PerformanceCharts() {
             😊 Mood & Stress Trend
           </p>
           <p className="text-xs mb-4" style={{ color: MUTED }}>
-            Mood (green) and stress (rose) levels over time — both out of 5
+            Mood, stress, sleep, study, me time and physical activity over time
           </p>
           {wellnessData.length === 0 ? (
             <p className="text-xs text-center py-8" style={{ color: MUTED }}>
-              No mood/stress data yet.
+              No wellness data yet. Log in Daily Tracker.
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart
-                data={wellnessData}
-                margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
-              >
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={wellnessData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: MUTED }} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: MUTED }}
-                  domain={[0, 5]}
-                  ticks={[0, 1, 2, 3, 4, 5]}
-                />
+                <YAxis tick={{ fontSize: 10, fill: MUTED }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line
-                  type="monotone"
-                  dataKey="mood"
-                  name="Mood"
-                  stroke={OLIVE}
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: OLIVE }}
-                  connectNulls
-                />
-                <Line
-                  type="monotone"
-                  dataKey="stress"
-                  name="Stress"
-                  stroke={ROSE}
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: ROSE }}
-                  connectNulls
-                />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Line type="monotone" dataKey="mood" name="Mood (1-5)" stroke={OLIVE} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                <Line type="monotone" dataKey="stress" name="Stress (1-5)" stroke={ROSE} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                <Line type="monotone" dataKey="sleep" name="Sleep (hrs)" stroke="#2C4A73" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                <Line type="monotone" dataKey="study" name="Study (hrs)" stroke="#2E7D52" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                <Line type="monotone" dataKey="meTime" name="Me Time (hrs)" stroke="#9B7BB0" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                <Line type="monotone" dataKey="physical" name="Physical (1=yes)" stroke="#E07A28" strokeWidth={2} dot={{ r: 2 }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -440,79 +447,33 @@ export default function PerformanceCharts() {
           </ResponsiveContainer>
         </div>
 
-        {/* ── 4. Practice Accuracy Bar Chart ── */}
+                {/* ── 4. Practice Improvement Over Time ── */}
         <div
           className="rounded-2xl p-5"
           style={{ background: CARD, border: `1px solid ${BORDER}` }}
         >
           <p className="text-sm font-bold mb-1" style={{ color: DARK }}>
-            ✏️ Question Practice Accuracy
+            ✏️ Question Practice — Improvement Over Time
           </p>
           <p className="text-xs mb-4" style={{ color: MUTED }}>
-            Latest attempt accuracy per subject (out of 100%)
+            Daily average of accuracy, concept understanding and speed (%)
           </p>
-          {practiceStats.every((s) => !s.hasData) ? (
+          {practiceTimeline.length === 0 ? (
             <p className="text-xs text-center py-8" style={{ color: MUTED }}>
               No practice data yet — start practising in Question Practice!
             </p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart
-                data={practiceStats}
-                margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
-              >
+              <LineChart data={practiceTimeline} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: MUTED }} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: MUTED }}
-                  unit="%"
-                  domain={[0, 100]}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0].payload as {
-                      fullName: string;
-                      acc: number;
-                      attempts: number;
-                      hasData: boolean;
-                    };
-                    return (
-                      <div
-                        className="rounded-xl px-3 py-2 shadow-lg"
-                        style={{
-                          background: CARD,
-                          border: `1px solid ${BORDER}`,
-                        }}
-                      >
-                        <p
-                          className="text-xs font-semibold"
-                          style={{ color: CHARCOAL }}
-                        >
-                          {d.fullName}
-                        </p>
-                        <p className="text-xs" style={{ color: OLIVE }}>
-                          {d.hasData
-                            ? `${d.acc}% · ${d.attempts} attempts`
-                            : "Not started"}
-                        </p>
-                      </div>
-                    );
-                  }}
-                />
-                <Bar
-                  dataKey="acc"
-                  name="Accuracy %"
-                  radius={[4, 4, 0, 0]}
-                  fill={OLIVE}
-                  label={{
-                    position: "top",
-                    fontSize: 9,
-                    fill: MUTED,
-                    formatter: (v: number) => (v > 0 ? `${v}%` : ""),
-                  }}
-                />
-              </BarChart>
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: MUTED }} />
+                <YAxis tick={{ fontSize: 10, fill: MUTED }} unit="%" domain={[0, 100]} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Line type="monotone" dataKey="accuracy" name="Accuracy" stroke="#2C4A73" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                <Line type="monotone" dataKey="concept" name="Concept" stroke="#6B568F" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                <Line type="monotone" dataKey="speed" name="Speed" stroke="#E07A28" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              </LineChart>
             </ResponsiveContainer>
           )}
         </div>
