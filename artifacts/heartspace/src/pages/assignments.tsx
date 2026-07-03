@@ -694,27 +694,14 @@ function TopicBlock({
               >
                 {avgAcc}%
               </span>
-              {worstConcept && (
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded-full"
-                  style={{
-                    background: CONCEPT_CFG[getConceptKey(worstConcept)].bg,
-                    color: CONCEPT_CFG[getConceptKey(worstConcept)].color,
-                  }}
-                >
-                  {CONCEPT_CFG[getConceptKey(worstConcept)].emoji}{" "}
-                  {CONCEPT_CFG[getConceptKey(worstConcept)].label}
+              {worstConcept !== null && worstConcept !== undefined && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
+                  🧠 {typeof worstConcept === "number" ? `${worstConcept}%` : worstConcept}
                 </span>
               )}
-              {worstSpeed && (
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded-full"
-                  style={{
-                    background: SPEED_CFG[getSpeedKey(worstSpeed)].bg,
-                    color: SPEED_CFG[getSpeedKey(worstSpeed)].color,
-                  }}
-                >
-                  {SPEED_CFG[getSpeedKey(worstSpeed)].emoji} {SPEED_CFG[getSpeedKey(worstSpeed)].label}
+              {worstSpeed !== null && worstSpeed !== undefined && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
+                  ⚡ {typeof worstSpeed === "number" ? `${worstSpeed}%` : worstSpeed}
                 </span>
               )}
             </>
@@ -1359,27 +1346,18 @@ export default function QuestionPractice() {
           </h3>
           <div className="space-y-2">
             {weakAreas.map((st) => {
-              const cfg = CONCEPT_CFG[getConceptKey(st.latest!.concept)];
               return (
                 <div
                   key={st.id}
                   className="flex items-center gap-3 px-3 py-2 rounded-xl"
                   style={{ background: CARD, border: `1px solid #C0392B22` }}
                 >
-                  <span className="flex-1 text-sm" style={{ color: CHARCOAL }}>
-                    {st.name}
+                  <span className="flex-1 text-sm" style={{ color: CHARCOAL }}>{st.name}</span>
+                  <span className="text-xs font-bold" style={{ color: getAccuracyColor(st.latest!.accuracy) }}>
+                    🎯 {st.latest!.accuracy}%
                   </span>
-                  <span
-                    className="text-xs font-bold"
-                    style={{ color: getAccuracyColor(st.latest!.accuracy) }}
-                  >
-                    {st.latest!.accuracy}%
-                  </span>
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ background: cfg.bg, color: cfg.color }}
-                  >
-                    {cfg.emoji} {cfg.label}
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
+                    🧠 {typeof st.latest!.concept === "number" ? `${st.latest!.concept}%` : st.latest!.concept}
                   </span>
                 </div>
               );
