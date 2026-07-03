@@ -1752,10 +1752,10 @@ function MyProgressTab({
                           <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
                             <div className="h-full rounded-full" style={{
                               width: `${Math.min(Math.round(((calHours[SYLLABUS_CAL_MAP[subject.id] ?? subject.id] ?? 0) / SUBJ_HOURS[SYLLABUS_CAL_MAP[subject.id] ?? subject.id]) * 100), 100)}%`,
-                              background: REVISION_ORANGE,
+                              background: "#E07A28",
                             }} />
                           </div>
-                          <span className="text-xs flex-shrink-0" style={{ color: REVISION_ORANGE }}>
+                          <span className="text-xs flex-shrink-0" style={{ color: "#E07A28" }}>
                             {Math.round((calHours[SYLLABUS_CAL_MAP[subject.id] ?? subject.id] ?? 0) * 10) / 10}/{SUBJ_HOURS[SYLLABUS_CAL_MAP[subject.id] ?? subject.id]}h
                           </span>
                         </div>
