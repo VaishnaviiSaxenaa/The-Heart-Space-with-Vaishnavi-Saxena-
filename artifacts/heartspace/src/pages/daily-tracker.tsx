@@ -124,6 +124,29 @@ function lsKey(userId: string) {
   return `hs_daily_${userId}`;
 }
 
+function profileKey(userId: string) {
+  return `hs_daily_profile_${userId}`;
+}
+
+interface DailyProfile {
+  energySlots: EnergySlots;
+  sittingCapacityHours: number | null;
+  studyCapacityHours: number | null;
+}
+
+function loadProfile(userId: string): DailyProfile {
+  try {
+    const r = localStorage.getItem(profileKey(userId));
+    return r ? JSON.parse(r) : { energySlots: { high: [], medium: [], low: [] }, sittingCapacityHours: null, studyCapacityHours: null };
+  } catch {
+    return { energySlots: { high: [], medium: [], low: [] }, sittingCapacityHours: null, studyCapacityHours: null };
+  }
+}
+
+function saveProfile(userId: string, profile: DailyProfile) {
+  localStorage.setItem(profileKey(userId), JSON.stringify(profile));
+}
+
 export function loadDailyAll(userId: string): Record<string, DailyEntry> {
   try {
     const r = localStorage.getItem(lsKey(userId));
@@ -743,7 +766,16 @@ export default function DailyTracker() {
   const effectiveUserId = viewAsId ?? userId;
   const isViewMode = !!viewAsId;
   const space = isViewMode ? "zenith" : ((user as any)?.space as string | null);
-  const today = new Date().toISOString().split("T")[0];
+  const todayLocal = new Date();
+  const today = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [profile, setProfile] = useState<DailyProfile>(() => loadProfile(effectiveUserId));
+
+  const updateProfile = (patch: Partial<DailyProfile>) => {
+    const next = { ...profile, ...patch };
+    setProfile(next);
+    if (!isViewMode) saveProfile(userId, next);
+  };
 
   const isZenith = space === "zenith";
   const isApex = space === "apex";
@@ -761,7 +793,7 @@ export default function DailyTracker() {
   }, [effectiveUserId, isViewMode]);
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState<DailyEntry>(
-    () => loadDailyAll(effectiveUserId)[today] ?? blank(today),
+    () => loadDailyAll(effectiveUserId)[selectedDate] ?? blank(selectedDate),
   );
 
   const set =
@@ -770,14 +802,14 @@ export default function DailyTracker() {
       setForm((p) => ({ ...p, [k]: v }));
 
   function handleSave() {
-    const next = { ...allEntries, [today]: { ...form, date: today } };
+    const next = { ...allEntries, [selectedDate]: { ...form, date: selectedDate } };
     setAllEntries(next);
     if (!isViewMode) saveAll(userId, next);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
 
-  const hasEntry = !!allEntries[today];
+  const hasEntry = !!allEntries[selectedDate];
   const history = Object.values(allEntries).sort((a, b) =>
     b.date.localeCompare(a.date),
   );
@@ -792,10 +824,32 @@ export default function DailyTracker() {
         >
           Daily Tracker
         </h1>
-        <p className="mt-1 text-sm" style={{ color: MUTED }}>
-          {format(new Date(), "EEEE, MMMM d, yyyy")} ·{" "}
-          {hasEntry ? "✓ Entry logged today" : "Log how you're doing"}
-        </p>
+        <div className="flex items-center gap-3 mt-2">
+          <button onClick={() => {
+            const d = new Date(selectedDate);
+            d.setDate(d.getDate() - 1);
+            const newDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            setSelectedDate(newDate);
+            setForm(loadDailyAll(effectiveUserId)[newDate] ?? blank(newDate));
+          }} className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+            style={{ background: CREAM, border: `1px solid ${BORDER}`, color: CHARCOAL }}>‹</button>
+          <p className="text-sm font-semibold" style={{ color: CHARCOAL }}>
+            {format(new Date(selectedDate + 'T12:00:00'), "EEEE, MMMM d, yyyy")}
+            {selectedDate === today && <span className="ml-2 text-xs" style={{ color: OLIVE }}>· Today</span>}
+          </p>
+          <button onClick={() => {
+            if (selectedDate >= today) return;
+            const d = new Date(selectedDate);
+            d.setDate(d.getDate() + 1);
+            const newDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            setSelectedDate(newDate);
+            setForm(loadDailyAll(effectiveUserId)[newDate] ?? blank(newDate));
+          }} className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+            style={{ background: CREAM, border: `1px solid ${BORDER}`, color: selectedDate >= today ? BORDER : CHARCOAL }}>›</button>
+          <span className="text-xs ml-1" style={{ color: MUTED }}>
+            {hasEntry ? "✓ Entry logged" : "No entry yet"}
+          </span>
+        </div>
         <div className="mt-2">
           <span
             className="text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide"
@@ -1012,13 +1066,9 @@ export default function DailyTracker() {
                     min={0}
                     max={24}
                     step={0.5}
-                    value={form.sittingCapacityHours ?? ""}
+                    value={profile.sittingCapacityHours ?? ""}
                     onChange={(e) =>
-                      set("sittingCapacityHours")(
-                        e.target.value
-                          ? Math.min(24, parseFloat(e.target.value))
-                          : null,
-                      )
+                      updateProfile({ sittingCapacityHours: e.target.value ? Math.min(24, parseFloat(e.target.value)) : null })
                     }
                     placeholder="e.g. 2"
                     className="w-full h-11 px-4 rounded-xl text-sm border-2 outline-none"
@@ -1042,13 +1092,9 @@ export default function DailyTracker() {
                     min={0}
                     max={24}
                     step={0.5}
-                    value={form.studyCapacityHours ?? ""}
+                    value={profile.studyCapacityHours ?? ""}
                     onChange={(e) =>
-                      set("studyCapacityHours")(
-                        e.target.value
-                          ? Math.min(24, parseFloat(e.target.value))
-                          : null,
-                      )
+                      updateProfile({ studyCapacityHours: e.target.value ? Math.min(24, parseFloat(e.target.value)) : null })
                     }
                     placeholder="e.g. 8"
                     className="w-full h-11 px-4 rounded-xl text-sm border-2 outline-none"
@@ -1148,8 +1194,8 @@ export default function DailyTracker() {
                 your natural rhythms.
               </p>
               <EnergyManager
-                slots={form.energySlots}
-                onChange={set("energySlots")}
+                slots={profile.energySlots}
+                onChange={(v) => updateProfile({ energySlots: v })}
               />
             </section>
           </>
