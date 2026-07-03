@@ -1261,7 +1261,7 @@ export default function DailyTracker() {
           style={{
             background: saved
               ? OLIVE
-              : `linear-gradient(135deg, #A07840 0%, ${GOLD} 100%)`,
+              : `linear-gradient(135deg, #4A3570 0%, ${PROGRESS_PURPLE} 100%)`,
             color: "#fff",
             boxShadow: "0 4px 16px rgba(201,169,110,.35)",
           }}
