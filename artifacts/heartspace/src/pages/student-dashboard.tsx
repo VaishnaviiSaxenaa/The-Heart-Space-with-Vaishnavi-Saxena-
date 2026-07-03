@@ -819,7 +819,7 @@ export default function StudentDashboard() {
             {[
               { label: "Study Speed", key: `hs_topic_speed_${_uid}`, color: "#2C4A73" },
               { label: "Revision Speed", key: `hs_revision_speed_${_uid}`, color: "#E07A28" },
-              { label: "Practice Speed", key: `hs_practice_speed_${_uid}`, color: "#E0B428" },
+              { label: "Practice Speed", key: `hs_practice_speed_${_uid}`, color: "#2E7D52" },
             ].map(({ label, key, color }) => {
               const speedMap = (() => { try { return JSON.parse(localStorage.getItem(key) ?? "{}"); } catch { return {}; } })();
               const current = speedMap[dashRoadmapSubjects[0]?.id] ?? "standard";

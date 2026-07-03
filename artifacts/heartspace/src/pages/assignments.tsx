@@ -1347,9 +1347,9 @@ export default function QuestionPractice() {
                         }}
                         style={{
                           flex: 1, padding: "0.2rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
-                          background: current === key ? "#5cb85c" : "#F8F5F0",
+                          background: current === key ? "#2E7D52" : "#F8F5F0",
                           color: current === key ? "#fff" : "#7A7267",
-                          border: `1px solid ${current === key ? "#5cb85c" : "#E5DDD0"}`,
+                          border: `1px solid ${current === key ? "#2E7D52" : "#E5DDD0"}`,
                         }}>{emoji} {label}</button>
                       );
                     })}
@@ -1378,10 +1378,10 @@ export default function QuestionPractice() {
                   <div>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                       <span style={{ fontSize:"0.75rem", fontWeight:600, color:"#2D2A25" }}>Overall</span>
-                      <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#5cb85c" }}>{Math.round(coveredHrs*10)/10}/{Math.round(totalHrs*10)/10}h · {overallPct}%</span>
+                      <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#2E7D52" }}>{Math.round(coveredHrs*10)/10}/{Math.round(totalHrs*10)/10}h · {overallPct}%</span>
                     </div>
                     <div style={{ height:6, borderRadius:999, background:"#E5DDD0", marginBottom:8 }}>
-                      <div style={{ height:"100%", borderRadius:999, width:`${overallPct}%`, background:"linear-gradient(90deg,#5cb85c,#3d9140)" }} />
+                      <div style={{ height:"100%", borderRadius:999, width:`${overallPct}%`, background:"linear-gradient(90deg,#2E7D52,#4CAF7D)" }} />
                     </div>
                     {practiceSubjects.map(s => {
                       const cov = covHours[s.id] ?? 0;
@@ -1390,9 +1390,9 @@ export default function QuestionPractice() {
                         <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
                           <span style={{ fontSize:"0.65rem", fontWeight:600, color:"#2D2A25", minWidth:130 }}>{s.name}</span>
                           <div style={{ flex:1, height:4, borderRadius:999, background:"#E5DDD0" }}>
-                            <div style={{ height:"100%", borderRadius:999, width:`${Math.min(p,100)}%`, background:"#5cb85c" }} />
+                            <div style={{ height:"100%", borderRadius:999, width:`${Math.min(p,100)}%`, background:"#2E7D52" }} />
                           </div>
-                          <span style={{ fontSize:"0.65rem", fontWeight:700, color:"#5cb85c", minWidth:60, textAlign:"right" }}>{Math.round(cov*10)/10}/{s.totalHours}h</span>
+                          <span style={{ fontSize:"0.65rem", fontWeight:700, color:"#2E7D52", minWidth:60, textAlign:"right" }}>{Math.round(cov*10)/10}/{s.totalHours}h</span>
                         </div>
                       );
                     })}
