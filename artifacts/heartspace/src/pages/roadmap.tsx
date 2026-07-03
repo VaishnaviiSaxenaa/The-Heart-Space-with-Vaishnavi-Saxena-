@@ -5291,7 +5291,6 @@ function RoadmapView({
 
       {activeTab === "schedule" && (
         <>
-        <AIRoadmapAssistant examType={rm.examType} subjects={JAM_SUBJECTS.map(s => ({ name: s.name, studyWeeks: s.studyWeeks }))} />
         <LiveScheduleTab
           examType={rm.examType}
           startDate={rm.startDate}
