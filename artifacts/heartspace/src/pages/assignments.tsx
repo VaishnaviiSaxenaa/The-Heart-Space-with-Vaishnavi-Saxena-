@@ -519,18 +519,17 @@ function SubtopicRow({
             >
               {latest.accuracy}%
             </span>
-            <span
-              className="text-[10px] px-1.5 py-0.5 rounded-full"
-              style={{ background: conceptCfg!.bg, color: conceptCfg!.color }}
-            >
-              {conceptCfg!.emoji}
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
+              🧠 {typeof latest.concept === "number" ? `${latest.concept}%` : latest.concept}
             </span>
-            <span
-              className="text-[10px] px-1.5 py-0.5 rounded-full"
-              style={{ background: speedCfg!.bg, color: speedCfg!.color }}
-            >
-              {speedCfg!.emoji}
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
+              ⚡ {typeof latest.speed === "number" ? `${latest.speed}%` : latest.speed}
             </span>
+            {(latest.mistakeCount ?? 0) > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
+                🔍 {latest.mistakeCount}
+              </span>
+            )}
             {attemptCount > 0 && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-full"
