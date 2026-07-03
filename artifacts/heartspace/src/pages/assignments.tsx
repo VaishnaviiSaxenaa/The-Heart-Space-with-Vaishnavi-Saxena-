@@ -1347,9 +1347,9 @@ export default function QuestionPractice() {
                         }}
                         style={{
                           flex: 1, padding: "0.2rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
-                          background: current === key ? "#E0B428" : "#F8F5F0",
+                          background: current === key ? "#5cb85c" : "#F8F5F0",
                           color: current === key ? "#fff" : "#7A7267",
-                          border: `1px solid ${current === key ? "#E0B428" : "#E5DDD0"}`,
+                          border: `1px solid ${current === key ? "#5cb85c" : "#E5DDD0"}`,
                         }}>{emoji} {label}</button>
                       );
                     })}
