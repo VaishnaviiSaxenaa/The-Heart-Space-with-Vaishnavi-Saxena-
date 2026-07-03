@@ -1414,6 +1414,25 @@ function MyProgressTab({
   const [progress, setProgress] = useState<SyllabusProgress>(() =>
     loadSyllabusProgress(userId),
   );
+  const calHours = (() => {
+    try {
+      const uid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
+      const cal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
+      const todayLocal = new Date();
+      const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+      const hours: Record<string, number> = {};
+      Object.entries(cal).forEach(([day, entries]: [string, any]) => {
+        if (day <= todayKey) entries.forEach((e: any) => { hours[e.subjectId] = (hours[e.subjectId] ?? 0) + e.hours; });
+      });
+      return hours;
+    } catch { return {}; }
+  })();
+  const SUBJ_HOURS: Record<string, number> = { la: 60, ra: 60, gt: 50, ca: 50, ode: 40, pde: 40, dc: 50, na: 30, cv: 30 };
+  const SYLLABUS_CAL_MAP: Record<string, string> = {
+    linear_algebra: "la", real_analysis: "ra", abstract_algebra: "gt",
+    complex_analysis: "ca", ode: "ode", pde: "pde", differential_calculus: "dc",
+    numerical_analysis: "na", calculus_of_variations: "cv", integration: "dc",
+  };
   useEffect(() => {
     const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
     if (!viewAsId) return;
@@ -1728,6 +1747,19 @@ function MyProgressTab({
                           {inProg > 0 && ` · ${inProg} in progress`}
                         </span>
                       </div>
+                      {SUBJ_HOURS[SYLLABUS_CAL_MAP[subject.id] ?? subject.id] && (
+                        <div className="flex items-center gap-3 mt-1">
+                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                            <div className="h-full rounded-full" style={{
+                              width: `${Math.min(Math.round(((calHours[SYLLABUS_CAL_MAP[subject.id] ?? subject.id] ?? 0) / SUBJ_HOURS[SYLLABUS_CAL_MAP[subject.id] ?? subject.id]) * 100), 100)}%`,
+                              background: REVISION_ORANGE,
+                            }} />
+                          </div>
+                          <span className="text-xs flex-shrink-0" style={{ color: REVISION_ORANGE }}>
+                            {Math.round((calHours[SYLLABUS_CAL_MAP[subject.id] ?? subject.id] ?? 0) * 10) / 10}/{SUBJ_HOURS[SYLLABUS_CAL_MAP[subject.id] ?? subject.id]}h
+                          </span>
+                        </div>
+                      )}
                     </div>
                     {isOpen ? (
                       <ChevronDown
