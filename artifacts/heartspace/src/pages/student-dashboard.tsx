@@ -808,6 +808,89 @@ export default function StudentDashboard() {
               return <p className="text-xs" style={{ color: MUTED }}>No calendar data yet. Set up your roadmap first.</p>;
             }
           })()}
+
+          {/* Revision Summary */}
+          {(() => {
+            try {
+              const uid = String(user?.id ?? "");
+              const todayLocal = new Date();
+              const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+              const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
+              const covRev: Record<string,number> = {};
+              Object.entries(revCal).forEach(([day, entries]: [string,any]) => {
+                if (day <= todayKey) entries.forEach((e: any) => { covRev[e.subjectId] = (covRev[e.subjectId] ?? 0) + e.hours; });
+              });
+              const totalRev = dashRevisionSubjects.reduce((a,s) => a + s.totalHours, 0);
+              const coveredRev = dashRevisionSubjects.reduce((a,s) => a + (covRev[s.id] ?? 0), 0);
+              const revPct = totalRev > 0 ? Math.round((coveredRev/totalRev)*100) : 0;
+              if (totalRev === 0) return null;
+              return (
+                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>🔁 Revision Coverage</span>
+                    <span className="text-[10px] font-bold" style={{ color: REVISION_ORANGE }}>{Math.round(coveredRev*10)/10}/{Math.round(totalRev*10)/10}h · {revPct}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(revPct,100)}%`, background: REVISION_ORANGE }} />
+                  </div>
+                </div>
+              );
+            } catch { return null; }
+          })()}
+
+          {/* Practice Summary */}
+          {(() => {
+            try {
+              const uid = String(user?.id ?? "");
+              const todayLocal = new Date();
+              const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+              const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
+              const covPrac: Record<string,number> = {};
+              Object.entries(pracCal).forEach(([day, entries]: [string,any]) => {
+                if (day <= todayKey) entries.forEach((e: any) => { covPrac[e.subjectId] = (covPrac[e.subjectId] ?? 0) + e.hours; });
+              });
+              const totalPrac = dashPracticeSubjects.reduce((a,s) => a + s.totalHours, 0);
+              const coveredPrac = dashPracticeSubjects.reduce((a,s) => a + (covPrac[s.id] ?? 0), 0);
+              const pracPct = totalPrac > 0 ? Math.round((coveredPrac/totalPrac)*100) : 0;
+              if (totalPrac === 0) return null;
+              return (
+                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>✏️ Practice Coverage</span>
+                    <span className="text-[10px] font-bold" style={{ color: "#2E7D52" }}>{Math.round(coveredPrac*10)/10}/{Math.round(totalPrac*10)/10}h · {pracPct}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(pracPct,100)}%`, background: "#2E7D52" }} />
+                  </div>
+                </div>
+              );
+            } catch { return null; }
+          })()}
+
+          {/* Notes Summary */}
+          {(() => {
+            try {
+              const uid = String(user?.id ?? "");
+              const notesRaw = localStorage.getItem(`hs_notes_${uid}`);
+              if (!notesRaw) return null;
+              const notes = JSON.parse(notesRaw);
+              const done = notes.filter((n: any) => n.done).length;
+              const total = notes.length;
+              if (total === 0) return null;
+              const pct = Math.round((done/total)*100);
+              return (
+                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>📝 Notes Coverage</span>
+                    <span className="text-[10px] font-bold" style={{ color: PROGRESS_PURPLE }}>{done}/{total} topics · {pct}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(pct,100)}%`, background: PROGRESS_PURPLE }} />
+                  </div>
+                </div>
+              );
+            } catch { return null; }
+          })()}
         </Card>
 
         <Card className="p-6">
