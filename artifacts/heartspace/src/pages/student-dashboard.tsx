@@ -349,6 +349,94 @@ function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects
 }
 
 
+function WeeklyRhythmCard({ uid }: { uid: string }) {
+  const getWeekStart = (offset = 0) => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1) + offset * 7;
+    const monday = new Date(d);
+    monday.setDate(diff);
+    return monday.toISOString().split("T")[0];
+  };
+  const [weekOffset, setWeekOffset] = useState(0);
+  const weekKey = getWeekStart(weekOffset);
+  const storageKey = `hs_weekly_rhythm_${uid}_${weekKey}`;
+  const [ticked, setTicked] = useState<number[]>(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) ?? "[]"); } catch { return []; }
+  });
+  
+  useEffect(() => {
+    try { setTicked(JSON.parse(localStorage.getItem(`hs_weekly_rhythm_${uid}_${getWeekStart(weekOffset)}`) ?? "[]")); } catch { setTicked([]); }
+  }, [weekOffset, uid]);
+
+  const toggle = (i: number) => {
+    const next = ticked.includes(i) ? ticked.filter(x => x !== i) : [...ticked, i];
+    setTicked(next);
+    localStorage.setItem(`hs_weekly_rhythm_${uid}_${weekKey}`, JSON.stringify(next));
+  };
+
+  const days = ["M", "T", "W", "T", "F", "S", "S"];
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  const isCurrentWeek = weekOffset === 0;
+
+  // Get week date range label
+  const monday = new Date(weekKey);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const monthLabel = monday.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const rangeLabel = `${monday.getDate()} – ${sunday.getDate()} ${sunday.toLocaleDateString("en-IN", { month: "short" })}`;
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-center justify-between mb-3">
+        <SectionTitle>Weekly Rhythm</SectionTitle>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setWeekOffset(o => o - 1)}
+            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+            style={{ background: CREAM, border: `1px solid ${BORDER}`, color: CHARCOAL }}>
+            ‹
+          </button>
+          <div className="text-center">
+            <p className="text-[10px] font-bold" style={{ color: CHARCOAL }}>{monthLabel}</p>
+            <p className="text-[9px]" style={{ color: MUTED }}>{rangeLabel}</p>
+          </div>
+          <button onClick={() => setWeekOffset(o => Math.min(0, o + 1))}
+            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+            style={{ background: CREAM, border: `1px solid ${BORDER}`, color: weekOffset === 0 ? BORDER : CHARCOAL }}
+            disabled={weekOffset === 0}>
+            ›
+          </button>
+        </div>
+      </div>
+      <div className="flex gap-2 mb-3">
+        {days.map((day, i) => {
+          const isToday = isCurrentWeek && i === todayIdx;
+          const isDone = ticked.includes(i);
+          const isSun = i === 6;
+          return (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+              <span className="text-[11px] font-semibold" style={{ color: isToday ? PROGRESS_PURPLE : MUTED }}>{day}</span>
+              <button
+                onClick={() => !isSun && toggle(i)}
+                className="w-full aspect-square rounded-xl flex items-center justify-center transition-all"
+                style={{
+                  background: isSun ? `${GOLD}15` : isDone ? `${OLIVE}22` : isToday ? `${PROGRESS_PURPLE}15` : CREAM,
+                  border: `1.5px solid ${isSun ? GOLD : isDone ? OLIVE : isToday ? PROGRESS_PURPLE : BORDER}`,
+                  cursor: isSun ? "default" : "pointer",
+                }}>
+                {isSun ? <span className="text-sm">☀️</span> : isDone ? <span className="text-sm" style={{ color: OLIVE }}>✓</span> : <span className="text-[10px]" style={{ color: BORDER }}>○</span>}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-xs text-center italic" style={{ color: MUTED }}>
+        Structured days help me build. Free days help me breathe.
+      </p>
+    </Card>
+  );
+}
+
 export default function StudentDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -832,66 +920,7 @@ export default function StudentDashboard() {
             }
           })()}
         </Card>
-        <Card className="p-6">
-          <SectionTitle>Weekly Rhythm</SectionTitle>
-          {(() => {
-            const uid = String(user?.id ?? "");
-            const weekKey = (() => {
-              const d = new Date();
-              const day = d.getDay();
-              const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-              const monday = new Date(d.setDate(diff));
-              return monday.toISOString().split("T")[0];
-            })();
-            const storageKey = `hs_weekly_rhythm_${uid}_${weekKey}`;
-            const [ticked, setTicked] = useState<number[]>(() => {
-              try { return JSON.parse(localStorage.getItem(storageKey) ?? "[]"); } catch { return []; }
-            });
-            const toggle = (idx: number) => {
-              const next = ticked.includes(idx) ? ticked.filter(i => i !== idx) : [...ticked, idx];
-              setTicked(next);
-              localStorage.setItem(storageKey, JSON.stringify(next));
-            };
-            const days = ["M", "T", "W", "T", "F", "S", "S"];
-            const todayIdx = (new Date().getDay() + 6) % 7;
-            return (
-              <div>
-                <div className="flex gap-2 mb-4">
-                  {days.map((day, i) => {
-                    const isToday = i === todayIdx;
-                    const isDone = ticked.includes(i);
-                    const isSun = i === 6;
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                        <span className="text-[11px] font-semibold" style={{ color: isToday ? PROGRESS_PURPLE : MUTED }}>{day}</span>
-                        <button
-                          onClick={() => !isSun && toggle(i)}
-                          className="w-full aspect-square rounded-xl flex items-center justify-center transition-all"
-                          style={{
-                            background: isSun ? `${GOLD}15` : isDone ? `${OLIVE}22` : isToday ? `${PROGRESS_PURPLE}15` : CREAM,
-                            border: `1.5px solid ${isSun ? GOLD : isDone ? OLIVE : isToday ? PROGRESS_PURPLE : BORDER}`,
-                            cursor: isSun ? "default" : "pointer",
-                          }}
-                        >
-                          {isSun ? (
-                            <span className="text-sm">☀️</span>
-                          ) : isDone ? (
-                            <span className="text-sm">✓</span>
-                          ) : (
-                            <span className="text-[10px]" style={{ color: BORDER }}>○</span>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-center italic" style={{ color: MUTED }}>
-                  Structured days help me build. Free days help me breathe.
-                </p>
-              </div>
-            );
-          })()}
-        </Card>
+        <WeeklyRhythmCard uid={String(user?.id ?? "")} />
       </div>
 
       {/* ── Analytics ── */}
