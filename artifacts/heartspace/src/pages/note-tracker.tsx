@@ -173,7 +173,12 @@ export default function NoteTracker() {
     ]).then(([notesRes, methodRes]) => {
       if (notesRes.data) {
         setNotes(notesRes.data as NoteLog[]);
-        try { localStorage.setItem(`hs_note_logs_${userId}`, JSON.stringify(notesRes.data)); } catch {}
+        try {
+          localStorage.setItem(`hs_note_logs_${userId}`, JSON.stringify(notesRes.data));
+          // Cache subject totals for dashboard
+          const subjectTotals = subjects.map(s => ({ name: s.name, total: s.topics.length }));
+          localStorage.setItem(`hs_note_subject_totals_${userId}`, JSON.stringify(subjectTotals));
+        } catch {}
       }
       if (methodRes.data) setMethodResponses(methodRes.data.responses ?? []);
       setLoading(false);

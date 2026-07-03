@@ -739,7 +739,9 @@ export default function StudentDashboard() {
               const covRev = dashRevisionSubjects.reduce((a,s) => a + (revHrs[s.id] ?? 0), 0);
               const totalPrac = dashPracticeSubjects.reduce((a,s) => a + s.totalHours, 0);
               const covPrac = dashPracticeSubjects.reduce((a,s) => a + (pracHrs[s.id] ?? 0), 0);
-              const totalNotes = notes.length;
+              const subjectTotalsRaw2 = localStorage.getItem(`hs_note_subject_totals_${uid}`);
+              const subjectTotals2: Array<{name:string,total:number}> = subjectTotalsRaw2 ? JSON.parse(subjectTotalsRaw2) : [];
+              const totalNotes = subjectTotals2.reduce((a,s) => a + s.total, 0);
               const covNotes = notes.filter((n: any) => n.done).length;
 
               const sections = [
@@ -793,13 +795,15 @@ export default function StudentDashboard() {
                     </div>
                   ))}
                   {/* Notes topic-wise */}
-                  {notes.length > 0 && (() => {
+                  {(() => {
+                    const subjectTotalsRaw = localStorage.getItem(`hs_note_subject_totals_${uid}`);
+                    const subjectTotals: Array<{name:string,total:number}> = subjectTotalsRaw ? JSON.parse(subjectTotalsRaw) : [];
+                    if (subjectTotals.length === 0) return null;
                     const bySubject: Record<string, {done: number, total: number}> = {};
+                    subjectTotals.forEach(s => { bySubject[s.name] = { done: 0, total: s.total }; });
                     notes.forEach((n: any) => {
                       const subj = n.subject ?? n.topic_key?.split("::")[0] ?? "Unknown";
-                      if (!bySubject[subj]) bySubject[subj] = { done: 0, total: 0 };
-                      bySubject[subj].total++;
-                      if (n.done) bySubject[subj].done++;
+                      if (bySubject[subj] && n.done) bySubject[subj].done++;
                     });
                     return (
                       <div>
