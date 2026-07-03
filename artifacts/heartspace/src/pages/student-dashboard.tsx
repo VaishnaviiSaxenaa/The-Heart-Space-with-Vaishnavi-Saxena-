@@ -295,268 +295,107 @@ function savePlanTasks(uid: string, tasks: PlanTask[]) {
   localStorage.setItem(PLAN_KEY(uid), JSON.stringify({ date: todayDate(), tasks }));
 }
 
-function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: {
+function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects }: {
   uid: string;
   studySubjects: Array<{id: string; name: string}>;
   revisionSubjects: Array<{id: string; name: string}>;
   practiceSubjects: Array<{id: string; name: string}>;
 }) {
   const [tasks, setTasks] = useState<PlanTask[]>(() => loadPlanTasks(uid));
+  const persist = (next: PlanTask[]) => { setTasks(next); savePlanTasks(uid, next); };
+  const toggleDone = (id: string) => persist(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
 
-  // Sync calendar entries into today's plan once on mount
-  useEffect(() => {
-    if (!uid) return;
-    try {
-      const todayLocal = new Date();
-      const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
-      const existing = loadPlanTasks(uid);
-      const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
-      const revCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_revision_${uid}`) ?? "{}");
-      const pracCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_practice_${uid}`) ?? "{}");
-      const calTasks: PlanTask[] = [];
-      const addEntries = (cal: any, subjects: Array<{id:string;name:string}>, cat: PlanCategory) => {
-        const entries = cal[todayKey] ?? [];
-        entries.forEach((e: any) => {
-          const subj = subjects.find(s => s.id === e.subjectId);
-          if (!subj) return;
-          calTasks.push({ id: `cal_${cat}_${e.subjectId}`, name: `${subj.name} (${e.hours}h)`, category: cat, done: false });
-        });
-      };
-      addEntries(studyCal, studySubjects, "Study");
-      addEntries(revCal, revisionSubjects, "Revision");
-      addEntries(pracCal, practiceSubjects, "Practice");
-      if (calTasks.length === 0) return;
-      // Keep done status from existing cal tasks, keep manual tasks
-      const manualTasks = existing.filter(t => !t.id.startsWith("cal_"));
-      const mergedCalTasks = calTasks.map(t => {
-        const prev = existing.find(e => e.id === t.id);
-        return prev ? { ...t, done: prev.done } : t;
-      });
-      const merged = [...mergedCalTasks, ...manualTasks];
-      // Only save if different from existing
-      const sameIds = merged.length === existing.length && merged.every((t, i) => t.id === existing[i]?.id);
-      if (!sameIds) {
-        savePlanTasks(uid, merged);
-        setTasks(merged);
-      }
-    } catch {}
-  }, [uid]);
-  const [adding, setAdding] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newCat, setNewCat] = useState<PlanCategory>("Study");
+  const todayLocal = new Date();
+  const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+  const todayLabel = todayLocal.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  const persist = (next: PlanTask[]) => {
-    setTasks(next);
-    savePlanTasks(uid, next);
-  };
-  const addTask = () => {
-    const name = newName.trim();
-    if (!name) return;
-    persist([
-      ...tasks,
-      { id: `${Date.now()}`, name, category: newCat, done: false },
-    ]);
-    setNewName("");
-    setNewCat("Study");
-    setAdding(false);
-  };
-  const toggleDone = (id: string) =>
-    persist(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
-  const deleteTask = (id: string) => persist(tasks.filter((t) => t.id !== id));
-  const doneCount = tasks.filter((t) => t.done).length;
+  // Get calendar entries for today
+  const studyCal = (() => { try { return JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}"); } catch { return {}; } })();
+  const revCal = (() => { try { return JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}"); } catch { return {}; } })();
+  const pracCal = (() => { try { return JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}"); } catch { return {}; } })();
+  const customTasks = (() => { try { return JSON.parse(localStorage.getItem(`heartspace_custom_tasks_${uid}_${todayKey}`) ?? "[]"); } catch { return []; } })();
+
+  const studyEntries = (studyCal[todayKey] ?? []).map((e: any) => ({ ...e, type: "Study", color: STUDY_BLUE, subj: studySubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId }));
+  const revEntries = (revCal[todayKey] ?? []).map((e: any) => ({ ...e, type: "Revision", color: REVISION_ORANGE, subj: revisionSubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId }));
+  const pracEntries = (pracCal[todayKey] ?? []).map((e: any) => ({ ...e, type: "Practice", color: "#2E7D52", subj: practiceSubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId }));
+  const allCalEntries = [...studyEntries, ...revEntries, ...pracEntries];
+  const doneCount = tasks.filter(t => t.done).length;
 
   return (
     <Card className="lg:col-span-2 p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h2
-          className="font-serif text-lg font-semibold"
-          style={{ color: CHARCOAL }}
-        >
-          Today's Plan
-          {tasks.length > 0 && (
-            <span
-              className="ml-2 text-sm font-sans font-normal"
-              style={{ color: MUTED }}
-            >
-              {doneCount}/{tasks.length} done
-            </span>
-          )}
-        </h2>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>Today's Overview</h2>
+          <p className="text-xs mt-0.5" style={{ color: MUTED }}>{todayLabel}</p>
+        </div>
         {tasks.length > 0 && (
-          <button
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.03] active:scale-[0.98]"
-            style={{
-              background: `linear-gradient(135deg, #C8922A 0%, ${PROGRESS_PURPLE} 100%)`,
-              color: CREAM,
-              boxShadow: "0 3px 10px rgba(230,167,86,.30)",
-            }}
-          >
-            <Plus className="w-3.5 h-3.5" /> Add Task
-          </button>
+          <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: `${PROGRESS_PURPLE}15`, color: PROGRESS_PURPLE }}>
+            {doneCount}/{tasks.length} done
+          </span>
         )}
       </div>
 
-      {adding && (
-        <div
-          className="mb-4 p-4 rounded-2xl space-y-3"
-          style={{ background: CREAM, border: `1px solid ${BORDER}` }}
-        >
-          <input
-            autoFocus
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") addTask();
-              if (e.key === "Escape") {
-                setAdding(false);
-                setNewName("");
-              }
-            }}
-            placeholder="What do you want to get done today?"
-            className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-sm"
-            style={{ color: CHARCOAL }}
-          />
-          <div className="flex flex-wrap gap-1.5">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setNewCat(cat)}
-                className="text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all duration-150"
-                style={
-                  newCat === cat
-                    ? { background: SIDEBAR, color: CREAM }
-                    : {
-                        background: CAT_COLORS[cat].bg,
-                        color: CAT_COLORS[cat].text,
-                      }
-                }
-              >
-                {cat}
-              </button>
+      {/* Calendar scheduled items */}
+      {allCalEntries.length > 0 && (
+        <div className="mb-4">
+          <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>📅 Scheduled Today</p>
+          <div className="space-y-1.5">
+            {allCalEntries.map((e: any, i: number) => (
+              <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl" style={{ background: `${e.color}10`, border: `1px solid ${e.color}30` }}>
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: e.color }} />
+                <span className="text-xs font-semibold flex-1" style={{ color: CHARCOAL }}>{e.subj}</span>
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: `${e.color}20`, color: e.color }}>{e.type}</span>
+                <span className="text-[10px] font-bold" style={{ color: e.color }}>{e.hours}h</span>
+              </div>
             ))}
           </div>
-          <div className="flex gap-2 pt-0.5">
-            <button
-              onClick={addTask}
-              className="px-4 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-              style={{ background: `${PROGRESS_PURPLE}28`, color: "#9A6010" }}
-            >
-              Add
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setNewName("");
-              }}
-              className="px-4 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-              style={{ background: `${BORDER}88`, color: MUTED }}
-            >
-              Cancel
-            </button>
-          </div>
         </div>
       )}
 
-      {tasks.length === 0 && !adding && (
-        <div className="flex flex-col items-center justify-center py-14 text-center">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-            style={{
-              background: `${PROGRESS_PURPLE}15`,
-              border: `1.5px dashed ${PROGRESS_PURPLE}55`,
-            }}
-          >
-            <Plus className="w-7 h-7" style={{ color: PROGRESS_PURPLE }} />
-          </div>
-          <p className="text-sm font-semibold mb-1" style={{ color: CHARCOAL }}>
-            No tasks yet
-          </p>
-          <p className="text-xs mb-6" style={{ color: MUTED }}>
-            Add your first task for today!
-          </p>
-          <button
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-            style={{
-              background: `linear-gradient(135deg, #C8922A 0%, ${PROGRESS_PURPLE} 100%)`,
-              color: CREAM,
-              boxShadow: "0 4px 14px rgba(230,167,86,.35)",
-            }}
-          >
-            <Plus className="w-4 h-4" /> Add Task
-          </button>
-        </div>
-      )}
-
+      {/* Custom tasks */}
       {tasks.length > 0 && (
-        <div className="space-y-2">
-          {tasks.map((task) => {
-            const cc = CAT_COLORS[task.category];
-            return (
-              <div
-                key={task.id}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl group transition-all duration-200"
-                style={{
-                  background: task.done ? `${OLIVE}0C` : CREAM,
-                  border: `1px solid ${task.done ? OLIVE + "35" : BORDER}`,
-                }}
-              >
-                <button
-                  onClick={() => toggleDone(task.id)}
-                  className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200"
-                  style={{
-                    borderColor: task.done ? OLIVE : "#C5B8AC",
-                    background: task.done ? OLIVE : "transparent",
-                    transform: task.done ? "scale(1.08)" : "scale(1)",
-                    boxShadow: task.done ? `0 0 0 3px ${OLIVE}22` : "none",
-                  }}
-                >
-                  {task.done && (
-                    <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                      <path
-                        d="M1 3.5L3.5 6L8 1"
-                        stroke="white"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </button>
-                <span
-                  className="flex-1 text-sm font-medium transition-all duration-200"
-                  style={{
-                    color: task.done ? MUTED : CHARCOAL,
-                    textDecoration: task.done ? "line-through" : "none",
-                    textDecorationColor: MUTED,
-                  }}
-                >
-                  {task.name}
-                </span>
-                <span
-                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
-                  style={{ background: cc.bg, color: cc.text }}
-                >
-                  {task.category}
-                </span>
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-lg"
-                  style={{ color: "#B03030" }}
-                  title="Delete task"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+        <div className="mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>✏️ Tasks</p>
+          <div className="space-y-1.5">
+            {tasks.map(t => (
+              <div key={t.id} className="flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer" style={{ background: CREAM, border: `1px solid ${BORDER}` }} onClick={() => toggleDone(t.id)}>
+                <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: t.done ? OLIVE : BORDER, background: t.done ? OLIVE : 'transparent' }}>
+                  {t.done && <span className="text-white text-[8px] font-bold">✓</span>}
+                </div>
+                <span className="text-xs font-semibold flex-1" style={{ color: CHARCOAL, textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.6 : 1 }}>{t.name}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: `${CAT_COLORS[t.category]?.bg ?? CREAM}`, color: CAT_COLORS[t.category]?.text ?? MUTED }}>{t.category}</span>
               </div>
-            );
-          })}
+            ))}
+          </div>
+        </div>
+      )}
+
+      {allCalEntries.length === 0 && tasks.length === 0 && (
+        <div className="text-center py-8" style={{ color: MUTED }}>
+          <p className="text-sm">Nothing scheduled for today.</p>
+          <p className="text-xs mt-1">Set up your roadmap calendar to see today's plan here.</p>
+        </div>
+      )}
+
+      {/* Custom tasks from calendar popup also show here */}
+      {customTasks.length > 0 && (
+        <div className="mt-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>📌 Added Tasks</p>
+          <div className="space-y-1.5">
+            {customTasks.map((t: any, i: number) => (
+              <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: PROGRESS_PURPLE }} />
+                <span className="text-xs font-semibold flex-1" style={{ color: CHARCOAL }}>{t.name}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: `${PROGRESS_PURPLE}15`, color: PROGRESS_PURPLE }}>{t.category}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </Card>
   );
 }
+
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -856,7 +695,7 @@ export default function StudentDashboard() {
 
       {/* ── Today's Plan + Next Session ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <TodaysPlan uid={String(user?.id ?? "")} studySubjects={dashStudySubjects} revisionSubjects={dashRevisionSubjects} practiceSubjects={dashPracticeSubjects} />
+        <TodaysOverview uid={String(user?.id ?? "")} studySubjects={dashStudySubjects} revisionSubjects={dashRevisionSubjects} practiceSubjects={dashPracticeSubjects} />
         <Card className="p-6 flex flex-col">
           <SectionTitle>Upcoming Session</SectionTitle>
           {/* Reschedule popup */}
