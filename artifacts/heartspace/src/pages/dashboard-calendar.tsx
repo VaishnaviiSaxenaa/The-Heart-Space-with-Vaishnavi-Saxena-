@@ -38,7 +38,7 @@ const TYPE_CONFIG: Record<
 > = {
   study: { label: "Study", color: "#2C4A73", emoji: "📖" },
   revision: { label: "Revision", color: "#E07A28", emoji: "🔁" },
-  practice: { label: "Practice", color: "#E0B428", emoji: "✏️" },
+  practice: { label: "Practice", color: "#2E7D52", emoji: "✏️" },
 };
 
 /* roadmap.tsx uses namespace key "study" via hs_calendar_${uid} (legacy key from before
