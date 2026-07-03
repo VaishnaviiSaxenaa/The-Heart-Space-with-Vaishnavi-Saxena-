@@ -708,143 +708,97 @@ export default function StudentDashboard() {
 
       {/* ── Wellbeing prompts ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6">
+        <Card className="p-6 lg:col-span-2">
           <SectionTitle>Reports Summary</SectionTitle>
           {(() => {
             try {
               const uid = String(user?.id ?? "");
               const todayLocal = new Date();
               const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
-              const cal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
-              // Sum hours per subject up to and including today
-              const coveredHours: Record<string, number> = {};
-              Object.entries(cal).forEach(([day, entries]: [string, any]) => {
-                if (day <= todayKey) {
-                  entries.forEach((e: any) => {
-                    coveredHours[e.subjectId] = (coveredHours[e.subjectId] ?? 0) + e.hours;
-                  });
-                }
-              });
-              const totalAllHours = dashStudySubjects.reduce((a, s) => a + s.totalHours, 0);
-              const coveredAllHours = Object.values(coveredHours).reduce((a: number, b: any) => a + b, 0);
-              const overallPct = totalAllHours > 0 ? Math.round((coveredAllHours / totalAllHours) * 100) : 0;
+              const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
+              const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
+              const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
+              const notesRaw = localStorage.getItem(`hs_notes_${uid}`);
+              const notes = notesRaw ? JSON.parse(notesRaw) : [];
+
+              const sumCal = (cal: any) => {
+                const hrs: Record<string,number> = {};
+                Object.entries(cal).forEach(([day, entries]: [string,any]) => {
+                  if (day <= todayKey) entries.forEach((e: any) => { hrs[e.subjectId] = (hrs[e.subjectId] ?? 0) + e.hours; });
+                });
+                return hrs;
+              };
+
+              const studyHrs = sumCal(studyCal);
+              const revHrs = sumCal(revCal);
+              const pracHrs = sumCal(pracCal);
+
+              const totalStudy = dashStudySubjects.reduce((a,s) => a + s.totalHours, 0);
+              const covStudy = dashStudySubjects.reduce((a,s) => a + (studyHrs[s.id] ?? 0), 0);
+              const totalRev = dashRevisionSubjects.reduce((a,s) => a + s.totalHours, 0);
+              const covRev = dashRevisionSubjects.reduce((a,s) => a + (revHrs[s.id] ?? 0), 0);
+              const totalPrac = dashPracticeSubjects.reduce((a,s) => a + s.totalHours, 0);
+              const covPrac = dashPracticeSubjects.reduce((a,s) => a + (pracHrs[s.id] ?? 0), 0);
+              const totalNotes = notes.length;
+              const covNotes = notes.filter((n: any) => n.done).length;
+
+              const sections = [
+                { label: "Study", covered: Math.round(covStudy*10)/10, total: Math.round(totalStudy*10)/10, unit: "h", color: STUDY_BLUE, subjects: dashStudySubjects, hrs: studyHrs },
+                { label: "Revision", covered: Math.round(covRev*10)/10, total: Math.round(totalRev*10)/10, unit: "h", color: REVISION_ORANGE, subjects: dashRevisionSubjects, hrs: revHrs },
+                { label: "Practice", covered: Math.round(covPrac*10)/10, total: Math.round(totalPrac*10)/10, unit: "h", color: "#2E7D52", subjects: dashPracticeSubjects, hrs: pracHrs },
+                { label: "Notes", covered: covNotes, total: totalNotes, unit: " topics", color: PROGRESS_PURPLE, subjects: [], hrs: {} },
+              ];
+
               return (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: CREAM }}>
-                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>📚 Overall Coverage</span>
-                    <span className="text-xs font-bold" style={{ color: PROGRESS_PURPLE }}>{coveredAllHours}h / {totalAllHours}h ({overallPct}%)</span>
-                  </div>
-                  <div className="space-y-2">
-                    {dashStudySubjects.map(s => {
-                      const covered = Math.round((coveredHours[s.id] ?? 0) * 10) / 10;
-                      const total = s.totalHours;
-                      const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
+                <div className="space-y-4">
+                  {/* Circle summary row */}
+                  <div className="grid grid-cols-4 gap-3">
+                    {sections.map(({ label, covered, total, unit, color }) => {
+                      const pct = total > 0 ? Math.min(Math.round((covered/total)*100), 100) : 0;
+                      const r = 28; const circ = 2 * Math.PI * r;
                       return (
-                        <div key={s.id} className="p-2.5 rounded-xl" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>{s.name}</span>
-                            <span className="text-[10px] font-bold" style={{ color: pct >= 100 ? OLIVE : PROGRESS_PURPLE }}>
-                              {covered}/{total}h · {pct}%
-                            </span>
-                          </div>
-                          <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
-                            <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, background: pct >= 100 ? OLIVE : pct >= 50 ? PROGRESS_PURPLE : REVISION_ORANGE }} />
-                          </div>
+                        <div key={label} className="flex flex-col items-center gap-1">
+                          <svg width="70" height="70" viewBox="0 0 70 70">
+                            <circle cx="35" cy="35" r={r} fill="none" stroke={BORDER} strokeWidth="5" />
+                            <circle cx="35" cy="35" r={r} fill="none" stroke={color} strokeWidth="5"
+                              strokeDasharray={circ} strokeDashoffset={circ - (circ * pct / 100)}
+                              strokeLinecap="round" transform="rotate(-90 35 35)" />
+                            <text x="35" y="39" textAnchor="middle" fontSize="11" fontWeight="700" fill={color}>{pct}%</text>
+                          </svg>
+                          <span className="text-[10px] font-bold" style={{ color: CHARCOAL }}>{label}</span>
+                          <span className="text-[9px]" style={{ color: MUTED }}>{covered}/{total}{unit}</span>
                         </div>
                       );
                     })}
                   </div>
+                  {/* Subject breakdown */}
+                  {sections.filter(s => s.subjects.length > 0).map(({ label, color, subjects, hrs, unit }) => (
+                    <div key={label}>
+                      <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color }}>{label} — by subject</p>
+                      <div className="space-y-1">
+                        {subjects.map((s: any) => {
+                          const cov = Math.round((hrs[s.id] ?? 0) * 10) / 10;
+                          const p = s.totalHours > 0 ? Math.min(Math.round((cov/s.totalHours)*100), 100) : 0;
+                          return (
+                            <div key={s.id} className="flex items-center gap-2">
+                              <span className="text-[10px]" style={{ color: CHARCOAL, minWidth: 120 }}>{s.name}</span>
+                              <div className="flex-1 h-1.5 rounded-full" style={{ background: BORDER }}>
+                                <div className="h-full rounded-full" style={{ width: `${p}%`, background: color }} />
+                              </div>
+                              <span className="text-[10px] font-bold" style={{ color, minWidth: 55, textAlign: "right" }}>{cov}/{s.totalHours}h</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               );
             } catch {
-              return <p className="text-xs" style={{ color: MUTED }}>No calendar data yet. Set up your roadmap first.</p>;
+              return <p className="text-xs" style={{ color: MUTED }}>No data yet.</p>;
             }
           })()}
-
-          {/* Revision Summary */}
-          {(() => {
-            try {
-              const uid = String(user?.id ?? "");
-              const todayLocal = new Date();
-              const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
-              const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
-              const covRev: Record<string,number> = {};
-              Object.entries(revCal).forEach(([day, entries]: [string,any]) => {
-                if (day <= todayKey) entries.forEach((e: any) => { covRev[e.subjectId] = (covRev[e.subjectId] ?? 0) + e.hours; });
-              });
-              const totalRev = dashRevisionSubjects.reduce((a,s) => a + s.totalHours, 0);
-              const coveredRev = dashRevisionSubjects.reduce((a,s) => a + (covRev[s.id] ?? 0), 0);
-              const revPct = totalRev > 0 ? Math.round((coveredRev/totalRev)*100) : 0;
-              if (totalRev === 0) return null;
-              return (
-                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>🔁 Revision Coverage</span>
-                    <span className="text-[10px] font-bold" style={{ color: REVISION_ORANGE }}>{Math.round(coveredRev*10)/10}/{Math.round(totalRev*10)/10}h · {revPct}%</span>
-                  </div>
-                  <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
-                    <div className="h-full rounded-full" style={{ width: `${Math.min(revPct,100)}%`, background: REVISION_ORANGE }} />
-                  </div>
-                </div>
-              );
-            } catch { return null; }
-          })()}
-
-          {/* Practice Summary */}
-          {(() => {
-            try {
-              const uid = String(user?.id ?? "");
-              const todayLocal = new Date();
-              const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
-              const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
-              const covPrac: Record<string,number> = {};
-              Object.entries(pracCal).forEach(([day, entries]: [string,any]) => {
-                if (day <= todayKey) entries.forEach((e: any) => { covPrac[e.subjectId] = (covPrac[e.subjectId] ?? 0) + e.hours; });
-              });
-              const totalPrac = dashPracticeSubjects.reduce((a,s) => a + s.totalHours, 0);
-              const coveredPrac = dashPracticeSubjects.reduce((a,s) => a + (covPrac[s.id] ?? 0), 0);
-              const pracPct = totalPrac > 0 ? Math.round((coveredPrac/totalPrac)*100) : 0;
-              if (totalPrac === 0) return null;
-              return (
-                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>✏️ Practice Coverage</span>
-                    <span className="text-[10px] font-bold" style={{ color: "#2E7D52" }}>{Math.round(coveredPrac*10)/10}/{Math.round(totalPrac*10)/10}h · {pracPct}%</span>
-                  </div>
-                  <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
-                    <div className="h-full rounded-full" style={{ width: `${Math.min(pracPct,100)}%`, background: "#2E7D52" }} />
-                  </div>
-                </div>
-              );
-            } catch { return null; }
-          })()}
-
-          {/* Notes Summary */}
-          {(() => {
-            try {
-              const uid = String(user?.id ?? "");
-              const notesRaw = localStorage.getItem(`hs_notes_${uid}`);
-              if (!notesRaw) return null;
-              const notes = JSON.parse(notesRaw);
-              const done = notes.filter((n: any) => n.done).length;
-              const total = notes.length;
-              if (total === 0) return null;
-              const pct = Math.round((done/total)*100);
-              return (
-                <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs font-semibold" style={{ color: CHARCOAL }}>📝 Notes Coverage</span>
-                    <span className="text-[10px] font-bold" style={{ color: PROGRESS_PURPLE }}>{done}/{total} topics · {pct}%</span>
-                  </div>
-                  <div className="h-1.5 rounded-full" style={{ background: BORDER }}>
-                    <div className="h-full rounded-full" style={{ width: `${Math.min(pct,100)}%`, background: PROGRESS_PURPLE }} />
-                  </div>
-                </div>
-              );
-            } catch { return null; }
-          })()}
         </Card>
-
         <Card className="p-6">
           <SectionTitle>Weekly Rhythm</SectionTitle>
           {(() => {
