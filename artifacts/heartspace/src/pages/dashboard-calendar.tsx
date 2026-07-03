@@ -110,7 +110,7 @@ export default function DashboardCalendar({
   // Get custom tasks for any date
   function getCustomTasksForDate(dateKey: string): Array<{id:string;name:string;category:string;done:boolean}> {
     try {
-      const raw = localStorage.getItem(`heartspace_custom_tasks_${dateKey}`);
+      const raw = localStorage.getItem(`heartspace_custom_tasks_${uid}_${dateKey}`);
       return raw ? JSON.parse(raw) : [];
     } catch { return []; }
   }
@@ -743,7 +743,7 @@ export default function DashboardCalendar({
                   onChange={e => setCustomTaskName(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter" && customTaskName.trim()) {
-                      const planKey = `heartspace_custom_tasks_${editingDay}`;
+                      const planKey = `heartspace_custom_tasks_${uid}_${editingDay}`;
                       const raw = localStorage.getItem(planKey);
                       const tasks = raw ? JSON.parse(raw) : [];
                       tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
@@ -770,7 +770,7 @@ export default function DashboardCalendar({
                 <button
                   onClick={() => {
                     if (!customTaskName.trim()) return;
-                    const planKey = `heartspace_custom_tasks_${editingDay}`;
+                    const planKey = `heartspace_custom_tasks_${uid}_${editingDay}`;
                     const raw = localStorage.getItem(planKey);
                     const tasks = raw ? JSON.parse(raw) : [];
                     tasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
