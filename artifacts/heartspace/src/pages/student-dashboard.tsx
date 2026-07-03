@@ -102,117 +102,69 @@ class SectionBoundary extends Component<
 function AnalyticsSection({ userId }: { userId: string }) {
   const data = useMemo(() => {
     try {
-      const raw = localStorage.getItem(`hs_daily_${userId}`);
-      const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+      const todayLocal = new Date();
       return Array.from({ length: 7 }, (_, i) => {
-        const d = subDays(new Date(), 6 - i);
-        const key = d.toISOString().split("T")[0];
-        const e = all[key];
+        const d = subDays(todayLocal, 6 - i);
+        const dayKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${userId}`) ?? "{}");
+        const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${userId}`) ?? "{}");
+        const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${userId}`) ?? "{}");
+        const sumHours = (cal: any) => (cal[dayKey] ?? []).reduce((a: number, e: any) => a + (e.hours ?? 0), 0);
+        const notesRaw = localStorage.getItem(`hs_notes_${userId}`);
+        const notes = notesRaw ? JSON.parse(notesRaw) : [];
+        const notesDone = notes.filter((n: any) => n.done && n.noted_at?.startsWith(dayKey)).length;
         return {
           day: format(d, "EEE"),
-          mood: e?.mood ?? null,
-          study: e?.studyHours ?? null,
+          study: sumHours(studyCal) || null,
+          revision: sumHours(revCal) || null,
+          practice: sumHours(pracCal) || null,
+          notes: notesDone || null,
         };
       });
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   }, [userId]);
 
-  const hasData = data.some((d) => d.mood !== null || d.study !== null);
+  const hasData = data.some(d => d.study || d.revision || d.practice || d.notes);
 
   if (!hasData) {
     return (
-      <div
-        className="text-center py-10 rounded-2xl"
-        style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}
-      >
-        <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-          No daily entries yet
-        </p>
-        <p className="text-xs mt-1" style={{ color: MUTED }}>
-          Start logging in <strong>Daily Tracker</strong> to see your mood and
-          study trends here.
-        </p>
+      <div className="text-center py-10 rounded-2xl" style={{ background: CREAM, border: `1.5px dashed ${BORDER}` }}>
+        <p className="text-sm font-medium" style={{ color: CHARCOAL }}>No data yet</p>
+        <p className="text-xs mt-1" style={{ color: MUTED }}>Set up your calendars to see growth insights here.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <p
-          className="text-xs font-semibold uppercase tracking-wide mb-3"
-          style={{ color: MUTED }}
-        >
-          Mood Trend — last 7 days
-        </p>
-        <ResponsiveContainer width="100%" height={150}>
-          <LineChart
-            data={data}
-            margin={{ top: 5, right: 8, left: -24, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-            <XAxis dataKey="day" tick={{ fontSize: 10, fill: MUTED }} />
-            <YAxis
-              domain={[1, 5]}
-              ticks={[1, 2, 3, 4, 5]}
-              tick={{ fontSize: 10, fill: MUTED }}
-            />
-            <Tooltip
-              formatter={(val: any) => [
-                val !== null ? `${val}/5` : "–",
-                "Mood",
-              ]}
-              contentStyle={{
-                background: "#fff",
-                border: `1px solid ${BORDER}`,
-                borderRadius: 10,
-                fontSize: 11,
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="mood"
-              stroke={PROGRESS_PURPLE}
-              strokeWidth={2.5}
-              dot={{ fill: PROGRESS_PURPLE, r: 4 }}
-              connectNulls={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+    <div>
+      <div className="flex gap-4 mb-3 flex-wrap">
+        {[
+          { key: "study", label: "Study", color: STUDY_BLUE },
+          { key: "revision", label: "Revision", color: REVISION_ORANGE },
+          { key: "practice", label: "Practice", color: "#2E7D52" },
+          { key: "notes", label: "Notes", color: PROGRESS_PURPLE },
+        ].map(({ key, label, color }) => (
+          <div key={key} className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ background: color }} />
+            <span className="text-[10px] font-semibold" style={{ color: MUTED }}>{label}</span>
+          </div>
+        ))}
       </div>
-      <div>
-        <p
-          className="text-xs font-semibold uppercase tracking-wide mb-3"
-          style={{ color: MUTED }}
-        >
-          Study Hours — last 7 days
-        </p>
-        <ResponsiveContainer width="100%" height={150}>
-          <BarChart
-            data={data}
-            margin={{ top: 5, right: 8, left: -24, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-            <XAxis dataKey="day" tick={{ fontSize: 10, fill: MUTED }} />
-            <YAxis tick={{ fontSize: 10, fill: MUTED }} />
-            <Tooltip
-              formatter={(val: any) => [
-                val !== null ? `${val}h` : "–",
-                "Study",
-              ]}
-              contentStyle={{
-                background: "#fff",
-                border: `1px solid ${BORDER}`,
-                borderRadius: 10,
-                fontSize: 11,
-              }}
-            />
-            <Bar dataKey="study" fill={OLIVE} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={data} margin={{ top: 5, right: 8, left: -24, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
+          <XAxis dataKey="day" tick={{ fontSize: 10, fill: MUTED }} />
+          <YAxis tick={{ fontSize: 10, fill: MUTED }} />
+          <Tooltip
+            contentStyle={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 11 }}
+            formatter={(val: any, name: string) => [val !== null ? `${val}h` : "–", name]}
+          />
+          <Line type="monotone" dataKey="study" stroke={STUDY_BLUE} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+          <Line type="monotone" dataKey="revision" stroke={REVISION_ORANGE} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+          <Line type="monotone" dataKey="practice" stroke="#2E7D52" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+          <Line type="monotone" dataKey="notes" stroke={PROGRESS_PURPLE} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -895,42 +847,63 @@ export default function StudentDashboard() {
 
         <Card className="p-6">
           <SectionTitle>Weekly Rhythm</SectionTitle>
-          <div className="flex gap-2 mb-4">
-            {["M", "T", "W", "T", "F", "S", "S"].map((day, idx) => {
-              const todayIdx = (new Date().getDay() + 6) % 7;
-              const isToday = idx === todayIdx;
-              return (
-                <div
-                  key={idx}
-                  className="flex-1 flex flex-col items-center gap-2"
-                >
-                  <span
-                    className="text-[11px] font-semibold"
-                    style={{ color: isToday ? PROGRESS_PURPLE : MUTED }}
-                  >
-                    {day}
-                  </span>
-                  <div
-                    className="w-full aspect-square rounded-xl flex items-center justify-center"
-                    style={{
-                      background: isToday ? `${PROGRESS_PURPLE}22` : CREAM,
-                      border: `1.5px solid ${isToday ? PROGRESS_PURPLE : BORDER}`,
-                    }}
-                  >
-                    <span
-                      className="text-[10px]"
-                      style={{ color: isToday ? PROGRESS_PURPLE : BORDER }}
-                    >
-                      {isToday ? "today" : "—"}
-                    </span>
-                  </div>
+          {(() => {
+            const uid = String(user?.id ?? "");
+            const weekKey = (() => {
+              const d = new Date();
+              const day = d.getDay();
+              const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+              const monday = new Date(d.setDate(diff));
+              return monday.toISOString().split("T")[0];
+            })();
+            const storageKey = `hs_weekly_rhythm_${uid}_${weekKey}`;
+            const [ticked, setTicked] = useState<number[]>(() => {
+              try { return JSON.parse(localStorage.getItem(storageKey) ?? "[]"); } catch { return []; }
+            });
+            const toggle = (idx: number) => {
+              const next = ticked.includes(idx) ? ticked.filter(i => i !== idx) : [...ticked, idx];
+              setTicked(next);
+              localStorage.setItem(storageKey, JSON.stringify(next));
+            };
+            const days = ["M", "T", "W", "T", "F", "S", "S"];
+            const todayIdx = (new Date().getDay() + 6) % 7;
+            return (
+              <div>
+                <div className="flex gap-2 mb-4">
+                  {days.map((day, i) => {
+                    const isToday = i === todayIdx;
+                    const isDone = ticked.includes(i);
+                    const isSun = i === 6;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                        <span className="text-[11px] font-semibold" style={{ color: isToday ? PROGRESS_PURPLE : MUTED }}>{day}</span>
+                        <button
+                          onClick={() => !isSun && toggle(i)}
+                          className="w-full aspect-square rounded-xl flex items-center justify-center transition-all"
+                          style={{
+                            background: isSun ? `${GOLD}15` : isDone ? `${OLIVE}22` : isToday ? `${PROGRESS_PURPLE}15` : CREAM,
+                            border: `1.5px solid ${isSun ? GOLD : isDone ? OLIVE : isToday ? PROGRESS_PURPLE : BORDER}`,
+                            cursor: isSun ? "default" : "pointer",
+                          }}
+                        >
+                          {isSun ? (
+                            <span className="text-sm">☀️</span>
+                          ) : isDone ? (
+                            <span className="text-sm">✓</span>
+                          ) : (
+                            <span className="text-[10px]" style={{ color: BORDER }}>○</span>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-          <p className="text-xs text-center" style={{ color: MUTED }}>
-            Daily Tracker entries will appear here week by week.
-          </p>
+                <p className="text-xs text-center italic" style={{ color: MUTED }}>
+                  Structured days help me build. Free days help me breathe.
+                </p>
+              </div>
+            );
+          })()}
         </Card>
       </div>
 
@@ -940,42 +913,38 @@ export default function StudentDashboard() {
         <AnalyticsSection userId={String(user?.id ?? "guest")} />
       </Card>
 
-      {/* ── Quote card ── */}
+            {/* ── Quote card ── */}
       <Card
         className="p-7 relative overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${CREAM} 0%, #EDE4D8 100%)`,
-        }}
+        style={{ background: "linear-gradient(135deg, #E8E0F5 0%, #D8D0F0 100%)" }}
       >
-        <svg
-          className="absolute top-4 right-6 opacity-20"
-          width="60"
-          height="50"
-          viewBox="0 0 60 50"
+        <div
+          className="absolute top-3 left-4 font-serif"
+          style={{ fontSize: "5rem", color: "#9B7BB0", opacity: 0.3, lineHeight: 1 }}
         >
-          <path
-            d="M10 40 Q30 5 50 40"
-            stroke={PROGRESS_PURPLE}
-            strokeWidth="1.5"
-            fill="none"
-          />
-          <path
-            d="M5 45 Q25 10 45 45"
-            stroke={PROGRESS_PURPLE}
-            strokeWidth="1"
-            fill="none"
-          />
-          <circle cx="30" cy="10" r="3" fill={PROGRESS_PURPLE} />
-        </svg>
-        <p
-          className="font-serif italic text-lg leading-relaxed max-w-lg"
-          style={{ color: SIDEBAR }}
+          "
+        </div>
+        <div className="relative z-10 pt-6">
+          <p
+            className="font-serif text-lg font-semibold leading-relaxed"
+            style={{ color: "#3D2B5E" }}
+          >
+            You don't have to do it all today.
+            <br />
+            Just don't stop showing up.
+          </p>
+          <div className="mt-4 flex items-center gap-2">
+            <div className="h-px flex-1" style={{ background: "#9B7BB0", opacity: 0.3 }} />
+            <span className="text-xs font-semibold italic" style={{ color: "#9B7BB0" }}>The Heart Space</span>
+            <div className="h-px flex-1" style={{ background: "#9B7BB0", opacity: 0.3 }} />
+          </div>
+        </div>
+        <div
+          className="absolute bottom-3 right-4"
+          style={{ fontSize: "1.2rem", opacity: 0.4 }}
         >
-          "You don't have to do it all today. Just don't stop showing up."
-        </p>
-        <p className="text-xs mt-3 font-medium" style={{ color: PROGRESS_PURPLE }}>
-          Daily Affirmation
-        </p>
+          ✦
+        </div>
       </Card>
     </div>
   );

@@ -45,7 +45,7 @@ const PROGRESS_PURPLE_LIGHT = "#B8A8E0";
 const COMPLETED_GREEN = "#4A8F5C";
 const COMPLETED_GREEN_LIGHT = "#7CC08E";
 const CARD = "#FFFDF9";
-const SIDEBAR = "#3D5E8C"; // blue-to-purple gradient top color
+const SIDEBAR = "#1C2B1C"; // deep forest green
 const SIDEBAR_HEADER = "#FFFFFF";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
@@ -221,13 +221,13 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                 />
               </svg>
               <span
-                className="font-serif text-lg font-bold leading-none"
-                style={{ color: SIDEBAR_HEADER }}
+                className="font-serif text-2xl font-bold leading-none"
+                style={{ color: SIDEBAR_HEADER, letterSpacing: "-0.02em" }}
               >
-                The Heart Space
+                The Heart<br/>Space
               </span>
             </div>
-            <p className="text-xs mt-1 pl-7" style={{ color: MUTED }}>
+            <p className="text-xs mt-1 pl-7 italic" style={{ color: "#C9A84C", fontFamily: "Georgia, serif", fontSize: "0.8rem" }}>
               with Vaishnavi Saxena
             </p>
           </div>
