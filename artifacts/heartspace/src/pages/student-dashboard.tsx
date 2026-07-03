@@ -920,7 +920,7 @@ export default function StudentDashboard() {
             }
           })()}
         </Card>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:col-span-2">
           <WeeklyRhythmCard uid={String(user?.id ?? "")} />
           <Card
             className="p-7 relative overflow-hidden"
