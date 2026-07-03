@@ -922,7 +922,34 @@ export default function StudentDashboard() {
         </Card>
         <div className="grid grid-cols-2 gap-4">
           <WeeklyRhythmCard uid={String(user?.id ?? "")} />
-                  </div>
+          <Card
+            className="p-7 relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #E8E0F5 0%, #D8D0F0 100%)" }}
+          >
+            <div
+              className="absolute top-3 left-4 font-serif"
+              style={{ fontSize: "5rem", color: "#9B7BB0", opacity: 0.3, lineHeight: 1 }}
+            >
+              "
+            </div>
+            <div className="relative z-10 pt-6">
+              <p
+                className="font-serif text-lg font-semibold leading-relaxed"
+                style={{ color: "#3D2B5E" }}
+              >
+                You don't have to do it all today.
+                <br />
+                Just don't stop showing up.
+              </p>
+              <div className="mt-4 flex items-center gap-2">
+                <div className="h-px flex-1" style={{ background: "#9B7BB0", opacity: 0.3 }} />
+                <span className="text-xs font-semibold italic" style={{ color: "#9B7BB0" }}>The Heart Space</span>
+                <div className="h-px flex-1" style={{ background: "#9B7BB0", opacity: 0.3 }} />
+              </div>
+            </div>
+            <div className="absolute bottom-3 right-4" style={{ fontSize: "1.2rem", opacity: 0.4 }}>✦</div>
+          </Card>
+        </div>
       </div>
 
       {/* ── Analytics ── */}
