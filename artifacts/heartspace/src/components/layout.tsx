@@ -82,7 +82,6 @@ function getNavItems(role: string, space: string | null): NavItem[] {
       { icon: Calendar, label: "Sessions with Sagar Sir", key: "sessions", href: "/sessions" },
       { icon: Users, label: "Students", key: "reports", href: "/counsellor" },
       { icon: BarChart2, label: "Analytics", key: "analytics", soon: true },
-      { icon: Library, label: "Resources", key: "resources", soon: true },
     ];
   }
 
@@ -117,11 +116,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
       { icon: RotateCcw, label: "Revision Tracker", key: "revision-tracker", href: "/revision-tracker" },
       { icon: BookOpen, label: "Note Tracker", key: "note-tracker", href: "/note-tracker" },
       { icon: Calendar, label: "Sessions with Sagar Sir", key: "sessions", href: "/sessions" },
-      { icon: Heart, label: "Health & Wellness", key: "health", soon: true },
-      { icon: Brain, label: "Mood & Mind", key: "mood", soon: true },
-      { icon: Zap, label: "Habits", key: "habits", soon: true },
       { icon: BarChart2, label: "Reports", key: "reports2", href: "/charts" },
-      { icon: Library, label: "Resources", key: "resources", soon: true },
     ];
   }
 
