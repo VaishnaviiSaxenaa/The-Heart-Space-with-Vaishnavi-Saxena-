@@ -17,7 +17,7 @@ import {
 } from "recharts";
 
 const DARK = "#3D2314";
-const GOLD = "#C9A96E";
+const GOLD = "#2E7D52";
 const CREAM = "#FAF7F2";
 const CARD = "#FFFFFF";
 const BORDER = "#E8DDD0";
