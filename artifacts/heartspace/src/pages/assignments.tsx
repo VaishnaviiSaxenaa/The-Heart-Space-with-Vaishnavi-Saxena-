@@ -1345,28 +1345,7 @@ export default function QuestionPractice() {
 
       {activeMainTab === "log" && (
       <>
-      {/* Legend */}
-      <div
-        className="flex flex-wrap gap-4 px-4 py-3 rounded-2xl"
-        style={{ background: CARD, border: `1px solid ${BORDER}` }}
-      >
-        <div>
-          <p
-            className="text-[10px] font-bold uppercase tracking-wide mb-1"
-            style={{ color: MUTED }}
-          >
-            How to use
-          </p>
-          <p className="text-xs" style={{ color: CHARCOAL }}>
-            Click <strong>🟢⚡ 100%</strong> on a subject to mark everything
-            Strong/Fast/100% instantly. Click <strong>+ Subject</strong> to log
-            a custom attempt for the whole subject. Click{" "}
-            <strong>+ Topic</strong> inside for topic-level, or expand to log
-            per subtopic. Click <strong>📅 History</strong> tab to see all
-            attempts for that subject.
-          </p>
-        </div>
-      </div>
+
 
       {/* Weak areas */}
       {weakAreas.length > 0 && (
