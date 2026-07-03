@@ -169,19 +169,16 @@ export default function PerformanceCharts() {
   /* ── Practice improvement over time ── */
   const practiceTimeline = (() => {
     const allAttempts: { date: string; accuracy: number; concept: number; speed: number }[] = [];
-    JAM_SUBJECTS.forEach((s) => {
-      const subData = (practice[s.id] as Record<string, unknown>) ?? {};
-      Object.values(subData).forEach((topic: any) => {
-        (topic?.attempts ?? []).forEach((a: any) => {
-          if (a.date && a.accuracy != null) {
-            allAttempts.push({
-              date: a.date.slice(0, 10),
-              accuracy: a.accuracy,
-              concept: typeof a.concept === "number" ? a.concept : 0,
-              speed: typeof a.speed === "number" ? a.speed : 0,
-            });
-          }
-        });
+    Object.values(practice as Record<string, any>).forEach((entry: any) => {
+      (entry?.attempts ?? []).forEach((a: any) => {
+        if (a.date && a.accuracy != null) {
+          allAttempts.push({
+            date: a.date.slice(0, 10),
+            accuracy: a.accuracy,
+            concept: typeof a.concept === "number" ? a.concept : 0,
+            speed: typeof a.speed === "number" ? a.speed : 0,
+          });
+        }
       });
     });
     // Group by date, average
