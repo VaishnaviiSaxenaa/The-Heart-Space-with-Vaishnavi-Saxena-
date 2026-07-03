@@ -718,8 +718,8 @@ export default function StudentDashboard() {
               const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
               const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
               const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
-              const notesRaw = localStorage.getItem(`hs_notes_${uid}`);
-              const notes = notesRaw ? JSON.parse(notesRaw) : [];
+              const notesRaw = localStorage.getItem(`hs_note_logs_${uid}`);
+              const notes: Array<{topic_key:string;subject:string;topic:string;done:boolean}> = notesRaw ? JSON.parse(notesRaw) : [];
 
               const sumCal = (cal: any) => {
                 const hrs: Record<string,number> = {};
@@ -746,7 +746,7 @@ export default function StudentDashboard() {
                 { label: "Study", covered: Math.round(covStudy*10)/10, total: Math.round(totalStudy*10)/10, unit: "h", color: STUDY_BLUE, subjects: dashStudySubjects, hrs: studyHrs },
                 { label: "Revision", covered: Math.round(covRev*10)/10, total: Math.round(totalRev*10)/10, unit: "h", color: REVISION_ORANGE, subjects: dashRevisionSubjects, hrs: revHrs },
                 { label: "Practice", covered: Math.round(covPrac*10)/10, total: Math.round(totalPrac*10)/10, unit: "h", color: "#2E7D52", subjects: dashPracticeSubjects, hrs: pracHrs },
-                { label: "Notes", covered: covNotes, total: totalNotes, unit: " topics", color: PROGRESS_PURPLE, subjects: [], hrs: {} },
+                { label: "Notes", covered: covNotes, total: totalNotes, unit: " topics", color: PROGRESS_PURPLE, subjects: [], hrs: {}, notes },
               ];
 
               return (
@@ -792,6 +792,35 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                   ))}
+                  {/* Notes topic-wise */}
+                  {notes.length > 0 && (() => {
+                    const bySubject: Record<string, {done: number, total: number}> = {};
+                    notes.forEach((n: any) => {
+                      const subj = n.subject ?? n.topic_key?.split("::")[0] ?? "Unknown";
+                      if (!bySubject[subj]) bySubject[subj] = { done: 0, total: 0 };
+                      bySubject[subj].total++;
+                      if (n.done) bySubject[subj].done++;
+                    });
+                    return (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: PROGRESS_PURPLE }}>Notes — by subject</p>
+                        <div className="space-y-1">
+                          {Object.entries(bySubject).map(([subj, { done, total }]) => {
+                            const p = total > 0 ? Math.round((done/total)*100) : 0;
+                            return (
+                              <div key={subj} className="flex items-center gap-2">
+                                <span className="text-[10px]" style={{ color: CHARCOAL, minWidth: 120 }}>{subj}</span>
+                                <div className="flex-1 h-1.5 rounded-full" style={{ background: BORDER }}>
+                                  <div className="h-full rounded-full" style={{ width: `${p}%`, background: PROGRESS_PURPLE }} />
+                                </div>
+                                <span className="text-[10px] font-bold" style={{ color: PROGRESS_PURPLE, minWidth: 55, textAlign: "right" }}>{done}/{total} topics</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             } catch {

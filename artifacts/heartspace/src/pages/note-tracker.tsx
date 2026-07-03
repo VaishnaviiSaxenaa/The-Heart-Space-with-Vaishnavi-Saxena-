@@ -171,7 +171,10 @@ export default function NoteTracker() {
         .eq("student_id", userId)
         .single(),
     ]).then(([notesRes, methodRes]) => {
-      if (notesRes.data) setNotes(notesRes.data as NoteLog[]);
+      if (notesRes.data) {
+        setNotes(notesRes.data as NoteLog[]);
+        try { localStorage.setItem(`hs_note_logs_${userId}`, JSON.stringify(notesRes.data)); } catch {}
+      }
       if (methodRes.data) setMethodResponses(methodRes.data.responses ?? []);
       setLoading(false);
     });
