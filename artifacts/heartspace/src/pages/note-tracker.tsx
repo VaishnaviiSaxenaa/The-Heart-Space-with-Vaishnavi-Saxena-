@@ -327,7 +327,7 @@ export default function NoteTracker() {
           </div>
           {subjects.map(s => {
             const topicIds = s.topics;
-            const subDone = notes.filter(n => topicIds.includes(n.topicKey?.split("_")[0] + "_" + n.topicKey?.split("_").slice(1).join("_")) && n.done).length;
+            const subDone = notes.filter(n => n.topic_key?.startsWith(`${s.key}::`) && n.done).length;
             const subTotal = topicIds.length;
             const p = subTotal > 0 ? Math.round((subDone/subTotal)*100) : 0;
             return (
