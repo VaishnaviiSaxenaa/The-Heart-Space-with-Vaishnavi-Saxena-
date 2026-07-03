@@ -1061,6 +1061,24 @@ function TickButton({
 }
 
 /* ─── Main Component ───────────────────── */
+/* ─── Subject hours (CSIR NET) ──────────────── */
+const SUBJECT_HOURS: Record<string, number> = {
+  linear_algebra: 60,
+  real_analysis: 60,
+  abstract_algebra: 50,
+  complex_analysis: 50,
+  ode: 40,
+  pde: 40,
+  differential_calculus: 50,
+  integration: 40,
+  numerical_analysis: 30,
+  calculus_of_variations: 30,
+  linear_programming: 30,
+  statistics: 30,
+  topology: 30,
+  functional_analysis: 30,
+};
+
 export default function Syllabus() {
   const { user } = useAuth();
   const userId = String(user?.id ?? "guest");
@@ -1069,6 +1087,25 @@ export default function Syllabus() {
   const effectiveUserId = viewAsId ?? userId;
   const isViewMode = !!viewAsId;
   const examType = (user as any)?.exam_type as string | null;
+
+  // Load calendar hours per subject
+  const calendarHours = (() => {
+    try {
+      const uid = effectiveUserId || userId;
+      const cal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
+      const todayLocal = new Date();
+      const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+      const hours: Record<string, number> = {};
+      Object.entries(cal).forEach(([day, entries]: [string, any]) => {
+        if (day <= todayKey) {
+          entries.forEach((e: any) => {
+            hours[e.subjectId] = (hours[e.subjectId] ?? 0) + e.hours;
+          });
+        }
+      });
+      return hours;
+    } catch { return {}; }
+  })();
 
   const [progress, setProgress] = useState<SyllabusProgress>(() =>
     loadSyllabusProgress(effectiveUserId),
@@ -1281,9 +1318,22 @@ export default function Syllabus() {
                       className="text-xs font-semibold flex-shrink-0"
                       style={{ color: pct === 100 ? OLIVE : MUTED }}
                     >
-                      {pct}% · {done}/{total}
+                      {pct}% · {done}/{total} subtopics
                     </span>
                   </div>
+                  {SUBJECT_HOURS[subject.id] && (
+                    <div className="flex items-center gap-3 pl-7 mt-1">
+                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                        <div className="h-full rounded-full transition-all duration-500" style={{
+                          width: `${Math.min(Math.round(((calendarHours[subject.id] ?? 0) / SUBJECT_HOURS[subject.id]) * 100), 100)}%`,
+                          background: "#E07A28",
+                        }} />
+                      </div>
+                      <span className="text-xs font-semibold flex-shrink-0" style={{ color: "#E07A28" }}>
+                        {Math.round((calendarHours[subject.id] ?? 0) * 10) / 10}/{SUBJECT_HOURS[subject.id]}h
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {isOpen ? (
                   <ChevronDown
