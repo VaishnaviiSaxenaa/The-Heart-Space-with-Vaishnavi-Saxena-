@@ -100,7 +100,7 @@ export default function DashboardCalendar({
     try {
       const todayLocal = new Date();
       const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
-      const raw = localStorage.getItem("heartspace_today_plan");
+      const raw = localStorage.getItem(`heartspace_today_plan_${uid}`);
       const parsed = raw ? JSON.parse(raw) : { date: todayKey, tasks: [] };
       const planTasks = parsed.date === todayKey ? (parsed.tasks ?? []) : [];
       return planTasks;
@@ -752,11 +752,11 @@ export default function DashboardCalendar({
                       const todayLocal = new Date();
                       const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
                       if (editingDay === todayKey) {
-                        const planRaw = localStorage.getItem("heartspace_today_plan");
+                        const planRaw = localStorage.getItem(`heartspace_today_plan_${uid}`);
                         const plan = planRaw ? JSON.parse(planRaw) : { date: todayKey, tasks: [] };
                         const planTasks = plan.date === todayKey ? plan.tasks : [];
                         planTasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
-                        localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: todayKey, tasks: planTasks }));
+                        localStorage.setItem(`heartspace_today_plan_${uid}`, JSON.stringify({ date: todayKey, tasks: planTasks }));
                       }
                       setCustomTaskName("");
                       setTaskRefresh(r => r + 1);
@@ -778,11 +778,11 @@ export default function DashboardCalendar({
                     const todayLocal = new Date();
                     const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
                     if (editingDay === todayKey) {
-                      const planRaw = localStorage.getItem("heartspace_today_plan");
+                      const planRaw = localStorage.getItem(`heartspace_today_plan_${uid}`);
                       const plan = planRaw ? JSON.parse(planRaw) : { date: todayKey, tasks: [] };
                       const planTasks = plan.date === todayKey ? plan.tasks : [];
                       planTasks.push({ id: `custom_${Date.now()}`, name: customTaskName.trim(), category: customTaskCat, done: false });
-                      localStorage.setItem("heartspace_today_plan", JSON.stringify({ date: todayKey, tasks: planTasks }));
+                      localStorage.setItem(`heartspace_today_plan_${uid}`, JSON.stringify({ date: todayKey, tasks: planTasks }));
                     }
                     setCustomTaskName("");
                     setTaskRefresh(r => r + 1);

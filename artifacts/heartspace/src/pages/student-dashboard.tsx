@@ -280,9 +280,9 @@ const PLAN_KEY = "heartspace_today_plan";
 function todayDate() {
   return new Date().toISOString().split("T")[0];
 }
-function loadPlanTasks(): PlanTask[] {
+function loadPlanTasks(uid: string): PlanTask[] {
   try {
-    const raw = localStorage.getItem(PLAN_KEY);
+    const raw = localStorage.getItem(PLAN_KEY(uid));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (parsed.date !== todayDate()) return [];
@@ -291,8 +291,8 @@ function loadPlanTasks(): PlanTask[] {
     return [];
   }
 }
-function savePlanTasks(tasks: PlanTask[]) {
-  localStorage.setItem(PLAN_KEY, JSON.stringify({ date: todayDate(), tasks }));
+function savePlanTasks(uid: string, tasks: PlanTask[]) {
+  localStorage.setItem(PLAN_KEY(uid), JSON.stringify({ date: todayDate(), tasks }));
 }
 
 function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: {
@@ -301,7 +301,7 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
   revisionSubjects: Array<{id: string; name: string}>;
   practiceSubjects: Array<{id: string; name: string}>;
 }) {
-  const [tasks, setTasks] = useState<PlanTask[]>(() => loadPlanTasks());
+  const [tasks, setTasks] = useState<PlanTask[]>(() => loadPlanTasks(uid));
 
   // Sync calendar entries into today's plan once on mount
   useEffect(() => {
@@ -309,7 +309,7 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
     try {
       const todayLocal = new Date();
       const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
-      const existing = loadPlanTasks();
+      const existing = loadPlanTasks(uid);
       const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
       const revCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_revision_${uid}`) ?? "{}");
       const pracCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_practice_${uid}`) ?? "{}");
@@ -336,7 +336,7 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
       // Only save if different from existing
       const sameIds = merged.length === existing.length && merged.every((t, i) => t.id === existing[i]?.id);
       if (!sameIds) {
-        savePlanTasks(merged);
+        savePlanTasks(uid, merged);
         setTasks(merged);
       }
     } catch {}
@@ -347,7 +347,7 @@ function TodaysPlan({ uid, studySubjects, revisionSubjects, practiceSubjects }: 
 
   const persist = (next: PlanTask[]) => {
     setTasks(next);
-    savePlanTasks(next);
+    savePlanTasks(uid, next);
   };
   const addTask = () => {
     const name = newName.trim();
