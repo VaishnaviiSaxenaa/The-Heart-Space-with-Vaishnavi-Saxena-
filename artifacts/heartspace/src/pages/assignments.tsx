@@ -490,6 +490,7 @@ function SubtopicRow({
   onDelete: (attemptId: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
+  const [showMistakes, setShowMistakes] = useState(false);
   const latest = getLatest(entry);
   const attemptCount = entry?.attempts.length ?? 0;
   const conceptCfg = latest ? CONCEPT_CFG[getConceptKey(latest.concept)] : null;
@@ -526,9 +527,18 @@ function SubtopicRow({
               ⚡ {typeof latest.speed === "number" ? `${latest.speed}%` : latest.speed}
             </span>
             {(latest.mistakeCount ?? 0) > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
-                🔍 {latest.mistakeCount}
-              </span>
+              <button onClick={() => setShowMistakes(s => !s)}
+                className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
+                style={{ background: "#C0392B22", color: "#C0392B", border: "none" }}>
+                🔍 {latest.mistakeCount} mistake{latest.mistakeCount !== 1 ? "s" : ""} {showMistakes ? "▲" : "▼"}
+              </button>
+            )}
+            {showMistakes && latest?.mistakes && latest.mistakes.filter(Boolean).length > 0 && (
+              <div className="w-full mt-1 p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
+                {latest.mistakes.filter(Boolean).map((m, i) => (
+                  <p key={i} className="text-[10px] italic" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
+                ))}
+              </div>
             )}
             {attemptCount > 0 && (
               <span
@@ -598,18 +608,16 @@ function TopicBlock({
   const speedOrder: SpeedLevel[] = ["slow", "moderate", "fast"];
   const latestConcepts = subtopicEntries
     .map((e) => getLatest(e)?.concept)
-    .filter(Boolean) as ConceptLevel[];
+    .filter((v) => v !== null && v !== undefined) as (number | string)[];
   const latestSpeeds = subtopicEntries
     .map((e) => getLatest(e)?.speed)
-    .filter(Boolean) as SpeedLevel[];
+    .filter((v) => v !== null && v !== undefined) as (number | string)[];
+  const toNum = (v: number | string) => typeof v === "number" ? v : 0;
   const worstConcept = latestConcepts.length
-    ? latestConcepts.reduce((a, b) =>
-        conceptOrder.indexOf(a) < conceptOrder.indexOf(b) ? a : b,
-      )
+    ? latestConcepts.reduce((a, b) => toNum(a) < toNum(b) ? a : b)
     : null;
   const worstSpeed = latestSpeeds.length
-    ? latestSpeeds.reduce((a, b) =>
-        speedOrder.indexOf(a) < speedOrder.indexOf(b) ? a : b,
+    ? latestSpeeds.reduce((a, b) => toNum(a) < toNum(b) ? a : b,
       )
     : null;
 
@@ -705,7 +713,7 @@ function TopicBlock({
                 </span>
               )}
               {(() => {
-                const totalMistakes = subtopicEntries.reduce((sum, e) => {
+                const totalMistakes = subtopicEntries.filter(Boolean).reduce((sum, e) => {
                   const latest = getLatest(e);
                   return sum + (latest?.mistakeCount ?? 0);
                 }, 0);
