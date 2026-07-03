@@ -73,6 +73,20 @@ const SPEED_CFG: Record<
   fast: { label: "Fast", color: OLIVE, bg: `${OLIVE}15`, emoji: "⚡" },
 };
 
+// Helper to convert numeric concept/speed to legacy config keys
+function getConceptKey(val: number | string): ConceptLevel {
+  if (typeof val === "string") return val as ConceptLevel;
+  if (val >= 70) return "strong";
+  if (val >= 40) return "developing";
+  return "weak";
+}
+function getSpeedKey(val: number | string): SpeedLevel {
+  if (typeof val === "string") return val as SpeedLevel;
+  if (val >= 70) return "fast";
+  if (val >= 40) return "moderate";
+  return "slow";
+}
+
 /* ─── localStorage ─────────────────────── */
 function lsKey(userId: string) {
   return `hs_practice_${userId}`;
@@ -247,8 +261,8 @@ function AttemptCard({
   isLatest: boolean;
   onDelete: () => void;
 }) {
-  const conceptCfg = CONCEPT_CFG[attempt.concept];
-  const speedCfg = SPEED_CFG[attempt.speed];
+  const conceptCfg = CONCEPT_CFG[getConceptKey(attempt.concept)];
+  const speedCfg = SPEED_CFG[getSpeedKey(attempt.speed)];
   return (
     <div
       className="rounded-xl px-4 py-3"
@@ -390,8 +404,8 @@ function SubjectHistory({
           </p>
           <div className="space-y-2">
             {items.map(({ subtopicName, stId, attempt }) => {
-              const conceptCfg = CONCEPT_CFG[attempt.concept];
-              const speedCfg = SPEED_CFG[attempt.speed];
+              const conceptCfg = CONCEPT_CFG[getConceptKey(attempt.concept)];
+              const speedCfg = SPEED_CFG[getSpeedKey(attempt.speed)];
               return (
                 <div
                   key={attempt.id}
@@ -480,8 +494,8 @@ function SubtopicRow({
   const [showForm, setShowForm] = useState(false);
   const latest = getLatest(entry);
   const attemptCount = entry?.attempts.length ?? 0;
-  const conceptCfg = latest ? CONCEPT_CFG[latest.concept] : null;
-  const speedCfg = latest ? SPEED_CFG[latest.speed] : null;
+  const conceptCfg = latest ? CONCEPT_CFG[getConceptKey(latest.concept)] : null;
+  const speedCfg = latest ? SPEED_CFG[getSpeedKey(latest.speed)] : null;
 
   return (
     <div
@@ -687,12 +701,12 @@ function TopicBlock({
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full"
                   style={{
-                    background: CONCEPT_CFG[worstConcept].bg,
-                    color: CONCEPT_CFG[worstConcept].color,
+                    background: CONCEPT_CFG[getConceptKey(worstConcept)].bg,
+                    color: CONCEPT_CFG[getConceptKey(worstConcept)].color,
                   }}
                 >
-                  {CONCEPT_CFG[worstConcept].emoji}{" "}
-                  {CONCEPT_CFG[worstConcept].label}
+                  {CONCEPT_CFG[getConceptKey(worstConcept)].emoji}{" "}
+                  {CONCEPT_CFG[getConceptKey(worstConcept)].label}
                 </span>
               )}
               {worstSpeed && (
