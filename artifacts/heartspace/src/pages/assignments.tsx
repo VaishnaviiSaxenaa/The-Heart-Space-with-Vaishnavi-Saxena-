@@ -533,13 +533,6 @@ function SubtopicRow({
                 🔍 {latest.mistakeCount} mistake{latest.mistakeCount !== 1 ? "s" : ""} {showMistakes ? "▲" : "▼"}
               </button>
             )}
-            {showMistakes && latest?.mistakes && latest.mistakes.filter(Boolean).length > 0 && (
-              <div className="w-full mt-1 p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
-                {latest.mistakes.filter(Boolean).map((m, i) => (
-                  <p key={i} className="text-[10px] italic" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
-                ))}
-              </div>
-            )}
             {attemptCount > 0 && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-full"
@@ -562,6 +555,15 @@ function SubtopicRow({
           <Plus className="w-3 h-3" />
         </button>
       </div>
+      {showMistakes && latest?.mistakes && latest.mistakes.filter(Boolean).length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
+            {latest.mistakes.filter(Boolean).map((m, i) => (
+              <p key={i} className="text-[10px] italic" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
+            ))}
+          </div>
+        </div>
+      )}
       {showForm && (
         <div className="px-4 pb-3">
           <AttemptForm
@@ -702,14 +704,14 @@ function TopicBlock({
               >
                 {avgAcc}%
               </span>
-              {worstConcept !== null && worstConcept !== undefined && (
+              {worstConcept !== null && worstConcept !== undefined && typeof worstConcept === "number" && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
-                  🧠 {typeof worstConcept === "number" ? `${worstConcept}%` : worstConcept}
+                  🧠 {worstConcept}%
                 </span>
               )}
-              {worstSpeed !== null && worstSpeed !== undefined && (
+              {worstSpeed !== null && worstSpeed !== undefined && typeof worstSpeed === "number" && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
-                  ⚡ {typeof worstSpeed === "number" ? `${worstSpeed}%` : worstSpeed}
+                  ⚡ {worstSpeed}%
                 </span>
               )}
               {(() => {
