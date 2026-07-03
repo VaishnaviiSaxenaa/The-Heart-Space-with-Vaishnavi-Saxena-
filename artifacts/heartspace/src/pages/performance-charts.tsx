@@ -144,7 +144,7 @@ export default function PerformanceCharts() {
         sleep: (e?.sleepHours as number) ?? null,
         study: (e?.studyHours as number) ?? null,
         meTime: e?.meTimeMinutes ? Math.round((e.meTimeMinutes as number)/60 * 10)/10 : null,
-        physical: (e?.physicalActivity as boolean) ? 1 : null,
+        physical: (e?.physicalActivity as boolean) === true ? 1 : null,
       };
     })
     .filter((d) => d.mood !== null || d.stress !== null || d.sleep !== null || d.study !== null);
@@ -168,32 +168,35 @@ export default function PerformanceCharts() {
 
   /* ── Practice improvement over time ── */
   const practiceTimeline = (() => {
-    const allAttempts: { date: string; accuracy: number; concept: number; speed: number }[] = [];
+    const allAttempts: { date: string; accuracy: number; conceptUnderstanding: number; speed: number; mistakes: number }[] = [];
     Object.values(practice as Record<string, any>).forEach((entry: any) => {
       (entry?.attempts ?? []).forEach((a: any) => {
         if (a.date && a.accuracy != null) {
           allAttempts.push({
             date: a.date.slice(0, 10),
             accuracy: a.accuracy,
-            concept: typeof a.concept === "number" ? a.concept : 0,
+            conceptUnderstanding: typeof a.concept === "number" ? a.concept : 0,
             speed: typeof a.speed === "number" ? a.speed : 0,
+            mistakes: typeof a.mistakeCount === "number" ? a.mistakeCount : 0,
           });
         }
       });
     });
     // Group by date, average
-    const byDate: Record<string, { acc: number[]; concept: number[]; speed: number[] }> = {};
-    allAttempts.forEach(({ date, accuracy, concept, speed }) => {
-      if (!byDate[date]) byDate[date] = { acc: [], concept: [], speed: [] };
+    const byDate: Record<string, { acc: number[]; concept: number[]; speed: number[]; mistakes: number[] }> = {};
+    allAttempts.forEach(({ date, accuracy, conceptUnderstanding, speed, mistakes }) => {
+      if (!byDate[date]) byDate[date] = { acc: [], concept: [], speed: [], mistakes: [] };
       byDate[date].acc.push(accuracy);
-      byDate[date].concept.push(concept);
+      byDate[date].concept.push(conceptUnderstanding);
       byDate[date].speed.push(speed);
+      byDate[date].mistakes.push(mistakes);
     });
     return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).slice(-range).map(([date, v]) => ({
       date: new Date(date + 'T12:00:00').toLocaleDateString('en-IN', {day:'numeric',month:'short'}),
       accuracy: Math.round(v.acc.reduce((a,b) => a+b, 0) / v.acc.length),
-      concept: Math.round(v.concept.reduce((a,b) => a+b, 0) / v.concept.length),
+      conceptUnderstanding: Math.round(v.concept.reduce((a,b) => a+b, 0) / v.concept.length),
       speed: Math.round(v.speed.reduce((a,b) => a+b, 0) / v.speed.length),
+      mistakes: Math.round(v.mistakes.reduce((a,b) => a+b, 0) / v.mistakes.length),
     }));
   })();
 
@@ -468,8 +471,9 @@ export default function PerformanceCharts() {
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
                 <Line type="monotone" dataKey="accuracy" name="Accuracy" stroke="#2C4A73" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                <Line type="monotone" dataKey="concept" name="Concept" stroke="#6B568F" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                <Line type="monotone" dataKey="conceptUnderstanding" name="Concept Understanding" stroke="#6B568F" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                 <Line type="monotone" dataKey="speed" name="Speed" stroke="#E07A28" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                <Line type="monotone" dataKey="mistakes" name="Mistakes (avg)" stroke="#C0392B" strokeWidth={2} dot={{ r: 3 }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           )}
