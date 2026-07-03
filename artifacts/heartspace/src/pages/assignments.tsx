@@ -713,11 +713,11 @@ function TopicBlock({
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full"
                   style={{
-                    background: SPEED_CFG[worstSpeed].bg,
-                    color: SPEED_CFG[worstSpeed].color,
+                    background: SPEED_CFG[getSpeedKey(worstSpeed)].bg,
+                    color: SPEED_CFG[getSpeedKey(worstSpeed)].color,
                   }}
                 >
-                  {SPEED_CFG[worstSpeed].emoji} {SPEED_CFG[worstSpeed].label}
+                  {SPEED_CFG[getSpeedKey(worstSpeed)].emoji} {SPEED_CFG[getSpeedKey(worstSpeed)].label}
                 </span>
               )}
             </>
@@ -1392,7 +1392,7 @@ export default function QuestionPractice() {
           </h3>
           <div className="space-y-2">
             {weakAreas.map((st) => {
-              const cfg = CONCEPT_CFG[st.latest!.concept];
+              const cfg = CONCEPT_CFG[getConceptKey(st.latest!.concept)];
               return (
                 <div
                   key={st.id}
