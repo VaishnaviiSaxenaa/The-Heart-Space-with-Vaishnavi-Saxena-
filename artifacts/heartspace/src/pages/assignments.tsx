@@ -704,6 +704,17 @@ function TopicBlock({
                   ⚡ {typeof worstSpeed === "number" ? `${worstSpeed}%` : worstSpeed}
                 </span>
               )}
+              {(() => {
+                const totalMistakes = subtopicEntries.reduce((sum, e) => {
+                  const latest = getLatest(e);
+                  return sum + (latest?.mistakeCount ?? 0);
+                }, 0);
+                return totalMistakes > 0 ? (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
+                    🔍 {totalMistakes} mistake{totalMistakes !== 1 ? "s" : ""}
+                  </span>
+                ) : null;
+              })()}
             </>
           ) : (
             <span
@@ -950,23 +961,7 @@ function SubjectBlock({
         </button>
 
         {/* Subject-level quick mark button */}
-        <button
-          type="button"
-          onClick={() => {
-            markSubjectBest();
-            setIsOpen(true);
-            setActiveTab("history");
-          }}
-          title="Mark entire subject as 100% Strong Fast"
-          className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-semibold transition-all hover:scale-105"
-          style={{
-            background: `${OLIVE}22`,
-            color: OLIVE,
-            border: `1px solid ${OLIVE}44`,
-          }}
-        >
-          🟢⚡ 100%
-        </button>
+        
 
         {/* Log custom attempt for whole subject */}
         <button
