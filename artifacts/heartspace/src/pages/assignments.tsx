@@ -39,8 +39,10 @@ interface PracticeAttempt {
   id: string;
   date: string;
   accuracy: number;
-  concept: ConceptLevel;
-  speed: SpeedLevel;
+  concept: number;
+  speed: number;
+  mistakeCount: number;
+  mistakes: string[];
   note?: string;
 }
 interface PracticeEntry {
@@ -114,204 +116,128 @@ function AttemptForm({
   label?: string;
 }) {
   const [accuracy, setAccuracy] = useState(50);
-  const [concept, setConcept] = useState<ConceptLevel>("developing");
-  const [speed, setSpeed] = useState<SpeedLevel>("moderate");
-  const [note, setNote] = useState("");
+  const [concept, setConcept] = useState(50);
+  const [speed, setSpeed] = useState(50);
+  const [mistakeCount, setMistakeCount] = useState(0);
+  const [mistakes, setMistakes] = useState<string[]>([]);
+  const [activeParam, setActiveParam] = useState<"concept"|"accuracy"|"speed"|"mistakes"|null>(null);
+
+  const updateMistake = (i: number, val: string) => {
+    const next = [...mistakes];
+    next[i] = val;
+    setMistakes(next);
+  };
+
+  const handleMistakeCount = (n: number) => {
+    setMistakeCount(n);
+    setMistakes(Array.from({ length: n }, (_, i) => mistakes[i] ?? ""));
+  };
+
+  const params = [
+    { key: "concept" as const, label: "Concept Understanding", emoji: "🧠", value: concept, color: "#6B568F" },
+    { key: "accuracy" as const, label: "Accuracy", emoji: "🎯", value: accuracy, color: "#2C4A73" },
+    { key: "speed" as const, label: "Speed", emoji: "⚡", value: speed, color: "#E07A28" },
+    { key: "mistakes" as const, label: "Mistake Recognition", emoji: "🔍", value: mistakeCount, color: "#C0392B" },
+  ];
 
   return (
-    <div
-      className="rounded-2xl p-5 space-y-4 mt-2"
-      style={{ background: `${PROGRESS_PURPLE}08`, border: `1.5px solid ${PROGRESS_PURPLE}44` }}
-    >
-      {label && (
-        <p className="text-xs font-semibold" style={{ color: MUTED }}>
-          {label}
-        </p>
+    <div className="rounded-2xl p-5 space-y-4 mt-2" style={{ background: `${PROGRESS_PURPLE}08`, border: `1.5px solid ${PROGRESS_PURPLE}44` }}>
+      {label && <p className="text-xs font-semibold" style={{ color: MUTED }}>{label}</p>}
+
+      {/* 4 Parameter buttons */}
+      <div className="grid grid-cols-2 gap-2">
+        {params.map(p => (
+          <button key={p.key} onClick={() => setActiveParam(activeParam === p.key ? null : p.key)}
+            className="flex items-center gap-2 p-3 rounded-xl text-left transition-all"
+            style={{
+              background: activeParam === p.key ? `${p.color}15` : CARD,
+              border: `1.5px solid ${activeParam === p.key ? p.color : BORDER}`,
+            }}>
+            <span className="text-lg">{p.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold" style={{ color: p.color }}>{p.label}</p>
+              <p className="text-sm font-bold" style={{ color: p.color }}>
+                {p.key === "mistakes" ? `${mistakeCount} mistake${mistakeCount !== 1 ? "s" : ""}` : `${p.value}%`}
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Active param detail */}
+      {activeParam && activeParam !== "mistakes" && (() => {
+        const p = params.find(x => x.key === activeParam)!;
+        const setter = activeParam === "concept" ? setConcept : activeParam === "accuracy" ? setAccuracy : setSpeed;
+        return (
+          <div className="p-4 rounded-xl" style={{ background: `${p.color}10`, border: `1px solid ${p.color}30` }}>
+            <p className="text-xs font-bold mb-3" style={{ color: p.color }}>{p.emoji} {p.label}</p>
+            <div className="flex items-center gap-3">
+              <input type="range" min={0} max={100} step={1} value={p.value}
+                onChange={e => setter(parseInt(e.target.value))}
+                className="flex-1" style={{ accentColor: p.color }} />
+              <span className="text-base font-bold w-12 text-right" style={{ color: p.color }}>{p.value}%</span>
+            </div>
+            <div className="flex justify-between text-[9px] mt-1" style={{ color: MUTED }}>
+              <span>Needs Work</span><span>Average</span><span>Excellent</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Mistakes detail */}
+      {activeParam === "mistakes" && (
+        <div className="p-4 rounded-xl" style={{ background: "#C0392B10", border: "1px solid #C0392B30" }}>
+          <p className="text-xs font-bold mb-3" style={{ color: "#C0392B" }}>🔍 Mistake Recognition</p>
+          <div className="mb-3">
+            <p className="text-[10px] font-semibold mb-1.5" style={{ color: MUTED }}>How many mistakes are you making?</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {[0,1,2,3,4,5].map(n => (
+                <button key={n} onClick={() => handleMistakeCount(n)}
+                  className="w-8 h-8 rounded-lg text-xs font-bold"
+                  style={{ background: mistakeCount === n ? "#C0392B" : CARD, color: mistakeCount === n ? "#fff" : CHARCOAL, border: `1.5px solid ${mistakeCount === n ? "#C0392B" : BORDER}` }}>
+                  {n === 5 ? "5+" : n}
+                </button>
+              ))}
+            </div>
+          </div>
+          {mistakeCount > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold" style={{ color: MUTED }}>Describe each mistake:</p>
+              {Array.from({ length: mistakeCount }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold w-4" style={{ color: "#C0392B" }}>{i+1}.</span>
+                  <input
+                    type="text"
+                    placeholder={`Mistake ${i+1}...`}
+                    value={mistakes[i] ?? ""}
+                    onChange={e => updateMistake(i, e.target.value)}
+                    className="flex-1 px-2 py-1.5 rounded-lg text-xs outline-none"
+                    style={{ background: CARD, border: `1px solid ${BORDER}` }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Accuracy */}
-      <div>
-        <label
-          className="text-xs font-semibold mb-2 flex items-center gap-2"
-          style={{ color: CHARCOAL }}
-        >
-          <TrendingUp className="w-3.5 h-3.5" style={{ color: PROGRESS_PURPLE }} />
-          Accuracy
-          <span
-            className="ml-auto text-base font-bold font-serif"
-            style={{ color: getAccuracyColor(accuracy) }}
-          >
-            {accuracy}%
-          </span>
-        </label>
-        <div className="flex items-center gap-3">
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={accuracy}
-            onChange={(e) => setAccuracy(parseInt(e.target.value))}
-            className="flex-1 accent-amber-600"
-          />
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={accuracy}
-            onChange={(e) =>
-              setAccuracy(
-                Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
-              )
-            }
-            className="w-16 h-8 px-2 rounded-lg text-xs font-bold text-center border-2 outline-none"
-            style={{
-              background: CARD,
-              borderColor: BORDER,
-              color: getAccuracyColor(accuracy),
-            }}
-          />
-        </div>
-        <div
-          className="h-2 rounded-full overflow-hidden mt-2"
-          style={{ background: BORDER }}
-        >
-          <div
-            className="h-full rounded-full transition-all duration-300"
-            style={{
-              width: `${accuracy}%`,
-              background: getAccuracyColor(accuracy),
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Concept */}
-      <div>
-        <label
-          className="text-xs font-semibold mb-2 flex items-center gap-2"
-          style={{ color: CHARCOAL }}
-        >
-          <Brain className="w-3.5 h-3.5" style={{ color: PROGRESS_PURPLE }} /> Concept
-          Understanding
-        </label>
-        <div className="flex gap-2">
-          {(
-            Object.entries(CONCEPT_CFG) as [
-              ConceptLevel,
-              (typeof CONCEPT_CFG)[ConceptLevel],
-            ][]
-          ).map(([key, cfg]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setConcept(key)}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
-              style={
-                concept === key
-                  ? {
-                      background: cfg.color,
-                      color: "#fff",
-                      boxShadow: `0 2px 8px ${cfg.color}44`,
-                    }
-                  : {
-                      background: cfg.bg,
-                      color: cfg.color,
-                      border: `1px solid ${cfg.color}44`,
-                    }
-              }
-            >
-              {cfg.emoji} {cfg.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Speed */}
-      <div>
-        <label
-          className="text-xs font-semibold mb-2 flex items-center gap-2"
-          style={{ color: CHARCOAL }}
-        >
-          <Zap className="w-3.5 h-3.5" style={{ color: PROGRESS_PURPLE }} /> Speed
-        </label>
-        <div className="flex gap-2">
-          {(
-            Object.entries(SPEED_CFG) as [
-              SpeedLevel,
-              (typeof SPEED_CFG)[SpeedLevel],
-            ][]
-          ).map(([key, cfg]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setSpeed(key)}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
-              style={
-                speed === key
-                  ? {
-                      background: cfg.color,
-                      color: "#fff",
-                      boxShadow: `0 2px 8px ${cfg.color}44`,
-                    }
-                  : {
-                      background: cfg.bg,
-                      color: cfg.color,
-                      border: `1px solid ${cfg.color}44`,
-                    }
-              }
-            >
-              {cfg.emoji} {cfg.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Note */}
-      <div>
-        <label
-          className="text-xs font-semibold mb-1 block"
-          style={{ color: MUTED }}
-        >
-          Note (optional)
-        </label>
-        <input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="e.g. Struggled with Cayley-Hamilton..."
-          className="w-full h-9 px-3 rounded-xl text-xs border-2 outline-none"
-          style={{ background: CARD, borderColor: BORDER, color: CHARCOAL }}
-        />
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            onSave({ accuracy, concept, speed, note: note || undefined })
-          }
-          className="flex-1 h-10 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
-          style={{
-            background: `linear-gradient(135deg, #A07840 0%, ${PROGRESS_PURPLE} 100%)`,
-            color: "#fff",
-          }}
-        >
-          Save Attempt
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-5 h-10 rounded-xl text-sm font-semibold"
-          style={{ background: BORDER, color: MUTED }}
-        >
+      {/* Save/Cancel */}
+      <div className="flex gap-2 pt-1">
+        <button onClick={onCancel} className="flex-1 py-2 rounded-xl text-xs font-semibold"
+          style={{ background: CREAM, color: MUTED, border: `1px solid ${BORDER}` }}>
           Cancel
+        </button>
+        <button onClick={() => onSave({ accuracy, concept, speed, mistakeCount, mistakes: mistakes.filter(Boolean), note: "" })}
+          className="flex-1 py-2 rounded-xl text-xs font-bold text-white"
+          style={{ background: PROGRESS_PURPLE }}>
+          Save
         </button>
       </div>
     </div>
   );
 }
 
-/* ─── Attempt Card ─────────────────────── */
+
 function AttemptCard({
   attempt,
   isLatest,
