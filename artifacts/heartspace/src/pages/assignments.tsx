@@ -1378,10 +1378,10 @@ export default function QuestionPractice() {
                   <div>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                       <span style={{ fontSize:"0.75rem", fontWeight:600, color:"#2D2A25" }}>Overall</span>
-                      <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#E0B428" }}>{Math.round(coveredHrs*10)/10}/{Math.round(totalHrs*10)/10}h · {overallPct}%</span>
+                      <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#5cb85c" }}>{Math.round(coveredHrs*10)/10}/{Math.round(totalHrs*10)/10}h · {overallPct}%</span>
                     </div>
                     <div style={{ height:6, borderRadius:999, background:"#E5DDD0", marginBottom:8 }}>
-                      <div style={{ height:"100%", borderRadius:999, width:`${overallPct}%`, background:"linear-gradient(90deg,#E0B428,#E07A28)" }} />
+                      <div style={{ height:"100%", borderRadius:999, width:`${overallPct}%`, background:"linear-gradient(90deg,#5cb85c,#3d9140)" }} />
                     </div>
                     {practiceSubjects.map(s => {
                       const cov = covHours[s.id] ?? 0;
@@ -1390,9 +1390,9 @@ export default function QuestionPractice() {
                         <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
                           <span style={{ fontSize:"0.65rem", fontWeight:600, color:"#2D2A25", minWidth:130 }}>{s.name}</span>
                           <div style={{ flex:1, height:4, borderRadius:999, background:"#E5DDD0" }}>
-                            <div style={{ height:"100%", borderRadius:999, width:`${Math.min(p,100)}%`, background:"#E0B428" }} />
+                            <div style={{ height:"100%", borderRadius:999, width:`${Math.min(p,100)}%`, background:"#5cb85c" }} />
                           </div>
-                          <span style={{ fontSize:"0.65rem", fontWeight:700, color:"#E0B428", minWidth:60, textAlign:"right" }}>{Math.round(cov*10)/10}/{s.totalHours}h</span>
+                          <span style={{ fontSize:"0.65rem", fontWeight:700, color:"#5cb85c", minWidth:60, textAlign:"right" }}>{Math.round(cov*10)/10}/{s.totalHours}h</span>
                         </div>
                       );
                     })}
