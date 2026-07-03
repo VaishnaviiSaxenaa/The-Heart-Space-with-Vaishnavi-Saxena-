@@ -400,7 +400,7 @@ export default function RevisionTracker() {
           {(() => {
             try {
               const uid = _effectiveUid;
-              const revCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_revision_${uid}`) ?? "{}");
+              const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
               const todayLocal = new Date();
               const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
               const covHours: Record<string,number> = {};

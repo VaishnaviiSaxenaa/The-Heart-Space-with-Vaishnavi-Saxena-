@@ -1364,7 +1364,7 @@ export default function QuestionPractice() {
             {(() => {
               try {
                 const uid = _effectiveUid;
-                const pracCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_practice_${uid}`) ?? "{}");
+                const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
                 const todayLocal = new Date();
                 const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
                 const covHours: Record<string,number> = {};
