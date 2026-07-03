@@ -1358,6 +1358,49 @@ export default function QuestionPractice() {
               ))}
             </div>
           </div>
+          {/* Practice Coverage Summary */}
+          <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+            <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Practice Coverage</p>
+            {(() => {
+              try {
+                const uid = _effectiveUid;
+                const pracCal = JSON.parse(localStorage.getItem(`hs_generic_calendar_practice_${uid}`) ?? "{}");
+                const todayLocal = new Date();
+                const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
+                const covHours: Record<string,number> = {};
+                Object.entries(pracCal).forEach(([day, entries]: [string,any]) => {
+                  if (day <= todayKey) entries.forEach((e: any) => { covHours[e.subjectId] = (covHours[e.subjectId] ?? 0) + e.hours; });
+                });
+                const totalHrs = practiceSubjects.reduce((a,s) => a + s.totalHours, 0);
+                const coveredHrs = practiceSubjects.reduce((a,s) => a + (covHours[s.id] ?? 0), 0);
+                const overallPct = totalHrs > 0 ? Math.round((coveredHrs/totalHrs)*100) : 0;
+                return (
+                  <div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                      <span style={{ fontSize:"0.75rem", fontWeight:600, color:"#2D2A25" }}>Overall</span>
+                      <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#E0B428" }}>{Math.round(coveredHrs*10)/10}/{Math.round(totalHrs*10)/10}h · {overallPct}%</span>
+                    </div>
+                    <div style={{ height:6, borderRadius:999, background:"#E5DDD0", marginBottom:8 }}>
+                      <div style={{ height:"100%", borderRadius:999, width:`${overallPct}%`, background:"linear-gradient(90deg,#E0B428,#E07A28)" }} />
+                    </div>
+                    {practiceSubjects.map(s => {
+                      const cov = covHours[s.id] ?? 0;
+                      const p = s.totalHours > 0 ? Math.round((cov/s.totalHours)*100) : 0;
+                      return (
+                        <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                          <span style={{ fontSize:"0.65rem", fontWeight:600, color:"#2D2A25", minWidth:130 }}>{s.name}</span>
+                          <div style={{ flex:1, height:4, borderRadius:999, background:"#E5DDD0" }}>
+                            <div style={{ height:"100%", borderRadius:999, width:`${Math.min(p,100)}%`, background:"#E0B428" }} />
+                          </div>
+                          <span style={{ fontSize:"0.65rem", fontWeight:700, color:"#E0B428", minWidth:60, textAlign:"right" }}>{Math.round(cov*10)/10}/{s.totalHours}h</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              } catch { return <p style={{fontSize:"0.75rem",color:"#7A7267"}}>No data yet</p>; }
+            })()}
+          </div>
           <GenericCalendar
             namespace="practice"
             uid={effectiveUserId}

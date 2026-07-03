@@ -315,6 +315,33 @@ export default function NoteTracker() {
           ))}
         </div>
 
+        {/* Notes Coverage Summary */}
+        <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+          <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Notes Coverage</p>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+            <span style={{ fontSize:"0.75rem", fontWeight:600, color:"#2D2A25" }}>Overall</span>
+            <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#6B568F" }}>{doneCount}/{totalTopics} topics · {totalTopics > 0 ? Math.round((doneCount/totalTopics)*100) : 0}%</span>
+          </div>
+          <div style={{ height:6, borderRadius:999, background:"#E5DDD0", marginBottom:8 }}>
+            <div style={{ height:"100%", borderRadius:999, width:`${totalTopics > 0 ? Math.round((doneCount/totalTopics)*100) : 0}%`, background:"linear-gradient(90deg,#6B568F,#9B7BB0)" }} />
+          </div>
+          {subjects.map(s => {
+            const topicIds = s.topics;
+            const subDone = notes.filter(n => topicIds.includes(n.topicKey?.split("_")[0] + "_" + n.topicKey?.split("_").slice(1).join("_")) && n.done).length;
+            const subTotal = topicIds.length;
+            const p = subTotal > 0 ? Math.round((subDone/subTotal)*100) : 0;
+            return (
+              <div key={s.key} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                <span style={{ fontSize:"0.65rem", fontWeight:600, color:"#2D2A25", minWidth:130 }}>{s.name}</span>
+                <div style={{ flex:1, height:4, borderRadius:999, background:"#E5DDD0" }}>
+                  <div style={{ height:"100%", borderRadius:999, width:`${Math.min(p,100)}%`, background:"#6B568F" }} />
+                </div>
+                <span style={{ fontSize:"0.65rem", fontWeight:700, color:"#6B568F", minWidth:50, textAlign:"right" }}>{subDone}/{subTotal}</span>
+              </div>
+            );
+          })}
+        </div>
+
         {/* How do you make notes? */}
         <div
           style={{
