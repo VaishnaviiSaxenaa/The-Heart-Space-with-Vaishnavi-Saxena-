@@ -1598,6 +1598,26 @@ function MyProgressTab({
           {doneSubs} of {totalSubs} subtopics completed · Click ○ on a topic to
           mark all done · Click any subtopic to cycle status
         </p>
+        {/* Hours progress */}
+        {(() => {
+          const totalHrs = Object.values(SUBJ_HOURS).reduce((a, b) => a + b, 0);
+          const coveredHrs = Object.entries(SUBJ_HOURS).reduce((a, [calId]) => a + (calHours[calId] ?? 0), 0);
+          const hrsPct = totalHrs > 0 ? Math.round((coveredHrs / totalHrs) * 100) : 0;
+          return (
+            <div className="mt-3">
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="font-semibold" style={{ color: CHARCOAL }}>Hours Coverage</span>
+                <span className="font-bold" style={{ color: "#E07A28" }}>{Math.round(coveredHrs * 10) / 10}/{totalHrs}h · {hrsPct}%</span>
+              </div>
+              <div className="h-3 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                <div className="h-full rounded-full transition-all duration-700" style={{
+                  width: `${hrsPct}%`,
+                  background: "linear-gradient(90deg, #E07A28 0%, #E0B428 100%)",
+                }} />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Recent completions */}
