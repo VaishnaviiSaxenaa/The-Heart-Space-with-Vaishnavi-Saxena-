@@ -420,34 +420,33 @@ function SubjectHistory({
                         {subtopicName}
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className="text-sm font-bold font-serif"
-                          style={{ color: getAccuracyColor(attempt.accuracy) }}
-                        >
-                          {attempt.accuracy}%
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>
+                          🎯 {attempt.accuracy}%
                         </span>
-                        <span
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          style={{
-                            background: conceptCfg.bg,
-                            color: conceptCfg.color,
-                          }}
-                        >
-                          {conceptCfg.emoji} {conceptCfg.label}
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
+                          🧠 {typeof attempt.concept === "number" ? `${attempt.concept}%` : attempt.concept}
                         </span>
-                        <span
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          style={{
-                            background: speedCfg.bg,
-                            color: speedCfg.color,
-                          }}
-                        >
-                          {speedCfg.emoji} {speedCfg.label}
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
+                          ⚡ {typeof attempt.speed === "number" ? `${attempt.speed}%` : attempt.speed}
                         </span>
+                        {(attempt.mistakeCount ?? 0) > 0 && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
+                            🔍 {attempt.mistakeCount} mistake{attempt.mistakeCount !== 1 ? "s" : ""}
+                          </span>
+                        )}
                         <span className="text-[10px]" style={{ color: MUTED }}>
                           {format(new Date(attempt.date), "h:mm a")}
                         </span>
                       </div>
+                      {attempt.mistakes && attempt.mistakes.filter(Boolean).length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          {attempt.mistakes.filter(Boolean).map((m, i) => (
+                            <p key={i} className="text-[10px] italic" style={{ color: "#C0392B" }}>
+                              {i+1}. {m}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                       {attempt.note && (
                         <p
                           className="text-[10px] mt-1 italic"
