@@ -1079,6 +1079,24 @@ const SUBJECT_HOURS: Record<string, number> = {
   functional_analysis: 30,
 };
 
+// Map syllabus subject IDs to roadmap calendar subject IDs
+const SYLLABUS_TO_CAL_ID: Record<string, string> = {
+  linear_algebra: "la",
+  real_analysis: "ra",
+  differential_calculus: "dc",
+  abstract_algebra: "gt",
+  complex_analysis: "ca",
+  ode: "ode",
+  pde: "pde",
+  numerical_analysis: "na",
+  calculus_of_variations: "cv",
+  integration: "dc",
+  linear_programming: "lp",
+  statistics: "st",
+  topology: "top",
+  functional_analysis: "fa",
+};
+
 export default function Syllabus() {
   const { user } = useAuth();
   const userId = String(user?.id ?? "guest");
@@ -1325,12 +1343,12 @@ export default function Syllabus() {
                     <div className="flex items-center gap-3 pl-7 mt-1">
                       <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
                         <div className="h-full rounded-full transition-all duration-500" style={{
-                          width: `${Math.min(Math.round(((calendarHours[subject.id] ?? 0) / SUBJECT_HOURS[subject.id]) * 100), 100)}%`,
+                          width: `${Math.min(Math.round(((calendarHours[SYLLABUS_TO_CAL_ID[subject.id] ?? subject.id] ?? 0) / SUBJECT_HOURS[subject.id]) * 100), 100)}%`,
                           background: "#E07A28",
                         }} />
                       </div>
                       <span className="text-xs font-semibold flex-shrink-0" style={{ color: "#E07A28" }}>
-                        {Math.round((calendarHours[subject.id] ?? 0) * 10) / 10}/{SUBJECT_HOURS[subject.id]}h
+                        {Math.round((calendarHours[SYLLABUS_TO_CAL_ID[subject.id] ?? subject.id] ?? 0) * 10) / 10}/{SUBJECT_HOURS[subject.id]}h
                       </span>
                     </div>
                   )}
