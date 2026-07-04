@@ -640,6 +640,7 @@ function TopicBlock({
   const [expanded, setExpanded] = useState(false);
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [showTopicMistakes, setShowTopicMistakes] = useState(false);
+  const [showTopicHistory, setShowTopicHistory] = useState(false);
 
   const subtopicEntries = topic.subtopics.map((st) => progress[st.id]);
   const attempted = subtopicEntries.filter(
@@ -771,6 +772,16 @@ function TopicBlock({
                   🔍 {totalMistakeCount} mistake{totalMistakeCount !== 1 ? "s" : ""} {showTopicMistakes ? "▲" : "▼"}
                 </button>
               )}
+              {(() => {
+                const topicAttempts = topic.subtopics.reduce((sum, st) => sum + (progress[st.id]?.attempts.length ?? 0), 0);
+                return topicAttempts > 0 ? (
+                  <button onClick={() => setShowTopicHistory(s => !s)}
+                    className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
+                    style={{ background: `${PROGRESS_PURPLE}22`, color: CHARCOAL, border: "none" }}>
+                    {topicAttempts} attempt{topicAttempts !== 1 ? "s" : ""} {showTopicHistory ? "▲" : "▼"}
+                  </button>
+                ) : null;
+              })()}
             </>
           ) : (
             <span
@@ -812,6 +823,23 @@ function TopicBlock({
       )}
 
       {showTopicMistakes && (
+        <div className="mx-4 mb-2 p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
+          <p className="text-[10px] font-bold mb-1" style={{ color: "#C0392B" }}>Recent Mistakes</p>
+          {topic.subtopics.map(st => {
+            const latest = getLatest(progress[st.id]);
+            if (!latest?.mistakes?.filter(Boolean).length) return null;
+            return (
+              <div key={st.id} className="mb-1">
+                <p className="text-[10px] font-semibold" style={{ color: CHARCOAL }}>{st.name}:</p>
+                {latest.mistakes.filter(Boolean).map((m, i) => (
+                  <p key={i} className="text-[10px] italic ml-2" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {showTopicHistory && (
         <div className="mx-4 mb-2 p-3 rounded-lg space-y-2" style={{ background: `${PROGRESS_PURPLE}06`, border: `1px solid ${PROGRESS_PURPLE}22` }}>
           <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: MUTED }}>Attempt History</p>
           {topic.subtopics.map(st => {
@@ -822,11 +850,14 @@ function TopicBlock({
                 <p className="text-[10px] font-bold mb-1" style={{ color: CHARCOAL }}>{st.name}</p>
                 {[...entry.attempts].reverse().map((a, i) => (
                   <div key={a.id} className="flex items-center gap-1.5 flex-wrap py-1" style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
-                    <span className="text-[10px] font-semibold" style={{ color: MUTED }}>{new Date(a.date).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</span>
+                    <span className="text-[10px] font-semibold w-14" style={{ color: MUTED }}>{new Date(a.date).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</span>
                     <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: `${OLIVE}22`, color: OLIVE }}>🎯{a.accuracy}%</span>
                     {typeof a.concept === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>🧠{a.concept}%</span>}
                     {typeof a.speed === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>⚡{a.speed}%</span>}
                     {(a.mistakeCount ?? 0) > 0 && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>🔍{a.mistakeCount}</span>}
+                    {a.mistakes?.filter(Boolean).map((m, mi) => (
+                      <p key={mi} className="text-[10px] italic w-full" style={{ color: "#C0392B", marginLeft: "3.5rem" }}>{mi+1}. {m}</p>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -834,7 +865,7 @@ function TopicBlock({
           })}
         </div>
       )}
-
+      
       {expanded && (
         <div
           className="px-4 pb-4 space-y-2"
@@ -1111,7 +1142,7 @@ function SubjectBlock({
         <div style={{ borderTop: `1px solid ${BORDER}` }}>
           {/* Tab pills */}
           <div className="flex gap-2 px-5 pt-4">
-            {(["overview", "history"] as const).map((tab) => (
+            {(["overview"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
