@@ -643,27 +643,29 @@ function TopicBlock({
   const [showTopicHistory, setShowTopicHistory] = useState(false);
 
   const subtopicEntries = topic.subtopics.map((st) => progress[st.id]);
+  const topicEntry = progress[`topic_${topic.id}`];
   const attempted = subtopicEntries.filter(
     (e) => e && e.attempts.length > 0,
   ).length;
-  const latestAccs = subtopicEntries
-    .map((e) => getLatest(e)?.accuracy ?? null)
-    .filter((v) => v !== null) as number[];
+  // Use topic-level entry for stats if available, else aggregate subtopics
+  const latestTopicAttempt = getLatest(topicEntry);
+  const latestAccs = latestTopicAttempt
+    ? [latestTopicAttempt.accuracy]
+    : subtopicEntries.map((e) => getLatest(e)?.accuracy ?? null).filter((v) => v !== null) as number[];
   const avgAcc = latestAccs.length
     ? Math.round(latestAccs.reduce((s, v) => s + v, 0) / latestAccs.length)
     : null;
   const conceptOrder: ConceptLevel[] = ["weak", "developing", "strong"];
   const speedOrder: SpeedLevel[] = ["slow", "moderate", "fast"];
-  const latestConcepts = subtopicEntries
-    .map((e) => getLatest(e)?.concept)
-    .filter((v) => typeof v === "number") as number[];
-  const latestSpeeds = subtopicEntries
-    .map((e) => getLatest(e)?.speed)
-    .filter((v) => typeof v === "number") as number[];
-  const latestMistakes = subtopicEntries
-    .filter(Boolean)
-    .map((e) => getLatest(e)?.mistakeCount ?? 0);
-  const totalMistakeCount = latestMistakes.reduce((a, b) => a + b, 0);
+  const latestConcepts = latestTopicAttempt
+    ? (typeof latestTopicAttempt.concept === "number" ? [latestTopicAttempt.concept] : [])
+    : subtopicEntries.map((e) => getLatest(e)?.concept).filter((v) => typeof v === "number") as number[];
+  const latestSpeeds = latestTopicAttempt
+    ? (typeof latestTopicAttempt.speed === "number" ? [latestTopicAttempt.speed] : [])
+    : subtopicEntries.map((e) => getLatest(e)?.speed).filter((v) => typeof v === "number") as number[];
+  const totalMistakeCount = latestTopicAttempt
+    ? (latestTopicAttempt.mistakeCount ?? 0)
+    : subtopicEntries.filter(Boolean).reduce((a, e) => a + (getLatest(e)?.mistakeCount ?? 0), 0);
   const avgConcept = latestConcepts.length ? Math.round(latestConcepts.reduce((a,b) => a+b, 0) / latestConcepts.length) : null;
   const avgSpeed = latestSpeeds.length ? Math.round(latestSpeeds.reduce((a,b) => a+b, 0) / latestSpeeds.length) : null;
   const worstConcept = latestConcepts.length
@@ -676,17 +678,17 @@ function TopicBlock({
 
   function addTopicAttempt(attempt: Omit<PracticeAttempt, "id" | "date">) {
     const now = new Date().toISOString();
-    const next = { ...progress };
-    topic.subtopics.forEach((st) => {
-      const prev = next[st.id] ?? { attempts: [] };
-      next[st.id] = {
+    const topicKey = `topic_${topic.id}`;
+    const prev = progress[topicKey] ?? { attempts: [] };
+    onUpdate({
+      ...progress,
+      [topicKey]: {
         attempts: [
           ...prev.attempts,
-          { id: `${Date.now()}_${st.id}`, date: now, ...attempt },
+          { id: `${Date.now()}_${topicKey}`, date: now, ...attempt },
         ],
-      };
+      },
     });
-    onUpdate(next);
   }
 
   function addSubtopicAttempt(
@@ -773,7 +775,7 @@ function TopicBlock({
                 </button>
               )}
               {(() => {
-                const topicAttempts = topic.subtopics.reduce((sum, st) => sum + (progress[st.id]?.attempts.length ?? 0), 0);
+                const topicAttempts = (progress[`topic_${topic.id}`]?.attempts.length ?? 0) + topic.subtopics.reduce((sum, st) => sum + (progress[st.id]?.attempts.length ?? 0), 0);
                 return topicAttempts > 0 ? (
                   <button onClick={() => setShowTopicHistory(s => !s)}
                     className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
@@ -825,23 +827,46 @@ function TopicBlock({
       {showTopicMistakes && (
         <div className="mx-4 mb-2 p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
           <p className="text-[10px] font-bold mb-1" style={{ color: "#C0392B" }}>Recent Mistakes</p>
-          {topic.subtopics.map(st => {
-            const latest = getLatest(progress[st.id]);
-            if (!latest?.mistakes?.filter(Boolean).length) return null;
-            return (
-              <div key={st.id} className="mb-1">
-                <p className="text-[10px] font-semibold" style={{ color: CHARCOAL }}>{st.name}:</p>
-                {latest.mistakes.filter(Boolean).map((m, i) => (
-                  <p key={i} className="text-[10px] italic ml-2" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
-                ))}
-              </div>
-            );
-          })}
+          {latestTopicAttempt?.mistakes?.filter(Boolean).length ? (
+            latestTopicAttempt.mistakes.filter(Boolean).map((m, i) => (
+              <p key={i} className="text-[10px] italic ml-2" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
+            ))
+          ) : (
+            topic.subtopics.map(st => {
+              const latest = getLatest(progress[st.id]);
+              if (!latest?.mistakes?.filter(Boolean).length) return null;
+              return (
+                <div key={st.id} className="mb-1">
+                  <p className="text-[10px] font-semibold" style={{ color: CHARCOAL }}>{st.name}:</p>
+                  {latest.mistakes.filter(Boolean).map((m, i) => (
+                    <p key={i} className="text-[10px] italic ml-2" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
+                  ))}
+                </div>
+              );
+            })
+          )}
         </div>
       )}
       {showTopicHistory && (
         <div className="mx-4 mb-2 p-3 rounded-lg space-y-2" style={{ background: `${PROGRESS_PURPLE}06`, border: `1px solid ${PROGRESS_PURPLE}22` }}>
           <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: MUTED }}>Attempt History</p>
+          {topicEntry && topicEntry.attempts.length > 0 && (
+            <div className="rounded-lg p-2 mb-1" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+              <p className="text-[10px] font-bold mb-1" style={{ color: CHARCOAL }}>Topic-level attempts</p>
+              {[...topicEntry.attempts].reverse().map((a, i) => (
+                <div key={a.id} className="flex items-center gap-1.5 flex-wrap py-1" style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
+                  <span className="text-[10px] font-semibold w-14" style={{ color: MUTED }}>{new Date(a.date).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</span>
+                  <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: `${OLIVE}22`, color: OLIVE }}>🎯{a.accuracy}%</span>
+                  {typeof a.concept === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>🧠{a.concept}%</span>}
+                  {typeof a.speed === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>⚡{a.speed}%</span>}
+                  {(a.mistakeCount ?? 0) > 0 && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>🔍{a.mistakeCount}</span>}
+                  {a.mistakes?.filter(Boolean).map((m, mi) => (
+                    <p key={mi} className="text-[10px] italic w-full" style={{ color: "#C0392B", marginLeft: "3.5rem" }}>{mi+1}. {m}</p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
           {topic.subtopics.map(st => {
             const entry = progress[st.id];
             if (!entry || entry.attempts.length === 0) return null;
