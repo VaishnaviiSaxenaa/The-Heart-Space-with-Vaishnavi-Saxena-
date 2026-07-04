@@ -946,7 +946,6 @@ function SubjectBlock({
   const [isOpen, setIsOpen] = useState(false);
   const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [showSubjMistakes, setShowSubjMistakes] = useState(false);
-  const [showSubjHistory, setShowSubjHistory] = useState(false);
 
   const allSubtopicsInSubj = subject.topics.flatMap((t) => t.subtopics);
   const practicedInSubj = allSubtopicsInSubj.filter(
@@ -972,13 +971,8 @@ function SubjectBlock({
   const avgSpeedInSubj = latestSpeedsInSubj.length
     ? Math.round(latestSpeedsInSubj.reduce((a,b) => a+b, 0) / latestSpeedsInSubj.length)
     : null;
-  const subjEntry = progress[`subject_${subject.id}`];
-  const latestSubjAttempt = getLatest(subjEntry);
-  const totalMistakesInSubj = latestSubjAttempt
-    ? (latestSubjAttempt.mistakeCount ?? 0)
-    : allSubtopicsInSubj.reduce((sum, st) => sum + (getLatest(progress[st.id])?.mistakeCount ?? 0), 0);
-  const totalAttemptsInSubj = (subjEntry?.attempts.length ?? 0) +
-    allSubtopicsInSubj.reduce((sum, st) => sum + (progress[st.id]?.attempts.length ?? 0), 0);
+  const totalMistakesInSubj = allSubtopicsInSubj
+    .reduce((sum, st) => sum + (getLatest(progress[st.id])?.mistakeCount ?? 0), 0);
 
   /* Mark entire subject as 100% Strong Fast */
   function markSubjectBest() {
@@ -1013,23 +1007,12 @@ function SubjectBlock({
 
   function addSubjectAttempt(attempt: Omit<PracticeAttempt, "id" | "date">) {
     const now = new Date().toISOString();
-    const subjKey = `subject_${subject.id}`;
-    const prev = progress[subjKey] ?? { attempts: [] };
-    onUpdate({
-      ...progress,
-      [subjKey]: {
+    const next = { ...progress };
+    allSubtopicsInSubj.forEach((st) => {
+      const prev = next[st.id] ?? { attempts: [] };
+      next[st.id] = {
         attempts: [
           ...prev.attempts,
-          { id: `${Date.now()}_${subjKey}`, date: now, ...attempt },
-        ],
-      },
-    });
-    return;
-    allSubtopicsInSubj.forEach((st) => {
-      const prev2 = progress[st.id] ?? { attempts: [] };
-      progress[st.id] = {
-        attempts: [
-          ...prev2.attempts,
           { id: `${Date.now()}_${st.id}`, date: now, ...attempt },
         ],
       };
@@ -1129,13 +1112,6 @@ function SubjectBlock({
                   🔍 {totalMistakesInSubj} mistake{totalMistakesInSubj !== 1 ? "s" : ""} {showSubjMistakes ? "▲" : "▼"}
                 </button>
               )}
-              {totalAttemptsInSubj > 0 && (
-                <button onClick={() => setShowSubjHistory(s => !s)}
-                  className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
-                  style={{ background: `${PROGRESS_PURPLE}22`, color: CHARCOAL, border: "none" }}>
-                  {totalAttemptsInSubj} attempt{totalAttemptsInSubj !== 1 ? "s" : ""} {showSubjHistory ? "▲" : "▼"}
-                </button>
-              )}
             </div>
           </div>
           {isOpen ? (
@@ -1173,25 +1149,13 @@ function SubjectBlock({
       </div>
 
       {/* Subject-level custom form */}
-      {showSubjMistakes && (
-        <div className="px-5 py-2">
-          <div className="p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
-            <p className="text-[10px] font-bold mb-1" style={{ color: "#C0392B" }}>Recent Mistakes</p>
-            {latestSubjAttempt?.mistakes?.filter(Boolean).length ? (
-              latestSubjAttempt.mistakes.filter(Boolean).map((m, i) => (
-                <p key={i} className="text-[10px] italic" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
-              ))
-            ) : <p className="text-[10px]" style={{ color: MUTED }}>No subject-level mistakes yet.</p>}
-          </div>
-        </div>
-      )}
       {showSubjectForm && (
         <div
           className="px-6 pb-4"
           style={{ background: CREAM, borderTop: `1px solid ${BORDER}` }}
         >
           <AttemptForm
-            label={`Log for entire subject "${subject.name}"`}
+            label={`Logging for all ${allSubtopicsInSubj.length} subtopics in "${subject.name}"`}
             onSave={addSubjectAttempt}
             onCancel={() => setShowSubjectForm(false)}
           />
@@ -1646,28 +1610,3 @@ function AlertIcon() {
     </svg>
   );
 }
-      {showSubjHistory && (
-        <div className="px-5 py-2 mb-2">
-          <div className="p-3 rounded-lg space-y-2" style={{ background: `${PROGRESS_PURPLE}06`, border: `1px solid ${PROGRESS_PURPLE}22` }}>
-            <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: MUTED }}>Attempt History</p>
-            {subjEntry && subjEntry.attempts.length > 0 && (
-              <div className="rounded-lg p-2" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
-                <p className="text-[10px] font-bold mb-1" style={{ color: CHARCOAL }}>Subject-level attempts</p>
-                {[...subjEntry.attempts].reverse().map((a, i) => (
-                  <div key={a.id} className="flex items-center gap-1.5 flex-wrap py-1" style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
-                    <span className="text-[10px] font-semibold w-14" style={{ color: MUTED }}>{new Date(a.date).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</span>
-                    <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: `${OLIVE}22`, color: OLIVE }}>🎯{a.accuracy}%</span>
-                    {typeof a.concept === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>🧠{a.concept}%</span>}
-                    {typeof a.speed === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>⚡{a.speed}%</span>}
-                    {(a.mistakeCount ?? 0) > 0 && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>🔍{a.mistakeCount}</span>}
-                    {a.mistakes?.filter(Boolean).map((m, mi) => (
-                      <p key={mi} className="text-[10px] italic w-full" style={{ color: "#C0392B", marginLeft:"3.5rem" }}>{mi+1}. {m}</p>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      
