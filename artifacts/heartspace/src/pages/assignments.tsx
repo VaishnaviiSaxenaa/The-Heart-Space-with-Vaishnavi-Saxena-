@@ -848,6 +848,20 @@ function SubjectBlock({
         latestAccsInSubj.reduce((s, v) => s + v, 0) / latestAccsInSubj.length,
       )
     : null;
+  const latestConceptsInSubj = allSubtopicsInSubj
+    .map((st) => getLatest(progress[st.id])?.concept)
+    .filter((v) => typeof v === "number") as number[];
+  const avgConceptInSubj = latestConceptsInSubj.length
+    ? Math.round(latestConceptsInSubj.reduce((a,b) => a+b, 0) / latestConceptsInSubj.length)
+    : null;
+  const latestSpeedsInSubj = allSubtopicsInSubj
+    .map((st) => getLatest(progress[st.id])?.speed)
+    .filter((v) => typeof v === "number") as number[];
+  const avgSpeedInSubj = latestSpeedsInSubj.length
+    ? Math.round(latestSpeedsInSubj.reduce((a,b) => a+b, 0) / latestSpeedsInSubj.length)
+    : null;
+  const totalMistakesInSubj = allSubtopicsInSubj
+    .reduce((sum, st) => sum + (getLatest(progress[st.id])?.mistakeCount ?? 0), 0);
 
   /* Mark entire subject as 100% Strong Fast */
   function markSubjectBest() {
