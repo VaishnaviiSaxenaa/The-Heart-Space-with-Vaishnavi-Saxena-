@@ -879,6 +879,7 @@ function SubjectBlock({
   );
   const [isOpen, setIsOpen] = useState(false);
   const [showSubjectForm, setShowSubjectForm] = useState(false);
+  const [showSubjMistakes, setShowSubjMistakes] = useState(false);
 
   const allSubtopicsInSubj = subject.topics.flatMap((t) => t.subtopics);
   const practicedInSubj = allSubtopicsInSubj.filter(
