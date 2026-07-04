@@ -811,22 +811,29 @@ function TopicBlock({
         </div>
       )}
 
-      {showTopicMistakes && (() => {
-        const allMistakes: {subtopic: string; mistake: string}[] = [];
-        topic.subtopics.forEach(st => {
-          const latest = getLatest(progress[st.id]);
-          if (latest?.mistakes) latest.mistakes.filter(Boolean).forEach(m => allMistakes.push({subtopic: st.name, mistake: m}));
-        });
-        return allMistakes.length > 0 ? (
-          <div className="mx-4 mb-2 p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
-            {allMistakes.map((m, i) => (
-              <p key={i} className="text-[10px] italic mb-0.5" style={{ color: "#C0392B" }}>
-                <span className="font-semibold not-italic">{m.subtopic}:</span> {m.mistake}
-              </p>
-            ))}
-          </div>
-        ) : null;
-      })()}
+      {showTopicMistakes && (
+        <div className="mx-4 mb-2 p-3 rounded-lg space-y-2" style={{ background: `${PROGRESS_PURPLE}06`, border: `1px solid ${PROGRESS_PURPLE}22` }}>
+          <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: MUTED }}>Attempt History</p>
+          {topic.subtopics.map(st => {
+            const entry = progress[st.id];
+            if (!entry || entry.attempts.length === 0) return null;
+            return (
+              <div key={st.id} className="rounded-lg p-2 mb-1" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                <p className="text-[10px] font-bold mb-1" style={{ color: CHARCOAL }}>{st.name}</p>
+                {[...entry.attempts].reverse().map((a, i) => (
+                  <div key={a.id} className="flex items-center gap-1.5 flex-wrap py-1" style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
+                    <span className="text-[10px] font-semibold" style={{ color: MUTED }}>{new Date(a.date).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</span>
+                    <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: `${OLIVE}22`, color: OLIVE }}>🎯{a.accuracy}%</span>
+                    {typeof a.concept === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>🧠{a.concept}%</span>}
+                    {typeof a.speed === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>⚡{a.speed}%</span>}
+                    {(a.mistakeCount ?? 0) > 0 && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>🔍{a.mistakeCount}</span>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {expanded && (
         <div
