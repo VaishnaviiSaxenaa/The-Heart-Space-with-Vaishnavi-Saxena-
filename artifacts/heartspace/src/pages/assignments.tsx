@@ -610,16 +610,21 @@ function TopicBlock({
   const speedOrder: SpeedLevel[] = ["slow", "moderate", "fast"];
   const latestConcepts = subtopicEntries
     .map((e) => getLatest(e)?.concept)
-    .filter((v) => v !== null && v !== undefined) as (number | string)[];
+    .filter((v) => typeof v === "number") as number[];
   const latestSpeeds = subtopicEntries
     .map((e) => getLatest(e)?.speed)
-    .filter((v) => v !== null && v !== undefined) as (number | string)[];
-  const toNum = (v: number | string) => typeof v === "number" ? v : 0;
+    .filter((v) => typeof v === "number") as number[];
+  const latestMistakes = subtopicEntries
+    .filter(Boolean)
+    .map((e) => getLatest(e)?.mistakeCount ?? 0);
+  const totalMistakeCount = latestMistakes.reduce((a, b) => a + b, 0);
+  const avgConcept = latestConcepts.length ? Math.round(latestConcepts.reduce((a,b) => a+b, 0) / latestConcepts.length) : null;
+  const avgSpeed = latestSpeeds.length ? Math.round(latestSpeeds.reduce((a,b) => a+b, 0) / latestSpeeds.length) : null;
   const worstConcept = latestConcepts.length
-    ? latestConcepts.reduce((a, b) => toNum(a) < toNum(b) ? a : b)
+    ? latestConcepts.reduce((a, b) => a < b ? a : b)
     : null;
   const worstSpeed = latestSpeeds.length
-    ? latestSpeeds.reduce((a, b) => toNum(a) < toNum(b) ? a : b,
+    ? latestSpeeds.reduce((a, b) => a < b ? a : b,
       )
     : null;
 
@@ -704,27 +709,21 @@ function TopicBlock({
               >
                 {avgAcc}%
               </span>
-              {worstConcept !== null && worstConcept !== undefined && typeof worstConcept === "number" && (
+              {avgConcept !== null && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
-                  🧠 {worstConcept}%
+                  🧠 {avgConcept}%
                 </span>
               )}
-              {worstSpeed !== null && worstSpeed !== undefined && typeof worstSpeed === "number" && (
+              {avgSpeed !== null && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
-                  ⚡ {worstSpeed}%
+                  ⚡ {avgSpeed}%
                 </span>
               )}
-              {(() => {
-                const totalMistakes = subtopicEntries.filter(Boolean).reduce((sum, e) => {
-                  const latest = getLatest(e);
-                  return sum + (latest?.mistakeCount ?? 0);
-                }, 0);
-                return totalMistakes > 0 ? (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
-                    🔍 {totalMistakes} mistake{totalMistakes !== 1 ? "s" : ""}
-                  </span>
-                ) : null;
-              })()}
+              {totalMistakeCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
+                  🔍 {totalMistakeCount} mistake{totalMistakeCount !== 1 ? "s" : ""}
+                </span>
+              )}
             </>
           ) : (
             <span
