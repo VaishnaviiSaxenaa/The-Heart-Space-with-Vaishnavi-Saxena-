@@ -228,7 +228,7 @@ export default function PerformanceCharts() {
   });
 
   /* ── Summary ── */
-  const totalHrs = studyData.reduce((s, d) => s + d.hours, 0);
+  const totalHrs = studyData.reduce((s, d) => s + (d.study ?? 0), 0);
   const moodVals = wellnessData
     .filter((d) => d.mood)
     .map((d) => d.mood as number);
@@ -266,7 +266,7 @@ export default function PerformanceCharts() {
                 className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
                 style={{ background: CARD, border: `1px solid ${BORDER}`, color: DARK }}>‹</button>
               <span className="text-xs font-semibold" style={{ color: DARK }}>
-                {windowStartStr.slice(5).replace("-", "/")} – {windowEndStr.slice(5).replace("-", "/")}
+                {windowStartStr.split("-").slice(1).reverse().join("/")} – {windowEndStr.split("-").slice(1).reverse().join("/")}
               </span>
               <button onClick={() => setOffset(o => Math.min(0, o + 1))}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
