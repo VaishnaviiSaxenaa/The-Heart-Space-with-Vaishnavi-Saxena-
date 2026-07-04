@@ -150,7 +150,7 @@ function AttemptForm({
   const params = [
     { key: "concept" as const, label: "Concept Understanding", emoji: "🧠", value: concept, color: "#6B568F" },
     { key: "accuracy" as const, label: "Accuracy", emoji: "🎯", value: accuracy, color: "#2C4A73" },
-    { key: "speed" as const, label: "Speed", emoji: "⚡", value: speed, color: "#E07A28" },
+    { key: "speed" as const, label: "Speed", emoji: "⚡", value: speed, color: "#2C4A73" },
     { key: "mistakes" as const, label: "Mistake Recognition", emoji: "🔍", value: mistakeCount, color: "#C0392B" },
   ];
 
@@ -299,7 +299,7 @@ function AttemptCard({
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
           🧠 Concept: {typeof attempt.concept === "number" ? `${attempt.concept}%` : attempt.concept}
         </span>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>
           ⚡ Speed: {typeof attempt.speed === "number" ? `${attempt.speed}%` : attempt.speed}
         </span>
         {(attempt.mistakeCount ?? 0) > 0 && (
@@ -426,7 +426,7 @@ function SubjectHistory({
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
                           🧠 {typeof attempt.concept === "number" ? `${attempt.concept}%` : attempt.concept}
                         </span>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>
                           ⚡ {typeof attempt.speed === "number" ? `${attempt.speed}%` : attempt.speed}
                         </span>
                         {(attempt.mistakeCount ?? 0) > 0 && (
@@ -491,6 +491,7 @@ function SubtopicRow({
 }) {
   const [showForm, setShowForm] = useState(false);
   const [showMistakes, setShowMistakes] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const latest = getLatest(entry);
   const attemptCount = entry?.attempts.length ?? 0;
   const conceptCfg = latest ? CONCEPT_CFG[getConceptKey(latest.concept)] : null;
@@ -523,7 +524,7 @@ function SubtopicRow({
             <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
               🧠 {typeof latest.concept === "number" ? `${latest.concept}%` : latest.concept}
             </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>
               ⚡ {typeof latest.speed === "number" ? `${latest.speed}%` : latest.speed}
             </span>
             {(latest.mistakeCount ?? 0) > 0 && (
@@ -534,12 +535,12 @@ function SubtopicRow({
               </button>
             )}
             {attemptCount > 0 && (
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{ background: `${PROGRESS_PURPLE}22`, color: DARK }}
+              <button onClick={() => setShowHistory(s => !s)}
+                className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
+                style={{ background: `${PROGRESS_PURPLE}22`, color: DARK, border: "none" }}
               >
-                {attemptCount} attempt{attemptCount > 1 ? "s" : ""}
-              </span>
+                {attemptCount} attempt{attemptCount > 1 ? "s" : ""} {showHistory ? "▲" : "▼"}
+              </button>
             )}
           </div>
         )}
@@ -560,6 +561,22 @@ function SubtopicRow({
           <div className="p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
             {latest.mistakes.filter(Boolean).map((m, i) => (
               <p key={i} className="text-[10px] italic" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
+            ))}
+          </div>
+        </div>
+      )}
+      {showHistory && entry && entry.attempts.length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="space-y-1.5 p-2 rounded-lg" style={{ background: `${PROGRESS_PURPLE}08`, border: `1px solid ${PROGRESS_PURPLE}22` }}>
+            <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: MUTED }}>Attempt History</p>
+            {[...entry.attempts].reverse().map((a, i) => (
+              <div key={a.id} className="flex items-center gap-2 flex-wrap py-1" style={{ borderBottom: i < entry.attempts.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                <span className="text-[10px] font-semibold" style={{ color: MUTED }}>{new Date(a.date).toLocaleDateString("en-IN", {day:"2-digit",month:"short",year:"2-digit"})}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>🎯 {a.accuracy}%</span>
+                {typeof a.concept === "number" && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>🧠 {a.concept}%</span>}
+                {typeof a.speed === "number" && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>⚡ {a.speed}%</span>}
+                {(a.mistakeCount ?? 0) > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>🔍 {a.mistakeCount}</span>}
+              </div>
             ))}
           </div>
         </div>
@@ -715,7 +732,7 @@ function TopicBlock({
                 </span>
               )}
               {avgSpeed !== null && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#E07A2822", color: "#E07A28" }}>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>
                   ⚡ {avgSpeed}%
                 </span>
               )}
