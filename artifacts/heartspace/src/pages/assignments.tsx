@@ -946,6 +946,7 @@ function SubjectBlock({
   const [isOpen, setIsOpen] = useState(false);
   const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [showSubjMistakes, setShowSubjMistakes] = useState(false);
+  const [showSubjHistory, setShowSubjHistory] = useState(false);
 
   const allSubtopicsInSubj = subject.topics.flatMap((t) => t.subtopics);
   const practicedInSubj = allSubtopicsInSubj.filter(
@@ -973,6 +974,16 @@ function SubjectBlock({
     : null;
   const totalMistakesInSubj = allSubtopicsInSubj
     .reduce((sum, st) => sum + (getLatest(progress[st.id])?.mistakeCount ?? 0), 0);
+
+  const subjEntry = progress[`subject_${subject.id}`];
+  const latestSubjAttempt = getLatest(subjEntry);
+  const avgConceptInSubjFinal = latestSubjAttempt && typeof latestSubjAttempt.concept === "number"
+    ? latestSubjAttempt.concept : avgConceptInSubj;
+  const avgSpeedInSubjFinal = latestSubjAttempt && typeof latestSubjAttempt.speed === "number"
+    ? latestSubjAttempt.speed : avgSpeedInSubj;
+  const totalMistakesInSubjFinal = latestSubjAttempt
+    ? (latestSubjAttempt.mistakeCount ?? 0) : totalMistakesInSubj;
+  const subjAttemptCount = subjEntry?.attempts.length ?? 0;
 
   /* Mark entire subject as 100% Strong Fast */
   function markSubjectBest() {
@@ -1097,19 +1108,26 @@ function SubjectBlock({
               )}
               {avgConceptInSubj !== null && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
-                  🧠 {avgConceptInSubj}%
+                  🧠 {avgConceptInSubjFinal}%
                 </span>
               )}
               {avgSpeedInSubj !== null && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>
-                  ⚡ {avgSpeedInSubj}%
+                  ⚡ {avgSpeedInSubjFinal}%
                 </span>
               )}
-              {totalMistakesInSubj > 0 && (
+              {totalMistakesInSubjFinal > 0 && (
                 <button onClick={() => setShowSubjMistakes(s => !s)}
                   className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
                   style={{ background: "#C0392B22", color: "#C0392B", border: "none" }}>
-                  🔍 {totalMistakesInSubj} mistake{totalMistakesInSubj !== 1 ? "s" : ""} {showSubjMistakes ? "▲" : "▼"}
+                  🔍 {totalMistakesInSubjFinal} mistake{totalMistakesInSubj !== 1 ? "s" : ""} {showSubjMistakes ? "▲" : "▼"}
+                </button>
+              )}
+              {subjAttemptCount > 0 && (
+                <button onClick={() => setShowSubjHistory(s => !s)}
+                  className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
+                  style={{ background: `${PROGRESS_PURPLE}22`, color: CHARCOAL, border: "none" }}>
+                  {subjAttemptCount} attempt{subjAttemptCount !== 1 ? "s" : ""} {showSubjHistory ? "▲" : "▼"}
                 </button>
               )}
             </div>
@@ -1148,6 +1166,39 @@ function SubjectBlock({
         </button>
       </div>
 
+      {/* Subject mistakes expansion */}
+      {showSubjMistakes && latestSubjAttempt && (
+        <div className="px-5 py-2">
+          <div className="p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
+            <p className="text-[10px] font-bold mb-1" style={{ color: "#C0392B" }}>Recent Mistakes</p>
+            {latestSubjAttempt.mistakes?.filter(Boolean).length ? (
+              latestSubjAttempt.mistakes.filter(Boolean).map((m, i) => (
+                <p key={i} className="text-[10px] italic" style={{ color: "#C0392B" }}>{i+1}. {m}</p>
+              ))
+            ) : <p className="text-[10px]" style={{ color: MUTED }}>No mistakes recorded.</p>}
+          </div>
+        </div>
+      )}
+      {/* Subject history expansion */}
+      {showSubjHistory && subjEntry && (
+        <div className="px-5 py-2">
+          <div className="p-3 rounded-lg" style={{ background: `${PROGRESS_PURPLE}06`, border: `1px solid ${PROGRESS_PURPLE}22` }}>
+            <p className="text-[10px] font-bold uppercase mb-2" style={{ color: MUTED }}>Subject Attempt History</p>
+            {[...subjEntry.attempts].reverse().map((a, i) => (
+              <div key={a.id} className="flex items-center gap-1.5 flex-wrap py-1.5" style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
+                <span className="text-[10px] font-semibold w-14" style={{ color: MUTED }}>{new Date(a.date).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</span>
+                <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: `${OLIVE}22`, color: OLIVE }}>🎯{a.accuracy}%</span>
+                {typeof a.concept === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>🧠{a.concept}%</span>}
+                {typeof a.speed === "number" && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>⚡{a.speed}%</span>}
+                {(a.mistakeCount ?? 0) > 0 && <span className="text-[10px] px-1 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>🔍{a.mistakeCount}</span>}
+                {a.mistakes?.filter(Boolean).map((m, mi) => (
+                  <p key={mi} className="text-[10px] italic w-full ml-14" style={{ color: "#C0392B" }}>{mi+1}. {m}</p>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Subject-level custom form */}
       {showSubjectForm && (
         <div
