@@ -639,6 +639,7 @@ function TopicBlock({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showTopicForm, setShowTopicForm] = useState(false);
+  const [showTopicMistakes, setShowTopicMistakes] = useState(false);
 
   const subtopicEntries = topic.subtopics.map((st) => progress[st.id]);
   const attempted = subtopicEntries.filter(
@@ -764,9 +765,11 @@ function TopicBlock({
                 </span>
               )}
               {totalMistakeCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
-                  🔍 {totalMistakeCount} mistake{totalMistakeCount !== 1 ? "s" : ""}
-                </span>
+                <button onClick={() => setShowTopicMistakes(s => !s)}
+                  className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
+                  style={{ background: "#C0392B22", color: "#C0392B", border: "none" }}>
+                  🔍 {totalMistakeCount} mistake{totalMistakeCount !== 1 ? "s" : ""} {showTopicMistakes ? "▲" : "▼"}
+                </button>
               )}
             </>
           ) : (
