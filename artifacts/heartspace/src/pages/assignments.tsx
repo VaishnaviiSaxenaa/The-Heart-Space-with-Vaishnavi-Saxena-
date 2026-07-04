@@ -1039,9 +1039,11 @@ function SubjectBlock({
                 </span>
               )}
               {totalMistakesInSubj > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
-                  🔍 {totalMistakesInSubj} mistake{totalMistakesInSubj !== 1 ? "s" : ""}
-                </span>
+                <button onClick={() => setShowSubjMistakes(s => !s)}
+                  className="text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer"
+                  style={{ background: "#C0392B22", color: "#C0392B", border: "none" }}>
+                  🔍 {totalMistakesInSubj} mistake{totalMistakesInSubj !== 1 ? "s" : ""} {showSubjMistakes ? "▲" : "▼"}
+                </button>
               )}
             </div>
           </div>
