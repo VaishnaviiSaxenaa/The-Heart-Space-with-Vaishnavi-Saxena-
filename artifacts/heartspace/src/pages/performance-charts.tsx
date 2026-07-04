@@ -115,13 +115,23 @@ const CustomTooltip = ({
 export default function PerformanceCharts() {
   const { user } = useAuth();
   const uid = user?.id ?? "";
-  const [range, setRange] = useState<7 | 14 | 30>(14);
+  const [viewMode, setViewMode] = useState<"week" | "month">("week");
+  const [offset, setOffset] = useState(0); // 0 = current, -1 = prev, etc.
 
   const daily = loadDailyAll(uid);
   const syllabus = loadSyllabusProgress(uid);
   const practice = loadPractice(uid);
 
-  const sortedDates = Object.keys(daily).sort().slice(-range);
+  const range = viewMode === "week" ? 7 : 30;
+  const allDates = Object.keys(daily).sort();
+  // Calculate date window based on offset
+  const windowEnd = new Date();
+  windowEnd.setDate(windowEnd.getDate() + offset * range);
+  const windowStart = new Date(windowEnd);
+  windowStart.setDate(windowEnd.getDate() - range + 1);
+  const windowEndStr = windowEnd.toISOString().split("T")[0];
+  const windowStartStr = windowStart.toISOString().split("T")[0];
+  const sortedDates = allDates.filter(d => d >= windowStartStr && d <= windowEndStr);
 
   /* ── Study hours data ── */
   const studyData = sortedDates.map((d) => {
@@ -154,7 +164,7 @@ export default function PerformanceCharts() {
         physical: (e?.physicalActivity as boolean) === true ? 1 : null,
       };
     })
-    .filter((d) => d.mood !== null || d.stress !== null || d.sleep !== null || d.study !== null);
+    .filter((d) => d.mood !== null || d.stress !== null || d.sleep !== null || d.study !== null || d.physical !== null);
 
   /* ── Syllabus progress ── */
   const syllabusStats = SYLLABUS.filter(s => !s.netOnly).map((s) => {
@@ -246,25 +256,23 @@ export default function PerformanceCharts() {
             </p>
           </div>
           <div className="flex gap-2">
-            {([7, 14, 30] as const).map((r) => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                className="px-4 py-1.5 rounded-full text-xs font-semibold"
-                style={
-                  range === r
-                    ? { background: DARK, color: CREAM }
-                    : {
-                        background: CARD,
-                        border: `1px solid ${BORDER}`,
-                        color: MUTED,
-                      }
-                }
-              >
-                {r} days
+            <div className="flex items-center gap-2">
+              <button onClick={() => setViewMode(v => v === "week" ? "month" : "week")}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ background: DARK, color: "#fff" }}>
+                {viewMode === "week" ? "Week" : "Month"}
               </button>
-            ))}
-          </div>
+              <button onClick={() => setOffset(o => o - 1)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+                style={{ background: CARD, border: `1px solid ${BORDER}`, color: DARK }}>‹</button>
+              <span className="text-xs font-semibold" style={{ color: DARK }}>
+                {windowStartStr.slice(5).replace("-", "/")} – {windowEndStr.slice(5).replace("-", "/")}
+              </span>
+              <button onClick={() => setOffset(o => Math.min(0, o + 1))}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+                style={{ background: CARD, border: `1px solid ${BORDER}`, color: offset >= 0 ? BORDER : DARK }}
+                disabled={offset >= 0}>›</button>
+            </div>
         </div>
 
         {/* Summary cards */}
