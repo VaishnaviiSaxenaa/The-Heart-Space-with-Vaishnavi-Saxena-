@@ -963,14 +963,28 @@ function SubjectBlock({
               >
                 {practicedInSubj}/{allSubtopicsInSubj.length} practiced
                 {avgAccInSubj !== null && (
-                  <span
-                    className="ml-2"
-                    style={{ color: getAccuracyColor(avgAccInSubj) }}
-                  >
+                  <span className="ml-2" style={{ color: getAccuracyColor(avgAccInSubj) }}>
                     · {avgAccInSubj}% avg
                   </span>
                 )}
               </span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {avgConceptInSubj !== null && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
+                  🧠 {avgConceptInSubj}%
+                </span>
+              )}
+              {avgSpeedInSubj !== null && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>
+                  ⚡ {avgSpeedInSubj}%
+                </span>
+              )}
+              {totalMistakesInSubj > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>
+                  🔍 {totalMistakesInSubj} mistake{totalMistakesInSubj !== 1 ? "s" : ""}
+                </span>
+              )}
             </div>
           </div>
           {isOpen ? (
