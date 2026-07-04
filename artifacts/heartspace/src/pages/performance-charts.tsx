@@ -273,6 +273,7 @@ export default function PerformanceCharts() {
                 style={{ background: CARD, border: `1px solid ${BORDER}`, color: offset >= 0 ? BORDER : DARK }}
                 disabled={offset >= 0}>›</button>
             </div>
+          </div>
         </div>
 
         {/* Summary cards */}
