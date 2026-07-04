@@ -115,7 +115,7 @@ const CustomTooltip = ({
 export default function PerformanceCharts() {
   const { user } = useAuth();
   const uid = user?.id ?? "";
-  const [range, setRange] = useState<14 | 30>(14);
+  const [range, setRange] = useState<7 | 14 | 30>(14);
 
   const daily = loadDailyAll(uid);
   const syllabus = loadSyllabusProgress(uid);
@@ -126,10 +126,17 @@ export default function PerformanceCharts() {
   /* ── Study hours data ── */
   const studyData = sortedDates.map((d) => {
     const e = daily[d] as Record<string, unknown>;
+    // Get revision hours from revision calendar
+    const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
+    const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
+    const revHours = ((revCal[d] ?? []) as any[]).reduce((s: number, e: any) => s + (e.hours ?? 0), 0);
+    const pracHours = ((pracCal[d] ?? []) as any[]).reduce((s: number, e: any) => s + (e.hours ?? 0), 0);
     return {
       date: new Date(d + 'T12:00:00').toLocaleDateString('en-IN', {day:'numeric',month:'short'}),
       fullDate: d,
-      hours: (e?.studyHours as number) ?? 0,
+      study: (e?.studyHours as number) ?? 0,
+      revision: revHours,
+      practice: pracHours,
     };
   });
 
@@ -239,7 +246,7 @@ export default function PerformanceCharts() {
             </p>
           </div>
           <div className="flex gap-2">
-            {([14, 30] as const).map((r) => (
+            {([7, 14, 30] as const).map((r) => (
               <button
                 key={r}
                 onClick={() => setRange(r)}
@@ -302,46 +309,6 @@ export default function PerformanceCharts() {
               </p>
             </div>
           ))}
-        </div>
-
-        {/* ── 1. Study Hours Bar Chart ── */}
-        <div
-          className="rounded-2xl p-5"
-          style={{ background: CARD, border: `1px solid ${BORDER}` }}
-        >
-          <p className="text-sm font-bold mb-1" style={{ color: DARK }}>
-            📚 Study Hours per Day
-          </p>
-          <p className="text-xs mb-4" style={{ color: MUTED }}>
-            How many hours you studied each day
-          </p>
-          {noDaily ? (
-            <p className="text-xs text-center py-8" style={{ color: MUTED }}>
-              No data yet — start logging in Daily Tracker!
-            </p>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart
-                data={studyData}
-                margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: MUTED }} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: MUTED }}
-                  unit="h"
-                  domain={[0, "auto"]}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar
-                  dataKey="hours"
-                  name="Study hrs"
-                  fill={GOLD}
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
         </div>
 
         {/* ── 2. Mood + Stress Line Chart ── */}
@@ -479,45 +446,46 @@ export default function PerformanceCharts() {
           )}
         </div>
 
-        {/* ── 5. Study hours area chart (trend) ── */}
+        {/* ── 5. Combined Hours Trend ── */}
         <div
           className="rounded-2xl p-5"
           style={{ background: CARD, border: `1px solid ${BORDER}` }}
         >
           <p className="text-sm font-bold mb-1" style={{ color: DARK }}>
-            📈 Study Hours Trend (Area)
+            📈 Study · Revision · Practice Hours Trend
           </p>
           <p className="text-xs mb-4" style={{ color: MUTED }}>
-            Cumulative study effort over the period
+            Daily hours across all three activities
           </p>
           {noDaily ? (
             <p className="text-xs text-center py-8" style={{ color: MUTED }}>
               No data yet.
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart
-                data={studyData}
-                margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
-              >
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={studyData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                 <defs>
                   <linearGradient id="studyGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={GOLD} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={GOLD} stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="#2C4A73" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#2C4A73" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#E07A28" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#E07A28" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="pracGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2E7D52" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#2E7D52" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: MUTED }} />
                 <YAxis tick={{ fontSize: 10, fill: MUTED }} unit="h" />
                 <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="hours"
-                  name="Study hrs"
-                  stroke={GOLD}
-                  strokeWidth={2}
-                  fill="url(#studyGrad)"
-                />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area type="monotone" dataKey="study" name="Study" stroke="#2C4A73" strokeWidth={2} fill="url(#studyGrad)" />
+                <Area type="monotone" dataKey="revision" name="Revision" stroke="#E07A28" strokeWidth={2} fill="url(#revGrad)" />
+                <Area type="monotone" dataKey="practice" name="Practice" stroke="#2E7D52" strokeWidth={2} fill="url(#pracGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           )}
