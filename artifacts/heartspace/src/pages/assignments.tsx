@@ -590,6 +590,33 @@ function SubtopicRow({
             }}
             onCancel={() => setShowForm(false)}
           />
+          {/* History tab */}
+          {activeTab === "history" && (
+            <div className="px-5 pb-5 pt-3 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>All Attempts — Latest First</p>
+              {allSubtopicsInSubj.map((st) => {
+                const entry = progress[st.id];
+                if (!entry || entry.attempts.length === 0) return null;
+                return (
+                  <div key={st.id} className="rounded-xl p-3" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                    <p className="text-xs font-bold mb-2" style={{ color: CHARCOAL }}>{st.name}</p>
+                    {[...entry.attempts].reverse().map((a, i) => (
+                      <div key={a.id} className="flex items-center gap-2 flex-wrap py-1.5" style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
+                        <span className="text-[10px] font-semibold w-16" style={{ color: MUTED }}>{new Date(a.date).toLocaleDateString("en-IN", {day:"2-digit",month:"short"})}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: `${OLIVE}22`, color: OLIVE }}>🎯 {a.accuracy}%</span>
+                        {typeof a.concept === "number" && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>🧠 {a.concept}%</span>}
+                        {typeof a.speed === "number" && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#2C4A7322", color: "#2C4A73" }}>⚡ {a.speed}%</span>}
+                        {(a.mistakeCount ?? 0) > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#C0392B22", color: "#C0392B" }}>🔍 {a.mistakeCount}</span>}
+                        {a.mistakes?.filter(Boolean).map((m, mi) => (
+                          <span key={mi} className="text-[10px] italic" style={{ color: "#C0392B" }}>{mi+1}. {m}</span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -780,6 +807,23 @@ function TopicBlock({
           />
         </div>
       )}
+
+      {showTopicMistakes && (() => {
+        const allMistakes: {subtopic: string; mistake: string}[] = [];
+        topic.subtopics.forEach(st => {
+          const latest = getLatest(progress[st.id]);
+          if (latest?.mistakes) latest.mistakes.filter(Boolean).forEach(m => allMistakes.push({subtopic: st.name, mistake: m}));
+        });
+        return allMistakes.length > 0 ? (
+          <div className="mx-4 mb-2 p-2 rounded-lg" style={{ background: "#C0392B08", border: "1px solid #C0392B22" }}>
+            {allMistakes.map((m, i) => (
+              <p key={i} className="text-[10px] italic mb-0.5" style={{ color: "#C0392B" }}>
+                <span className="font-semibold not-italic">{m.subtopic}:</span> {m.mistake}
+              </p>
+            ))}
+          </div>
+        ) : null;
+      })()}
 
       {expanded && (
         <div
@@ -976,14 +1020,14 @@ function SubjectBlock({
                 style={{ color: MUTED }}
               >
                 {practicedInSubj}/{allSubtopicsInSubj.length} practiced
-                {avgAccInSubj !== null && (
-                  <span className="ml-2" style={{ color: getAccuracyColor(avgAccInSubj) }}>
-                    · {avgAccInSubj}% avg
-                  </span>
-                )}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
+              {avgAccInSubj !== null && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: `${OLIVE}22`, color: OLIVE }}>
+                  🎯 {avgAccInSubj}%
+                </span>
+              )}
               {avgConceptInSubj !== null && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "#6B568F22", color: "#6B568F" }}>
                   🧠 {avgConceptInSubj}%
@@ -1054,7 +1098,7 @@ function SubjectBlock({
         <div style={{ borderTop: `1px solid ${BORDER}` }}>
           {/* Tab pills */}
           <div className="flex gap-2 px-5 pt-4">
-            {(["overview"] as const).map((tab) => (
+            {(["overview", "history"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
