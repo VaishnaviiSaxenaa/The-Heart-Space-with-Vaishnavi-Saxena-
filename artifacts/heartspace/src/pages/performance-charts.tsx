@@ -114,7 +114,8 @@ const CustomTooltip = ({
 
 export default function PerformanceCharts() {
   const { user } = useAuth();
-  const uid = user?.id ?? "";
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const uid = viewAsId ?? user?.id ?? "";
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0); // 0 = current, -1 = prev, etc.
 

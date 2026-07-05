@@ -1573,6 +1573,11 @@ export default function CounsellorDashboard() {
                     { label: "📚 Syllabus", path: "/syllabus" },
                     { label: "✏️ Practice", path: "/assignments" },
                     { label: "📓 Daily", path: "/daily-tracker" },
+                    { label: "💜 Vaishnavi Sessions", path: "/my-sessions" },
+                    { label: "🔄 Revision", path: "/revision-tracker" },
+                    { label: "📝 Notes", path: "/note-tracker" },
+                    { label: "📅 Sagar Sessions", path: "/sessions" },
+                    { label: "📈 Reports", path: "/charts" },
                   ].map(({ label, path }) => (
                     <button key={path} type="button"
                       onClick={() => window.open(`${path}?viewAs=${selected.id}`, "_blank")}

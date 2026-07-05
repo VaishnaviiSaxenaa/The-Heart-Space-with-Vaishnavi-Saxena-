@@ -59,7 +59,10 @@ function ApexLockedMySessions() {
 
 export default function MySessions() {
   const { user } = useAuth();
-  const userId = user?.id ? String(user.id) : "";
+  const rawUserId = user?.id ? String(user.id) : "";
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const userId = viewAsId ?? rawUserId;
+  const isViewMode = !!viewAsId;
   const [sessions, setSessions] = useState<VSession[]>([]);
   const [notes, setNotes] = useState<SessionNote[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -277,6 +280,7 @@ export default function MySessions() {
                       📝 {s.note}
                     </div>
                   )}
+                  {!isViewMode && (
                   <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
                     {s.student_response === "accepted" ? (
                       <button style={{ background: "#E8F5E9", color: "#2E7D32", border: "1px solid #A5D6A7", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "default" }}>
@@ -293,7 +297,8 @@ export default function MySessions() {
                       Cancel session
                     </button>
                   </div>
-                  {cancellingId === s.id ? (
+                  )}
+                  {!isViewMode && cancellingId === s.id ? (
                     <div
                       style={{
                         background: "#FFF8F8",
@@ -403,6 +408,8 @@ export default function MySessions() {
             Write what you'd like to talk about in your next session. Vaishnavi
             Ma'am can see all your notes.
           </p>
+          {!isViewMode && (
+          <>
           <textarea
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
@@ -444,6 +451,8 @@ export default function MySessions() {
             <Send size={16} />
             {saving ? "Saving..." : "Add Note"}
           </button>
+          </>
+          )}
 
           {notes.length > 0 && (
             <div style={{ marginTop: "1.25rem" }}>

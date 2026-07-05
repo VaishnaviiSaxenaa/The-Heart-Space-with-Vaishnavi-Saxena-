@@ -147,7 +147,10 @@ interface NoteLog {
 
 export default function NoteTracker() {
   const { user } = useAuth();
-  const userId = user?.id ? String(user.id) : "";
+  const rawUserId = user?.id ? String(user.id) : "";
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const userId = viewAsId ?? rawUserId;
+  const isViewMode = !!viewAsId;
   const examType = (user as any)?.examType ?? "JAM";
   const subjects =
     examType === "NET_GATE" ? [...JAM_SUBJECTS, ...NET_EXTRA] : JAM_SUBJECTS;
@@ -271,7 +274,12 @@ export default function NoteTracker() {
 
   return (
     <div style={{ background: CREAM, minHeight: "100vh", padding: "2rem" }}>
-      <div style={{ maxWidth: 760, margin: "0 auto" }}>
+      {isViewMode && (
+        <div style={{ maxWidth: 760, margin: "0 auto 1rem", background: "#FFF8DC", border: "1px solid #E6D28A", borderRadius: 12, padding: "0.6rem 1rem", fontSize: "0.8rem", color: "#8A6D1D", fontWeight: 600 }}>
+          👁️ View-only mode — you're viewing this student's Note Tracker
+        </div>
+      )}
+      <div style={{ maxWidth: 760, margin: "0 auto", pointerEvents: isViewMode ? "none" : "auto", opacity: isViewMode ? 0.85 : 1 }}>
         {/* Header */}
         <div style={{ marginBottom: "1.5rem" }}>
           <h1

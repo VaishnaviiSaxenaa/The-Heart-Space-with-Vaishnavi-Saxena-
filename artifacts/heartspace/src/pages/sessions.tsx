@@ -394,7 +394,7 @@ function CounsellorSessionsPage() {
 }
 
 /* ─── Student Sagar Session Section ── */
-function SagarSessionSection({ userId }: { userId: string }) {
+function SagarSessionSection({ userId, isViewMode = false }: { userId: string; isViewMode?: boolean }) {
   const [sessions, setSessions] = useState<SagarSession[]>(() =>
     loadSagarSessions(userId),
   );
@@ -483,7 +483,7 @@ function SagarSessionSection({ userId }: { userId: string }) {
         <div className="flex items-center gap-2">
           <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>Sessions with Sagar Sir</h1>
         </div>
-        {!showForm && (
+        {!showForm && !isViewMode && (
           <button
             onClick={() => setShowForm(true)}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold"
@@ -801,15 +801,23 @@ function VaishnaviNoteSection({ userId }: { userId: string }) {
 /* ─── Main Sessions Page ── */
 export default function Sessions() {
   const { user } = useAuth();
-  const userId = String(user?.id ?? "guest");
-  const space = (user as any)?.space as string | null;
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const isViewMode = !!viewAsId;
+  const userId = viewAsId ?? String(user?.id ?? "guest");
+  const [viewedPlan, setViewedPlan] = useState<string | null>(null);
+  useEffect(() => {
+    if (!viewAsId) return;
+    supabase.from("profiles").select("plan").eq("id", viewAsId).single()
+      .then(({ data }) => setViewedPlan(data?.plan ?? null));
+  }, [viewAsId]);
+  const space = isViewMode ? viewedPlan : ((user as any)?.space as string | null);
   const role = user?.role;
   const isZenith = space === "zenith";
   const isApex = space === "apex";
   const isHeartSpace = space === "heartspace";
   const isCounsellor = role === "counsellor";
 
-  if (isCounsellor) return <CounsellorSessionsPage />;
+  if (isCounsellor && !isViewMode) return <CounsellorSessionsPage />;
 
   if (isApex) {
     return (
@@ -846,10 +854,10 @@ export default function Sessions() {
       </div>
       {isZenith && (
         <>
-          <SagarSessionSection userId={userId} />
+          <SagarSessionSection userId={userId} isViewMode={isViewMode} />
         </>
       )}
-      {isHeartSpace && <SagarSessionSection userId={userId} />}
+      {isHeartSpace && <SagarSessionSection userId={userId} isViewMode={isViewMode} />}
     </div>
   );
 }
