@@ -347,6 +347,7 @@ function DetailsForm({
           email: v.email.trim(),
           role: selectedKey,
           plan: plan,
+          status: "pending",
         },
         { onConflict: "id" },
       );
@@ -356,7 +357,7 @@ function DetailsForm({
       /* ── Step 4: Fetch profile to confirm saved role and plan ── */
       const { data: profile, error: fetchErr } = await supabase
         .from("profiles")
-        .select("id, email, full_name, role, plan, avatar_url")
+        .select("id, email, full_name, role, plan, avatar_url, status")
         .eq("id", signInData.user.id)
         .single();
       if (fetchErr) console.error("Profile fetch error:", fetchErr);
@@ -374,6 +375,7 @@ function DetailsForm({
           role: mapped.role,
           space: planFromDB,
           avatarUrl: profile?.avatar_url ?? null,
+          status: profile?.status ?? "pending",
         } as any,
         signInData.session.access_token,
       );
