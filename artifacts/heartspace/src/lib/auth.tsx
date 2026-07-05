@@ -132,6 +132,7 @@ async function resolveSupabaseUser(
       space: planFromDB,
       avatarUrl: profile?.avatar_url ?? null,
       exam_type: examType,
+      status: profile?.status ?? null,
     } as any;
 
     return { user: heartUser, token: accessToken };

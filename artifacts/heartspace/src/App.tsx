@@ -95,10 +95,10 @@ function PendingScreen() {
         <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2D2A25", marginBottom: "0.5rem" }}>Account Pending Approval</h1>
         <p style={{ color: "#7A7267", lineHeight: 1.6, marginBottom: "1.5rem" }}>
-          Your account is awaiting approval. Please contact Vaishnavi to activate your subscription.
+          Your account is awaiting approval. Please contact Vaishnavi Ma'am to activate your subscription.
         </p>
-        <a href="https://wa.me/+917985931085" style={{ display: "inline-block", background: "#6B568F", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
-          Contact Vaishnavi
+        <a href="https://wa.me/919336019395?text=Hello%20Ma'am%20I%20want%20my%20subscription%20activated." style={{ display: "inline-block", background: "#6B568F", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
+          Contact Vaishnavi Ma'am
         </a>
       </div>
     </div>
@@ -112,10 +112,10 @@ function SuspendedScreen() {
         <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔒</div>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2D2A25", marginBottom: "0.5rem" }}>Account Suspended</h1>
         <p style={{ color: "#7A7267", lineHeight: 1.6, marginBottom: "1.5rem" }}>
-          Your subscription has expired or been suspended. Please contact Vaishnavi to renew your access.
+          Your subscription has expired or been suspended. Please contact Vaishnavi Ma'am to renew your access.
         </p>
-        <a href="https://wa.me/+917985931085" style={{ display: "inline-block", background: "#6B568F", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
-          Contact Vaishnavi
+        <a href="https://wa.me/919336019395?text=Hello%20Ma'am%20I%20want%20my%20subscription%20activated." style={{ display: "inline-block", background: "#6B568F", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
+          Contact Vaishnavi Ma'am
         </a>
       </div>
     </div>
@@ -174,19 +174,19 @@ function Router() {
           <StudentRoute component={StudentDashboard} />
         </Route>
         <Route path="/revision-tracker">
-          <ProtectedRoute component={RevisionTracker} allowedRole="student" />
+          <StudentRoute component={RevisionTracker} />
         </Route>
         <Route path="/note-tracker">
-          <ProtectedRoute component={NoteTracker} allowedRole="student" />
+          <StudentRoute component={NoteTracker} />
         </Route>
         <Route path="/counsellor-sessions">
           <ProtectedRoute component={CounsellorSessionsPage} allowedRole="counsellor" />
         </Route>
         <Route path="/revision-tracker">
-          <ProtectedRoute component={RevisionTracker} allowedRole="student" />
+          <StudentRoute component={RevisionTracker} />
         </Route>
         <Route path="/note-tracker">
-          <ProtectedRoute component={NoteTracker} allowedRole="student" />
+          <StudentRoute component={NoteTracker} />
         </Route>
         <Route path="/counsellor-sessions">
           <ProtectedRoute component={CounsellorSessionsPage} allowedRole="counsellor" />
@@ -201,10 +201,10 @@ function Router() {
           <ProtectedRoute component={StudentDetail} allowedRole="counsellor" />
         </Route>
         <Route path="/sessions">
-          <ProtectedRoute component={Sessions} />
+          <StudentRoute component={Sessions} />
         </Route>
         <Route path="/daily-tracker">
-          <ProtectedRoute component={DailyTracker} />
+          <StudentRoute component={DailyTracker} />
         </Route>
         <Route path="/syllabus">
           <StudentRoute component={Syllabus} />
