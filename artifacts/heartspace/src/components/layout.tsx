@@ -78,8 +78,6 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         href: "/counsellor",
       },
       { icon: CalendarRange, label: "My Calendar", key: "counsellor-sessions", href: "/counsellor-sessions" },
-      { icon: RotateCcw, label: "Revision Tracker", key: "revision-tracker", href: "/revision-tracker" },
-      { icon: BookOpen, label: "Note Tracker", key: "note-tracker", href: "/note-tracker" },
       { icon: Calendar, label: "Sessions with Sagar Sir", key: "sessions", href: "/sessions" },
       { icon: Users, label: "Students", key: "reports", href: "/counsellor" },
       { icon: ShieldCheck, label: "Access Control", key: "admin", href: "/admin" },
