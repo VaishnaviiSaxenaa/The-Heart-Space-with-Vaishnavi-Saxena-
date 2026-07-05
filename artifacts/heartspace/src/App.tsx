@@ -25,6 +25,7 @@ import DailyTracker from "./pages/daily-tracker";
 import StudentDetail from "./pages/student-detail";
 import Roadmap from "./pages/roadmap";
 import PerformanceCharts from "./pages/performance-charts";
+import AdminPanel from "./pages/admin-panel";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -87,6 +88,40 @@ function ProtectedRoute({
   return <Component />;
 }
 
+function PendingScreen() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F5F0" }}>
+      <div style={{ textAlign: "center", maxWidth: 400, padding: "2rem" }}>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2D2A25", marginBottom: "0.5rem" }}>Account Pending Approval</h1>
+        <p style={{ color: "#7A7267", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+          Your account is awaiting approval. Please contact Vaishnavi to activate your subscription.
+        </p>
+        <a href="https://wa.me/+917985931085" style={{ display: "inline-block", background: "#6B568F", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
+          Contact Vaishnavi
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function SuspendedScreen() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F5F0" }}>
+      <div style={{ textAlign: "center", maxWidth: 400, padding: "2rem" }}>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔒</div>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2D2A25", marginBottom: "0.5rem" }}>Account Suspended</h1>
+        <p style={{ color: "#7A7267", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+          Your subscription has expired or been suspended. Please contact Vaishnavi to renew your access.
+        </p>
+        <a href="https://wa.me/+917985931085" style={{ display: "inline-block", background: "#6B568F", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
+          Contact Vaishnavi
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function StudentRoute({
   component: Component,
 }: {
@@ -94,6 +129,7 @@ function StudentRoute({
 }) {
   const { isAuthenticated, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const status = (user as any)?.status as string | null;
 
   useEffect(() => {
     if (isLoading) return;
@@ -111,6 +147,8 @@ function StudentRoute({
 
   if (isLoading) return <FullScreenLoader />;
   if (!isAuthenticated) return null;
+  if (status === "pending") return <PendingScreen />;
+  if (status === "suspended") return <SuspendedScreen />;
   return <Component />;
 }
 
@@ -126,6 +164,9 @@ function Router() {
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/exam-select" component={ExamSelect} />
 
+        <Route path="/admin">
+          <ProtectedRoute component={AdminPanel} allowedRole="counsellor" />
+        </Route>
         <Route path="/dashboard">
           <StudentRoute component={StudentDashboard} />
         </Route>
