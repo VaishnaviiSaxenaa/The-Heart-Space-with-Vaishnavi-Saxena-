@@ -28,6 +28,7 @@ import {
   GraduationCap,
   Map,
   PenLine,
+  ShieldCheck,
 } from "lucide-react";
 
 const CREAM = "#F8F5F0";
@@ -81,6 +82,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
       { icon: BookOpen, label: "Note Tracker", key: "note-tracker", href: "/note-tracker" },
       { icon: Calendar, label: "Sessions with Sagar Sir", key: "sessions", href: "/sessions" },
       { icon: Users, label: "Students", key: "reports", href: "/counsellor" },
+      { icon: ShieldCheck, label: "Access Control", key: "admin", href: "/admin" },
       { icon: BarChart2, label: "Analytics", key: "analytics", soon: true },
     ];
   }
