@@ -177,7 +177,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         style={{ borderBottom: `1px solid ${BORDER}` }}
       >
         <div className="flex items-start justify-between">
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: "100%", height: "auto", display: "block" }} />
           </div>
           {onClose && (
