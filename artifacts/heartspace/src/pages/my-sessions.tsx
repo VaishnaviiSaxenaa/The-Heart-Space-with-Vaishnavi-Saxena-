@@ -36,6 +36,27 @@ interface SessionNote {
   created_at: string;
 }
 
+function ApexLockedMySessions() {
+  return (
+    <div style={{ background: CREAM, minHeight: "100vh", padding: "2rem" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: CHARCOAL, marginBottom: "1.5rem" }}>
+          Sessions with Vaishnavi Ma'am
+        </h1>
+        <div style={{ textAlign: "center", padding: "5rem 1rem", borderRadius: 16, background: CARD, border: `1.5px dashed ${BORDER}` }}>
+          <Calendar style={{ width: 40, height: 40, margin: "0 auto 0.75rem", opacity: 0.3, color: GOLD }} />
+          <p style={{ fontSize: "0.9rem", fontWeight: 600, color: CHARCOAL }}>
+            Sessions not available on Apex+
+          </p>
+          <p style={{ fontSize: "0.75rem", marginTop: "0.25rem", maxWidth: 280, marginLeft: "auto", marginRight: "auto", color: MUTED }}>
+            Apex+ is a self-prep plan. Upgrade to Zenith for counsellor sessions.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MySessions() {
   const { user } = useAuth();
   const userId = user?.id ? String(user.id) : "";
@@ -124,6 +145,9 @@ export default function MySessions() {
         Loading your sessions...
       </div>
     );
+
+  const space = (user as any)?.space as string | null;
+  if (space === "apex") return <ApexLockedMySessions />;
 
   return (
     <div style={{ background: CREAM, minHeight: "100vh", padding: "2rem" }}>
