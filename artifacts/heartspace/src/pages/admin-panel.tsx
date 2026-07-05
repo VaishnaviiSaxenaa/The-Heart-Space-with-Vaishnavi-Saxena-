@@ -58,12 +58,13 @@ export default function AdminPanel() {
     return <div style={{ padding: "2rem", color: RED }}>Access denied.</div>;
   }
 
-  const filtered = students.filter(s => s.role === "student" && (filter === "all" || s.status === filter));
+  const STUDENT_ROLES = ["academy_student", "prep_student", "counseling_client"];
+  const filtered = students.filter(s => STUDENT_ROLES.includes(s.role) && (filter === "all" || s.status === filter));
   const counts = {
-    all: students.filter(s => s.role === "student").length,
-    pending: students.filter(s => s.role === "student" && s.status === "pending").length,
-    active: students.filter(s => s.role === "student" && s.status === "active").length,
-    suspended: students.filter(s => s.role === "student" && s.status === "suspended").length,
+    all: students.filter(s => STUDENT_ROLES.includes(s.role)).length,
+    pending: students.filter(s => STUDENT_ROLES.includes(s.role) && s.status === "pending").length,
+    active: students.filter(s => STUDENT_ROLES.includes(s.role) && s.status === "active").length,
+    suspended: students.filter(s => STUDENT_ROLES.includes(s.role) && s.status === "suspended").length,
   };
 
   return (
