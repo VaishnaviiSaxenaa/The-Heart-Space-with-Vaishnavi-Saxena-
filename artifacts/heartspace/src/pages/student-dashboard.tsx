@@ -463,8 +463,19 @@ export default function StudentDashboard() {
   const [allVaishnaviSessions, setAllVaishnaviSessions] = useState<Array<{id:string,scheduled_at:string,note?:string,rescheduled_at?:string}>>([]);
   const [showSessionPopup, setShowSessionPopup] = useState(false);
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
+  const [vaishnaviStats, setVaishnaviStats] = useState({ total: 0, upcoming: 0, completed: 0 });
   useEffect(() => {
     if (!user?.id) return;
+    supabase.from("vaishnavi_sessions").select("status").eq("student_id", user.id)
+      .then(({ data }) => {
+        if (data) {
+          setVaishnaviStats({
+            total: data.length,
+            upcoming: data.filter((s: any) => s.status === "upcoming").length,
+            completed: data.filter((s: any) => s.status === "done").length,
+          });
+        }
+      });
     supabase.from("sessions_data").select("data").eq("user_id", user.id).single()
       .then(({ data: sd }) => {
         if (sd?.data) setSagarSessions(sd.data as Array<Record<string,unknown>>);
@@ -648,19 +659,19 @@ export default function StudentDashboard() {
         {[
           {
             label: "Total Sessions",
-            value: summary?.totalSessions ?? 0,
+            value: vaishnaviStats.total,
             sub: "all time",
             color: SIDEBAR,
           },
           {
             label: "Upcoming",
-            value: summary?.upcomingSessions ?? 0,
+            value: vaishnaviStats.upcoming,
             sub: "scheduled",
             color: PROGRESS_PURPLE,
           },
           {
             label: "Completed",
-            value: summary?.completedSessions ?? 0,
+            value: vaishnaviStats.completed,
             sub: "sessions",
             color: OLIVE,
           },
