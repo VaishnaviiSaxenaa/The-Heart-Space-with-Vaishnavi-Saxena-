@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import { ReactNode } from "react";
+import logoImg from "../assets/logo.png";
 import {
   LayoutDashboard,
   RotateCcw,
@@ -177,54 +178,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
       >
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <svg width="22" height="20" viewBox="0 0 22 20" fill="none">
-                <path
-                  d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
-                  stroke={GOLD}
-                  strokeWidth="1.5"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <line
-                  x1="8"
-                  y1="7"
-                  x2="6"
-                  y2="4"
-                  stroke={GOLD}
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                />
-                <line
-                  x1="11"
-                  y1="5.5"
-                  x2="11"
-                  y2="2"
-                  stroke={GOLD}
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                />
-                <line
-                  x1="14"
-                  y1="7"
-                  x2="16"
-                  y2="4"
-                  stroke={GOLD}
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span
-                className="font-serif text-2xl font-bold leading-none"
-                style={{ color: SIDEBAR_HEADER, letterSpacing: "-0.02em" }}
-              >
-                The Heart<br/>Space
-              </span>
-            </div>
-            <p className="text-xs mt-1 pl-7 italic" style={{ color: "#C9A84C", fontFamily: "Georgia, serif", fontSize: "0.8rem" }}>
-              with Vaishnavi Saxena
-            </p>
+            <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 150, height: "auto" }} />
           </div>
           {onClose && (
             <button
