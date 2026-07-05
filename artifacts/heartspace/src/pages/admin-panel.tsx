@@ -28,6 +28,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "pending" | "active" | "suspended">("all");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     loadStudents();
@@ -59,7 +60,17 @@ export default function AdminPanel() {
   }
 
   const STUDENT_ROLES = ["academy_student", "prep_student", "counseling_client"];
-  const filtered = students.filter(s => STUDENT_ROLES.includes(s.role) && (filter === "all" || s.status === filter));
+  const filtered = students.filter(s => {
+    if (!STUDENT_ROLES.includes(s.role)) return false;
+    if (filter !== "all" && s.status !== filter) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const nameMatch = (s.full_name || "").toLowerCase().includes(q);
+      const emailMatch = (s.email || "").toLowerCase().includes(q);
+      if (!nameMatch && !emailMatch) return false;
+    }
+    return true;
+  });
   const counts = {
     all: students.filter(s => STUDENT_ROLES.includes(s.role)).length,
     pending: students.filter(s => STUDENT_ROLES.includes(s.role) && s.status === "pending").length,
@@ -74,6 +85,25 @@ export default function AdminPanel() {
           🎛️ Student Access Control
         </h1>
         <p style={{ color: MUTED, marginBottom: "1.5rem" }}>Manage student subscriptions and access</p>
+
+        {/* Search box */}
+        <input
+          type="text"
+          placeholder="Search by name or email..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "0.6rem 1rem",
+            borderRadius: 12,
+            border: `1px solid ${BORDER}`,
+            fontSize: "0.9rem",
+            background: CARD,
+            color: CHARCOAL,
+            marginBottom: "1rem",
+            boxSizing: "border-box",
+          }}
+        />
 
         {/* Filter tabs */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
