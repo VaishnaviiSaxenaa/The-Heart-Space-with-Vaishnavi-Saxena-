@@ -387,7 +387,7 @@ export default function Login() {
         /* Fetch profile — NOW includes exam_type */
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("id, email, full_name, role, plan, avatar_url, exam_type")
+          .select("id, email, full_name, role, plan, avatar_url, exam_type, status")
           .eq("id", data.user.id)
           .single()
           .then((r) => r);
@@ -407,7 +407,7 @@ export default function Login() {
           });
           const { data: fresh } = await supabase
             .from("profiles")
-            .select("id, email, full_name, role, plan, avatar_url, exam_type")
+            .select("id, email, full_name, role, plan, avatar_url, exam_type, status")
             .eq("id", data.user.id)
             .single()
             .then((r) => r);
@@ -445,6 +445,7 @@ export default function Login() {
             space: planFromDB,
             avatarUrl: resolvedProfile?.avatar_url ?? null,
             exam_type: examType,
+            status: resolvedProfile?.status ?? null,
           } as any,
           data.session.access_token,
         );
