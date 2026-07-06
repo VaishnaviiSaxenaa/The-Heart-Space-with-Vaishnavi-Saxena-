@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
-import logoImg from "../assets/logo.png";
+import logoImg from "../assets/logo-transparent.png";
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#3D3530";
 const GOLD = "#8B7FC7";
@@ -105,7 +105,7 @@ const SERVICES: Service[] = [
 function BrandHeader() {
   return (
     <div className="text-center mb-8">
-      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 340, height: "auto", margin: "0 auto" }} />
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 190, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }

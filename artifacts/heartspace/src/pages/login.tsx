@@ -18,7 +18,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, GraduationCap } from "lucide-react";
 
-import logoImg from "../assets/logo.png";
+import logoImg from "../assets/logo-transparent.png";
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#3D3530";
 const GOLD = "#8B7FC7";
@@ -161,8 +161,8 @@ function HeartLogo() {
 
 function BrandHeader() {
   return (
-    <div className="text-center mb-10">
-      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 340, height: "auto", margin: "0 auto" }} />
+    <div className="text-center mb-2">
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 190, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }
@@ -513,8 +513,8 @@ export default function Login() {
           <ForgotPasswordView onBack={() => setShowForgot(false)} />
         ) : (
           <>
-            <div className="rounded-2xl p-8" style={cardStyle}>
-              <div className="flex mb-6" style={{ borderBottom: `1px solid ${BORDER}` }}>
+            <div className="rounded-2xl p-6" style={cardStyle}>
+              <div className="flex mb-4" style={{ borderBottom: `1px solid ${BORDER}` }}>
                 <div
                   className="flex-1 text-center pb-3 font-semibold text-sm cursor-pointer"
                   style={{ color: GOLD, borderBottom: `2px solid ${GOLD}` }}
@@ -535,14 +535,14 @@ export default function Login() {
               >
                 Welcome back
               </h2>
-              <p className="text-sm mb-6" style={{ color: MUTED }}>
+              <p className="text-sm mb-3" style={{ color: MUTED }}>
                 Sign in to your account
               </p>
 
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-5"
+                  className="space-y-3"
                 >
                   {(["email", "password"] as const).map((name) => (
                     <FormField
@@ -648,7 +648,7 @@ export default function Login() {
           </>
         )}
 
-        <div className="text-center mt-8">
+        <div className="text-center mt-4">
           <GraduationCap size={28} style={{ color: GOLD, margin: "0 auto 0.5rem" }} />
           <p className="font-serif font-bold text-lg" style={{ color: SIDEBAR }}>
             Imagine having everything you need to prepare,
