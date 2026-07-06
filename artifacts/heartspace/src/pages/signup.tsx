@@ -62,36 +62,38 @@ const SERVICES: Service[] = [
     key: "academy_student",
     name: "Zenith",
     emoji: "🏆",
-    color: "#C9A84C",
-    tagBg: "rgba(201,169,110,0.12)",
+    color: "#6B568F",
+    tagBg: "rgba(107,86,143,0.12)",
     tagline: "Full mentorship + counsellor support",
     bullets: [
-      "1-on-1 counsellor sessions",
-      "Syllabus & assignment tracking",
-      "Mood & wellness monitoring",
-      "AI progress summaries",
+      "1-on-1 sessions with Sagar Sir and Vaishnavi Ma'am",
+      "Fully customized to your pace and schedule",
+      "Syllabus & question practice tracking",
+      "Personalized roadmap & revision tracker",
+      "Mood, sleep & daily habit tracking",
     ],
   },
   {
     key: "prep_student",
     name: "Apex+",
     emoji: "⚡",
-    color: "#2D2A25",
-    tagBg: "rgba(61,35,20,0.08)",
-    tagline: "Academic tracking + AI guidance",
+    color: "#8B7FC7",
+    tagBg: "rgba(139,127,199,0.12)",
+    tagline: "Self-prep plan for independent learners",
     bullets: [
-      "Syllabus & assignment tracker",
-      "Daily tracker & analytics",
-      "AI study guidance",
-      "Self-paced progress",
+      "Syllabus & question practice tracking",
+      "Fully customized to your pace and schedule",
+      "Personalized roadmap & revision tracker",
+      "Daily tracker & progress reports",
+      "Entirely self-paced, self-directed learning",
     ],
   },
   {
     key: "counseling_client",
     name: "HeartSpace",
     emoji: "🌿",
-    color: "#D4A5A5",
-    tagBg: "rgba(212,165,165,0.15)",
+    color: "#8B9574",
+    tagBg: "rgba(139,149,116,0.12)",
     tagline: "Personal counselling + emotional support",
     bullets: [
       "Dedicated counsellor sessions",
@@ -106,7 +108,7 @@ const SERVICES: Service[] = [
 function BrandHeader() {
   return (
     <div className="text-center mb-8">
-      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 190, height: "auto", margin: "0 auto" }} />
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 260, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }
@@ -528,7 +530,7 @@ export default function Signup() {
   const [selected, setSelected] = useState<ServiceKey | null>(null);
 
   const bgStyle = {
-    background: `linear-gradient(155deg, ${CREAM} 0%, #EDE4D8 55%, #E8DDD0 100%)`,
+    background: "#F5EEEC",
   };
 
   return (
