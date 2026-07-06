@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, GraduationCap } from "lucide-react";
 
 import logoImg from "../assets/logo.png";
 const CREAM = "#F8F5F0";
@@ -648,9 +648,21 @@ export default function Login() {
           </>
         )}
 
-        <p className="text-center text-xs mt-4" style={{ color: MUTED }}>
-          A safe space for student wellbeing
-        </p>
+        <div className="text-center mt-8">
+          <GraduationCap size={28} style={{ color: GOLD, margin: "0 auto 0.5rem" }} />
+          <p className="font-serif font-bold text-lg" style={{ color: SIDEBAR }}>
+            Imagine having everything you need to prepare,
+          </p>
+          <p className="text-sm mb-3" style={{ color: MUTED }}>
+            in one intelligent space.
+          </p>
+          <p className="text-xs" style={{ color: MUTED }}>
+            Roadmaps &middot; Question Practice &middot; Studies &middot; Revision &middot; Notes
+          </p>
+          <p className="text-xs" style={{ color: MUTED }}>
+            Mood Tracking &middot; Trends &middot; Reports &middot; And more.
+          </p>
+        </div>
       </div>
     </div>
   );
