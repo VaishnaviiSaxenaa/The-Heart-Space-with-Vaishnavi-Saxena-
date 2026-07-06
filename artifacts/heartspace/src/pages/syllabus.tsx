@@ -1130,12 +1130,11 @@ export default function Syllabus() {
   );
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   useEffect(() => {
-    if (!isViewMode) return;
     supabase.from("syllabus_progress").select("data").eq("user_id", effectiveUserId).single()
       .then(({ data: sd }) => {
         if (sd?.data) setProgress(sd.data as SyllabusProgress);
       });
-  }, [effectiveUserId, isViewMode]);
+  }, [effectiveUserId]);
   const [expandedT, setExpandedT] = useState<Record<string, boolean>>({});
 
   const syllabus = filterSyllabus(examType);
