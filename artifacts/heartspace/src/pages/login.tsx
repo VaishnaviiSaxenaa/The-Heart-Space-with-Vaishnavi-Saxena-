@@ -162,7 +162,7 @@ function HeartLogo() {
 function BrandHeader() {
   return (
     <div className="text-center mb-2">
-      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 190, height: "auto", margin: "0 auto" }} />
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 260, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }
@@ -476,7 +476,7 @@ export default function Login() {
   }
 
   const bgStyle = {
-    background: `linear-gradient(155deg, ${CREAM} 0%, #EDE4D8 55%, #E8DDD0 100%)`,
+    background: "#F5EEEC",
   };
 
   const cardStyle = {
