@@ -58,6 +58,11 @@ export default function ExamSelect() {
   const { toast } = useToast();
   const [hover, setHover] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const space = (user as any)?.space as string | null;
+  if (space === "heartspace") {
+    setLocation("/self-dashboard");
+    return null;
+  }
 
   async function handleSelect(examKey: "JAM" | "NET_GATE") {
     if (!user || saving) return;
