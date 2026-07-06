@@ -3206,6 +3206,16 @@ function LiveScheduleTab({
       consumedHoursBySubject[e.subjectId] = (consumedHoursBySubject[e.subjectId] ?? 0) + e.hours;
     });
   });
+  const [calSyncTick, setCalSyncTick] = useState(0);
+  useEffect(() => {
+    supabase.from("roadmap_calendar").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => {
+        if (sd?.data) {
+          try { localStorage.setItem(`hs_calendar_${effectiveUserId}`, JSON.stringify(sd.data)); } catch {}
+          setCalSyncTick((t) => t + 1);
+        }
+      });
+  }, [effectiveUserId]);
   const [subjectOrder, setSubjectOrderState] = useState<string[]>(() =>
     loadSubjectOrder(effectiveUserId, defaultOrder),
   );
