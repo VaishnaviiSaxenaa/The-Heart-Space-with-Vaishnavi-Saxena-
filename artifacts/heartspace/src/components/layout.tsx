@@ -129,21 +129,9 @@ function getNavItems(role: string, space: string | null): NavItem[] {
       key: "home",
       href: "/self-dashboard",
     },
-    {
-      icon: ClipboardList,
-      label: "Daily Tracker",
-      key: "daily",
-      href: "/daily-tracker",
-    },
-    { icon: RotateCcw, label: "Revision Tracker", key: "revision-tracker", href: "/revision-tracker" },
-      { icon: BookOpen, label: "Note Tracker", key: "note-tracker", href: "/note-tracker" },
-      { icon: Calendar, label: "Sessions with Sagar Sir", key: "sessions", href: "/sessions" },
     { icon: Heart, label: "Health & Wellness", key: "health", soon: true },
     { icon: Brain, label: "Mood & Mind", key: "mood", soon: true },
     { icon: Zap, label: "Habits", key: "habits", soon: true },
-    { icon: BookOpen, label: "Academics", key: "academics", soon: true },
-    { icon: Library, label: "Resources", key: "resources", soon: true },
-    { icon: BarChart2, label: "Reports", key: "reports2", href: "/charts" },
   ];
 }
 

@@ -88,6 +88,16 @@ function ProtectedRoute({
   return <Component />;
 }
 
+function ComingSoonScreen() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: CREAM }}>
+      <div style={{ textAlign: "center" }}>
+        <h1 style={{ fontSize: "2rem", fontWeight: 700, color: "#2D2A25" }}>Coming Soon</h1>
+      </div>
+    </div>
+  );
+}
+
 function PendingScreen() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F5F0" }}>
@@ -171,7 +181,7 @@ function Router() {
           <StudentRoute component={StudentDashboard} />
         </Route>
         <Route path="/self-dashboard">
-          <StudentRoute component={StudentDashboard} />
+          <StudentRoute component={ComingSoonScreen} />
         </Route>
         <Route path="/revision-tracker">
           <StudentRoute component={RevisionTracker} />
