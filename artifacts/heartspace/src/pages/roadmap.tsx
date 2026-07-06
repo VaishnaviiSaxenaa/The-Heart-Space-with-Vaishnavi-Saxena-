@@ -4867,20 +4867,18 @@ export default function Roadmap() {
   const effectiveUserId = viewAsId ?? userId;
   // Sim slots at TOP LEVEL where effectiveUserId is always correct
 
-  const examType = ((user as any)?.exam_type as string | null) ?? "JAM";
+  const [viewedExamType, setViewedExamType] = useState<string | null>(null);
+  useEffect(() => {
+    if (!viewAsId) return;
+    supabase.from("profiles").select("exam_type").eq("id", viewAsId).single()
+      .then(({ data }) => setViewedExamType(data?.exam_type ?? null));
+  }, [viewAsId]);
+  const examType = ((viewAsId ? viewedExamType : (user as any)?.exam_type) as string | null) ?? "JAM";
   const space = (user as any)?.space as string | null;
   const [roadmap, setRoadmap] = useState<Roadmap | null>(() =>
     loadRoadmap(effectiveUserId),
   );
   useEffect(() => {
-    if (!viewAsId) return;
-    import("../lib/supabase").then(({ supabase }) => {
-      supabase.from("roadmap_data").select("data").eq("user_id", viewAsId).single()
-        .then(({ data: sd }) => { if (sd?.data) setRoadmap(sd.data as Roadmap); });
-    });
-  }, [viewAsId]);
-  useEffect(() => {
-    if (true) return;
     supabase.from("roadmap_data").select("data").eq("user_id", effectiveUserId).single()
       .then(({ data: sd }) => {
         if (sd?.data) setRoadmap(sd.data as Roadmap);
