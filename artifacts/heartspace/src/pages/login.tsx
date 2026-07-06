@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
 import logoImg from "../assets/logo.png";
 const CREAM = "#F8F5F0";
@@ -316,6 +317,7 @@ export default function Login() {
   const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -556,21 +558,37 @@ export default function Login() {
                             {name}
                           </FormLabel>
                           <FormControl>
-                            <Input
-                              type={name === "password" ? "password" : "email"}
-                              placeholder={
-                                name === "email"
-                                  ? "hello@example.com"
-                                  : "••••••••"
-                              }
-                              {...field}
-                              className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
-                              style={{
-                                background: CREAM,
-                                borderColor: BORDER,
-                                color: CHARCOAL,
-                              }}
-                            />
+                            <div style={{ position: "relative" }}>
+                              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: GOLD, pointerEvents: "none" }}>
+                                {name === "email" ? <Mail size={18} /> : <Lock size={18} />}
+                              </div>
+                              <Input
+                                type={name === "password" ? (showPassword ? "text" : "password") : "email"}
+                                placeholder={
+                                  name === "email"
+                                    ? "hello@example.com"
+                                    : "••••••••"
+                                }
+                                {...field}
+                                className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
+                                style={{
+                                  background: CREAM,
+                                  borderColor: BORDER,
+                                  color: CHARCOAL,
+                                  paddingLeft: 40,
+                                  paddingRight: name === "password" ? 40 : undefined,
+                                }}
+                              />
+                              {name === "password" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPassword((p) => !p)}
+                                  style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: MUTED, background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}
+                                >
+                                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                              )}
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -598,9 +616,18 @@ export default function Login() {
                       color: CREAM,
                       border: "none",
                       boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
                     }}
                   >
-                    {isPending ? "Signing in…" : "Enter HeartSpace"}
+                    {isPending ? "Signing in…" : (
+                      <>
+                        Enter HeartSpace
+                        <ArrowRight size={18} />
+                      </>
+                    )}
                   </Button>
                 </form>
               </Form>
