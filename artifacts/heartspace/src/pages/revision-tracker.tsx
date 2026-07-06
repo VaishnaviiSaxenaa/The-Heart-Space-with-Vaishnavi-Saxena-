@@ -194,7 +194,13 @@ export default function RevisionTracker() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const userId = viewAsId ?? rawUserId;
   const isViewMode = !!viewAsId;
-  const examType = (user as any)?.examType ?? "JAM";
+  const [viewedExamType, setViewedExamType] = useState<string | null>(null);
+  useEffect(() => {
+    if (!viewAsId) return;
+    supabase.from("profiles").select("exam_type").eq("id", viewAsId).single()
+      .then(({ data }) => setViewedExamType(data?.exam_type ?? null));
+  }, [viewAsId]);
+  const examType = (isViewMode ? viewedExamType : (user as any)?.exam_type) ?? "JAM";
   const subjects =
     examType === "NET_GATE" ? [...JAM_SUBJECTS, ...NET_EXTRA] : JAM_SUBJECTS;
 
