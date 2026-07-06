@@ -105,7 +105,7 @@ function PendingScreen() {
         <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2D2A25", marginBottom: "0.5rem" }}>Account Pending Approval</h1>
         <p style={{ color: "#7A7267", lineHeight: 1.6, marginBottom: "1.5rem" }}>
-          Your account is awaiting approval. Please contact Vaishnavi Ma'am to activate your subscription.
+          Your account is awaiting approval. Please wait a while for your subscription to be activated. If it isn't activated soon, feel free to contact Vaishnavi Ma'am.
         </p>
         <a href="https://wa.me/919336019395?text=Hello%20Ma'am%20I%20want%20my%20subscription%20activated." style={{ display: "inline-block", background: "#6B568F", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
           Contact Vaishnavi Ma'am
