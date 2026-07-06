@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
+import logoImg from "../assets/logo.png";
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#3D3530";
-const GOLD = "#E6A756";
+const GOLD = "#8B7FC7";
 const SIDEBAR = "#2D2A25";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
@@ -160,22 +161,7 @@ function HeartLogo() {
 function BrandHeader() {
   return (
     <div className="text-center mb-10">
-      <div className="flex items-center justify-center gap-3 mb-2">
-        <HeartLogo />
-        <h1
-          className="text-5xl font-serif font-bold tracking-tight"
-          style={{ color: SIDEBAR }}
-        >
-          HeartSpace
-        </h1>
-      </div>
-      <p className="font-serif italic" style={{ color: GOLD }}>
-        with Vaishnavi Saxena
-      </p>
-      <div
-        className="mt-3 mx-auto w-12 h-px rounded-full"
-        style={{ background: GOLD }}
-      />
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 220, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }
@@ -299,7 +285,7 @@ function ForgotPasswordView({ onBack }: { onBack: () => void }) {
               disabled={sending}
               className="w-full h-12 rounded-xl font-semibold text-base transition-all duration-200"
               style={{
-                background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+                background: `linear-gradient(135deg, #6B568F 0%, ${GOLD} 100%)`,
                 color: CREAM,
                 border: "none",
                 boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
@@ -593,7 +579,7 @@ export default function Login() {
                     disabled={isPending}
                     className="w-full h-12 rounded-xl font-semibold text-base transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                     style={{
-                      background: `linear-gradient(135deg, #C8922A 0%, ${GOLD} 100%)`,
+                      background: `linear-gradient(135deg, #6B568F 0%, ${GOLD} 100%)`,
                       color: CREAM,
                       border: "none",
                       boxShadow: "0 4px 16px rgba(230,167,86,0.4)",
@@ -616,28 +602,7 @@ export default function Login() {
               </p>
             </div>
 
-            <div
-              className="mt-4 px-4 py-3 rounded-2xl text-[11px] leading-relaxed"
-              style={{
-                background: "rgba(230,167,86,.12)",
-                border: "1px solid rgba(230,167,86,.25)",
-                color: SIDEBAR,
-              }}
-            >
-              <p className="font-semibold mb-1.5">
-                Demo accounts — password:{" "}
-                <code className="font-mono">heartspace123</code>
-              </p>
-              <div
-                className="grid grid-cols-1 gap-0.5"
-                style={{ color: MUTED }}
-              >
-                <span>vaishnavi@heartspace.com → Counsellor</span>
-                <span>prep@heartspace.com → Apex+ student</span>
-                <span>counseling@heartspace.com → HeartSpace client</span>
-                <span>academy@heartspace.com → Zenith student</span>
-              </div>
-            </div>
+
           </>
         )}
 
