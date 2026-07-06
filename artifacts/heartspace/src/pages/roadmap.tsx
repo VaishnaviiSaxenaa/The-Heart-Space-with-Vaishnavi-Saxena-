@@ -3191,7 +3191,11 @@ function LiveScheduleTab({
   const [simForm, setSimForm] = useState({ label: "", startDate: "", endDate: "", subjectIds: [] as string[], hoursPerSubject: {} as Record<string, number> });
   /* Live loads — always fresh */
   const [topicSpeed, setTopicSpeed] = useState<TopicSpeedMap>(() => loadTopicSpeed(effectiveUserId));
-  const baseWeeksOverride = loadBaseWeeks(effectiveUserId);
+  const [baseWeeksOverride, setBaseWeeksOverride] = useState<BaseWeeksMap>(() => loadBaseWeeks(effectiveUserId));
+  useEffect(() => {
+    supabase.from("base_weeks").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => { if (sd?.data) setBaseWeeksOverride(sd.data as BaseWeeksMap); });
+  }, [effectiveUserId]);
   const practiceProgress = loadPracticeProgress(effectiveUserId);
   const rawSubjectsList = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const defaultOrder = rawSubjectsList.map((s) => s.id);
@@ -3205,6 +3209,18 @@ function LiveScheduleTab({
   const [subjectOrder, setSubjectOrderState] = useState<string[]>(() =>
     loadSubjectOrder(effectiveUserId, defaultOrder),
   );
+  useEffect(() => {
+    supabase.from("subject_order").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => { if (sd?.data) setSubjectOrderState(sd.data as string[]); });
+  }, [effectiveUserId]);
+  useEffect(() => {
+    supabase.from("topic_speed").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => { if (sd?.data) setTopicSpeed(sd.data as TopicSpeedMap); });
+  }, [effectiveUserId]);
+  useEffect(() => {
+    supabase.from("study_periods").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => { if (sd?.data) setSimSlots(sd.data as StudyPeriod[]); });
+  }, [effectiveUserId]);
   const [parallelCfg, setParallelCfgState] = useState<ParallelConfig>(() =>
     loadParallelConfig(effectiveUserId),
   );
@@ -3390,6 +3406,7 @@ function LiveScheduleTab({
   function updateBaseWeeks(subjectId: string, weeks: number) {
     const next = { ...baseWeeksOverride, [subjectId]: Math.max(0.5, weeks) };
     saveBaseWeeks(effectiveUserId, next);
+    setBaseWeeksOverride(next);
     onSave(
       generateSmartSchedule(
         examType,
