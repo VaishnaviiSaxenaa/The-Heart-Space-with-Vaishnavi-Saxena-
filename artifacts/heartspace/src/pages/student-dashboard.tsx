@@ -2,6 +2,7 @@ import { useState, useMemo, Component, ReactNode, useEffect, useRef } from "reac
 import { useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
+import { JAM_SUBJECTS, NET_EXTRA } from "./note-tracker";
 import {
   useGetDashboardSummary,
   useListMoods,
@@ -439,6 +440,17 @@ function WeeklyRhythmCard({ uid }: { uid: string }) {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
+  const effectiveUserId = viewAsId ?? String(user?.id ?? "");
+  const [notesState, setNotesState] = useState<Array<{topic_key:string;subject:string;topic:string;done:boolean}>>([]);
+  const [noteSubjectTotalsState, setNoteSubjectTotalsState] = useState<Array<{name:string,total:number}>>([]);
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    supabase.from("note_logs").select("*").eq("student_id", effectiveUserId)
+      .then(({ data }) => {
+        if (data) setNotesState(data as any);
+      });
+  }, [effectiveUserId]);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -817,8 +829,7 @@ export default function StudentDashboard() {
               const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}");
               const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
               const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
-              const notesRaw = localStorage.getItem(`hs_note_logs_${uid}`);
-              const notes: Array<{topic_key:string;subject:string;topic:string;done:boolean}> = notesRaw ? JSON.parse(notesRaw) : [];
+              const notes = notesState;
 
               const sumCal = (cal: any) => {
                 const hrs: Record<string,number> = {};
@@ -838,8 +849,9 @@ export default function StudentDashboard() {
               const covRev = dashRevisionSubjects.reduce((a,s) => a + (revHrs[s.id] ?? 0), 0);
               const totalPrac = dashPracticeSubjects.reduce((a,s) => a + s.totalHours, 0);
               const covPrac = dashPracticeSubjects.reduce((a,s) => a + (pracHrs[s.id] ?? 0), 0);
-              const subjectTotalsRaw2 = localStorage.getItem(`hs_note_subject_totals_${uid}`);
-              const subjectTotals2: Array<{name:string,total:number}> = subjectTotalsRaw2 ? JSON.parse(subjectTotalsRaw2) : [];
+              const examTypeLocal = (user as any)?.exam_type ?? "JAM";
+              const subjectsLocal = examTypeLocal === "NET_GATE" ? [...JAM_SUBJECTS, ...NET_EXTRA] : JAM_SUBJECTS;
+              const subjectTotals2 = subjectsLocal.map((s: any) => ({ name: s.name, total: s.topics.length }));
               const totalNotes = subjectTotals2.reduce((a,s) => a + s.total, 0);
               const covNotes = notes.filter((n: any) => n.done).length;
 
@@ -895,8 +907,7 @@ export default function StudentDashboard() {
                   ))}
                   {/* Notes topic-wise */}
                   {(() => {
-                    const subjectTotalsRaw = localStorage.getItem(`hs_note_subject_totals_${uid}`);
-                    const subjectTotals: Array<{name:string,total:number}> = subjectTotalsRaw ? JSON.parse(subjectTotalsRaw) : [];
+                    const subjectTotals = subjectTotals2;
                     if (subjectTotals.length === 0) return null;
                     const bySubject: Record<string, {done: number, total: number}> = {};
                     subjectTotals.forEach(s => { bySubject[s.name] = { done: 0, total: s.total }; });

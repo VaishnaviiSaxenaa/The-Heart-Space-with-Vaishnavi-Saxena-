@@ -19,7 +19,7 @@ const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
 const OLIVE = "#6E8B6B";
 
-const JAM_SUBJECTS = [
+export const JAM_SUBJECTS = [
   {
     key: "linear_algebra",
     name: "Linear Algebra",
@@ -111,7 +111,7 @@ const JAM_SUBJECTS = [
   },
 ];
 
-const NET_EXTRA = [
+export const NET_EXTRA = [
   {
     key: "topology",
     name: "Topology",
