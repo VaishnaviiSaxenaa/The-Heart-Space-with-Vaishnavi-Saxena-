@@ -488,7 +488,7 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-start pt-8 p-4 relative overflow-hidden"
       style={bgStyle}
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
