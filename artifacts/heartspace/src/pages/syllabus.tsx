@@ -1104,7 +1104,13 @@ export default function Syllabus() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? userId;
   const isViewMode = !!viewAsId;
-  const examType = (user as any)?.exam_type as string | null;
+  const [viewedExamType, setViewedExamType] = useState<string | null>(null);
+  useEffect(() => {
+    if (!viewAsId) return;
+    supabase.from("profiles").select("exam_type").eq("id", viewAsId).single()
+      .then(({ data }) => setViewedExamType(data?.exam_type ?? null));
+  }, [viewAsId]);
+  const examType = isViewMode ? viewedExamType : ((user as any)?.exam_type as string | null);
 
   // Load calendar hours per subject
   const calendarHours = (() => {
