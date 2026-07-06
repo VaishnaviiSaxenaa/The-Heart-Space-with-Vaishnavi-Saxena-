@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 import logoImg from "../assets/logo-transparent.png";
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#3D3530";
 const GOLD = "#8B7FC7";
@@ -233,6 +234,7 @@ function DetailsForm({
   const { login } = useAuth();
   const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const service = SERVICES.find((s) => s.key === selectedKey)!;
 
@@ -431,29 +433,45 @@ function DetailsForm({
                           : "Password"}
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        type={
-                          name === "password"
-                            ? "password"
-                            : name === "email"
-                              ? "email"
-                              : "text"
-                        }
-                        placeholder={
-                          name === "fullName"
-                            ? "Your full name"
-                            : name === "email"
-                              ? "hello@example.com"
-                              : "Min. 8 characters"
-                        }
-                        {...field}
-                        className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
-                        style={{
-                          background: CREAM,
-                          borderColor: BORDER,
-                          color: CHARCOAL,
-                        }}
-                      />
+                      <div style={{ position: "relative" }}>
+                        <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: GOLD, pointerEvents: "none" }}>
+                          {name === "fullName" ? <User size={18} /> : name === "email" ? <Mail size={18} /> : <Lock size={18} />}
+                        </div>
+                        <Input
+                          type={
+                            name === "password"
+                              ? (showPassword ? "text" : "password")
+                              : name === "email"
+                                ? "email"
+                                : "text"
+                          }
+                          placeholder={
+                            name === "fullName"
+                              ? "Your full name"
+                              : name === "email"
+                                ? "hello@example.com"
+                                : "Min. 8 characters"
+                          }
+                          {...field}
+                          className="h-11 rounded-xl border-2 transition-all focus-visible:ring-0"
+                          style={{
+                            background: CREAM,
+                            borderColor: BORDER,
+                            color: CHARCOAL,
+                            paddingLeft: 40,
+                            paddingRight: name === "password" ? 40 : undefined,
+                          }}
+                        />
+                        {name === "password" && (
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((p) => !p)}
+                            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: MUTED, background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        )}
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -470,9 +488,18 @@ function DetailsForm({
                 color: CREAM,
                 border: "none",
                 boxShadow: `0 4px 16px ${service.color}40`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
               }}
             >
-              {isPending ? "Creating account…" : `Join ${service.name}`}
+              {isPending ? "Creating account…" : (
+                <>
+                  {`Join ${service.name}`}
+                  <ArrowRight size={18} />
+                </>
+              )}
             </Button>
 
             <p className="text-center text-sm pt-1" style={{ color: MUTED }}>
@@ -506,7 +533,7 @@ export default function Signup() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-start pt-8 p-6 relative overflow-hidden"
       style={bgStyle}
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
