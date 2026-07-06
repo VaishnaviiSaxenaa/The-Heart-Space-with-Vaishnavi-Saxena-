@@ -22,9 +22,10 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 
+import logoImg from "../assets/logo.png";
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#3D3530";
-const GOLD = "#E6A756";
+const GOLD = "#8B7FC7";
 const SIDEBAR = "#2D2A25";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
@@ -104,58 +105,7 @@ const SERVICES: Service[] = [
 function BrandHeader() {
   return (
     <div className="text-center mb-8">
-      <div className="flex items-center justify-center gap-3 mb-2">
-        <svg width="28" height="26" viewBox="0 0 22 20" fill="none">
-          <path
-            d="M11 18.5C11 18.5 1.5 12.5 1.5 6.5C1.5 4.01 3.51 2 6 2C8 2 9.75 3.1 11 4.75C12.25 3.1 14 2 16 2C18.49 2 20.5 4.01 20.5 6.5C20.5 12.5 11 18.5 11 18.5Z"
-            stroke={GOLD}
-            strokeWidth="1.5"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <line
-            x1="8"
-            y1="7"
-            x2="6"
-            y2="4"
-            stroke={GOLD}
-            strokeWidth="1"
-            strokeLinecap="round"
-          />
-          <line
-            x1="11"
-            y1="5.5"
-            x2="11"
-            y2="2"
-            stroke={GOLD}
-            strokeWidth="1"
-            strokeLinecap="round"
-          />
-          <line
-            x1="14"
-            y1="7"
-            x2="16"
-            y2="4"
-            stroke={GOLD}
-            strokeWidth="1"
-            strokeLinecap="round"
-          />
-        </svg>
-        <h1
-          className="text-5xl font-serif font-bold tracking-tight"
-          style={{ color: SIDEBAR }}
-        >
-          HeartSpace
-        </h1>
-      </div>
-      <p className="font-serif italic" style={{ color: GOLD }}>
-        with Vaishnavi Saxena
-      </p>
-      <div
-        className="mt-3 mx-auto w-12 h-px rounded-full"
-        style={{ background: GOLD }}
-      />
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 340, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }
@@ -410,6 +360,21 @@ function DetailsForm({
             "0 20px 60px rgba(61,53,48,.14), 0 6px 16px rgba(61,53,48,.08)",
         }}
       >
+        <div className="flex mb-6" style={{ borderBottom: `1px solid ${BORDER}` }}>
+          <a
+            href="/"
+            className="flex-1 text-center pb-3 font-semibold text-sm cursor-pointer"
+            style={{ color: MUTED }}
+          >
+            Sign In
+          </a>
+          <div
+            className="flex-1 text-center pb-3 font-semibold text-sm cursor-pointer"
+            style={{ color: GOLD, borderBottom: `2px solid ${GOLD}` }}
+          >
+            Create Account
+          </div>
+        </div>
         {/* Selected service badge */}
         <div
           className="flex items-center gap-2 mb-5 px-3 py-2 rounded-xl"

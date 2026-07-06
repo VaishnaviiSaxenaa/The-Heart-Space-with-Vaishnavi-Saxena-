@@ -512,6 +512,21 @@ export default function Login() {
         ) : (
           <>
             <div className="rounded-2xl p-8" style={cardStyle}>
+              <div className="flex mb-6" style={{ borderBottom: `1px solid ${BORDER}` }}>
+                <div
+                  className="flex-1 text-center pb-3 font-semibold text-sm cursor-pointer"
+                  style={{ color: GOLD, borderBottom: `2px solid ${GOLD}` }}
+                >
+                  Sign In
+                </div>
+                <a
+                  href="/signup"
+                  className="flex-1 text-center pb-3 font-semibold text-sm cursor-pointer"
+                  style={{ color: MUTED }}
+                >
+                  Create Account
+                </a>
+              </div>
               <h2
                 className="font-serif text-xl font-bold mb-1"
                 style={{ color: SIDEBAR }}
