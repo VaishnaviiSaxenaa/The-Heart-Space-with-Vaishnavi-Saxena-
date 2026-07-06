@@ -274,12 +274,7 @@ export default function NoteTracker() {
 
   return (
     <div style={{ background: CREAM, minHeight: "100vh", padding: "2rem" }}>
-      {isViewMode && (
-        <div style={{ maxWidth: 760, margin: "0 auto 1rem", background: "#FFF8DC", border: "1px solid #E6D28A", borderRadius: 12, padding: "0.6rem 1rem", fontSize: "0.8rem", color: "#8A6D1D", fontWeight: 600 }}>
-          👁️ View-only mode — you're viewing this student's Note Tracker
-        </div>
-      )}
-      <div style={{ maxWidth: 760, margin: "0 auto", pointerEvents: isViewMode ? "none" : "auto", opacity: isViewMode ? 0.85 : 1 }}>
+      <div style={{ maxWidth: 760, margin: "0 auto" }}>
         {/* Header */}
         <div style={{ marginBottom: "1.5rem" }}>
           <h1

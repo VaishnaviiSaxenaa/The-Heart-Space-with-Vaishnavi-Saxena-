@@ -280,7 +280,6 @@ export default function MySessions() {
                       📝 {s.note}
                     </div>
                   )}
-                  {!isViewMode && (
                   <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
                     {s.student_response === "accepted" ? (
                       <button style={{ background: "#E8F5E9", color: "#2E7D32", border: "1px solid #A5D6A7", borderRadius: 8, padding: "0.35rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "default" }}>
@@ -297,8 +296,7 @@ export default function MySessions() {
                       Cancel session
                     </button>
                   </div>
-                  )}
-                  {!isViewMode && cancellingId === s.id ? (
+                  {cancellingId === s.id ? (
                     <div
                       style={{
                         background: "#FFF8F8",
@@ -408,7 +406,6 @@ export default function MySessions() {
             Write what you'd like to talk about in your next session. Vaishnavi
             Ma'am can see all your notes.
           </p>
-          {!isViewMode && (
           <>
           <textarea
             value={newNote}
@@ -452,7 +449,6 @@ export default function MySessions() {
             {saving ? "Saving..." : "Add Note"}
           </button>
           </>
-          )}
 
           {notes.length > 0 && (
             <div style={{ marginTop: "1.25rem" }}>

@@ -483,7 +483,7 @@ function SagarSessionSection({ userId, isViewMode = false }: { userId: string; i
         <div className="flex items-center gap-2">
           <h1 className="text-3xl font-serif font-bold" style={{ color: CHARCOAL }}>Sessions with Sagar Sir</h1>
         </div>
-        {!showForm && !isViewMode && (
+        {!showForm && (
           <button
             onClick={() => setShowForm(true)}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold"
