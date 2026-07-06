@@ -161,7 +161,7 @@ function HeartLogo() {
 function BrandHeader() {
   return (
     <div className="text-center mb-10">
-      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 220, height: "auto", margin: "0 auto" }} />
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 340, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }
