@@ -92,8 +92,8 @@ const SERVICES: Service[] = [
     key: "counseling_client",
     name: "HeartSpace",
     emoji: "🌿",
-    color: "#8B9574",
-    tagBg: "rgba(139,149,116,0.12)",
+    color: "#D4A5A5",
+    tagBg: "rgba(212,165,165,0.15)",
     tagline: "Personal counselling + emotional support",
     bullets: [
       "Dedicated counsellor sessions",
@@ -107,7 +107,7 @@ const SERVICES: Service[] = [
 /* ── Brand header ──────────────────────────────────────────── */
 function BrandHeader() {
   return (
-    <div className="text-center mb-8">
+    <div className="text-center mb-2">
       <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 260, height: "auto", margin: "0 auto" }} />
     </div>
   );
