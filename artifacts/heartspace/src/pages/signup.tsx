@@ -108,7 +108,7 @@ const SERVICES: Service[] = [
 function BrandHeader() {
   return (
     <div className="text-center mb-2">
-      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 300, height: "auto", margin: "0 auto" }} />
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 190, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }
