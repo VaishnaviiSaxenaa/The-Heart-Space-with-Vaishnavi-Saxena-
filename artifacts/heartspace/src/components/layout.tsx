@@ -342,7 +342,7 @@ export function Layout({ children }: { children: ReactNode }) {
             className="font-serif font-bold text-lg"
             style={{ color: GOLD }}
           >
-            HeartSpace
+            PrepPilot
           </span>
           <div className="w-5" />
         </header>
@@ -353,7 +353,7 @@ export function Layout({ children }: { children: ReactNode }) {
           className="px-8 py-5 text-xs text-center"
           style={{ color: MUTED, borderTop: `1px solid ${BORDER}` }}
         >
-          HeartSpace · <span style={{ color: GOLD }}>by Vaishnavi Saxena</span>{" "}
+          PrepPilot · <span style={{ color: GOLD }}>by Vaishnavi Saxena</span>{" "}
           · {new Date().getFullYear()}
         </footer>
       </div>
