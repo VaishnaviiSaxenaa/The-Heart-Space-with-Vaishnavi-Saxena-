@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { loadDailyAll } from "./daily-tracker";
 import { SYLLABUS, loadSyllabusProgress } from "./syllabus";
@@ -119,9 +120,17 @@ export default function PerformanceCharts() {
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0); // 0 = current, -1 = prev, etc.
 
-  const daily = loadDailyAll(uid);
-  const syllabus = loadSyllabusProgress(uid);
-  const practice = loadPractice(uid);
+  const [daily, setDaily] = useState(() => loadDailyAll(uid));
+  const [syllabus, setSyllabus] = useState(() => loadSyllabusProgress(uid));
+  const [practice, setPractice] = useState<Record<string, unknown>>(() => loadPractice(uid));
+  useEffect(() => {
+    supabase.from("daily_tracker").select("data").eq("user_id", uid).single()
+      .then(({ data: sd }) => { if (sd?.data) setDaily(sd.data as any); });
+    supabase.from("syllabus_progress").select("data").eq("user_id", uid).single()
+      .then(({ data: sd }) => { if (sd?.data) setSyllabus(sd.data as any); });
+    supabase.from("practice_progress").select("data").eq("user_id", uid).single()
+      .then(({ data: sd }) => { if (sd?.data) setPractice(sd.data as any); });
+  }, [uid]);
 
   const range = viewMode === "week" ? 7 : 30;
   const allDates = Object.keys(daily).sort();
