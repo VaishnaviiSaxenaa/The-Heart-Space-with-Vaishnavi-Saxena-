@@ -145,6 +145,28 @@ function loadProfile(userId: string): DailyProfile {
 
 function saveProfile(userId: string, profile: DailyProfile) {
   localStorage.setItem(profileKey(userId), JSON.stringify(profile));
+  if (!userId) return;
+  supabase
+    .from("daily_profile")
+    .upsert(
+      { user_id: userId, data: profile, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    )
+    .then(() => {})
+    .catch(() => {});
+}
+async function loadProfileFromDB(userId: string): Promise<DailyProfile | null> {
+  try {
+    const { data, error } = await supabase
+      .from("daily_profile")
+      .select("data")
+      .eq("user_id", userId)
+      .single();
+    if (error || !data) return null;
+    return data.data as DailyProfile;
+  } catch {
+    return null;
+  }
 }
 
 export function loadDailyAll(userId: string): Record<string, DailyEntry> {
@@ -776,6 +798,15 @@ export default function DailyTracker() {
   const today = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
   const [selectedDate, setSelectedDate] = useState(today);
   const [profile, setProfile] = useState<DailyProfile>(() => loadProfile(effectiveUserId));
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    loadProfileFromDB(effectiveUserId).then((remote) => {
+      if (remote) {
+        try { localStorage.setItem(`hs_daily_profile_${effectiveUserId}`, JSON.stringify(remote)); } catch {}
+        setProfile(remote);
+      }
+    });
+  }, [effectiveUserId]);
 
   const updateProfile = (patch: Partial<DailyProfile>) => {
     const next = { ...profile, ...patch };
