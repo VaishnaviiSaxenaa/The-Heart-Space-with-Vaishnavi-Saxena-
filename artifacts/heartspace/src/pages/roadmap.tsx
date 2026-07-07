@@ -4716,16 +4716,20 @@ function RoadmapView({
       )}
 
       {/* SCHEDULE TAB — live, auto-updates */}
-      {activeTab === "calendar" && (
+      {activeTab === "calendar" && (() => {
+        const debugUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })();
+        console.log("[UID DEBUG] viewAsId:", viewAsId, "userId:", userId, "effectiveUserId:", effectiveUserId, "debugUid passed to wrapper:", debugUid);
+        return (
         <CalendarTabWrapper
           examType={rm.examType}
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
-          effectiveUserId={effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })()}
+          effectiveUserId={debugUid}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
         />
-      )}
+        );
+      })()}
 
       {activeTab === "schedule" && (
         <>
