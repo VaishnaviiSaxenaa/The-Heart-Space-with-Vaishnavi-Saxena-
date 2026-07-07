@@ -765,7 +765,13 @@ export default function DailyTracker() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? userId;
   const isViewMode = !!viewAsId;
-  const space = isViewMode ? "zenith" : ((user as any)?.space as string | null);
+  const [viewedSpace, setViewedSpace] = useState<string | null>(null);
+  useEffect(() => {
+    if (!viewAsId) return;
+    supabase.from("profiles").select("plan").eq("id", viewAsId).single()
+      .then(({ data }) => setViewedSpace(data?.plan ?? null));
+  }, [viewAsId]);
+  const space = isViewMode ? viewedSpace : ((user as any)?.space as string | null);
   const todayLocal = new Date();
   const today = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
   const [selectedDate, setSelectedDate] = useState(today);
@@ -785,12 +791,11 @@ export default function DailyTracker() {
     loadDailyAll(effectiveUserId),
   );
   useEffect(() => {
-    if (!isViewMode) return;
     supabase.from("daily_tracker").select("data").eq("user_id", effectiveUserId).single()
       .then(({ data: sd }) => {
         if (sd?.data) setAllEntries(sd.data as Record<string, DailyEntry>);
       });
-  }, [effectiveUserId, isViewMode]);
+  }, [effectiveUserId]);
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState<DailyEntry>(
     () => loadDailyAll(effectiveUserId)[selectedDate] ?? blank(selectedDate),
