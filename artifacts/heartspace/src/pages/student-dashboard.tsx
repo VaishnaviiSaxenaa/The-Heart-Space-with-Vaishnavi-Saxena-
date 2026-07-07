@@ -780,11 +780,11 @@ export default function StudentDashboard() {
                   <p style={{ fontSize: "0.65rem", fontWeight: 700, color: MUTED, margin: "0 0 0.35rem", textTransform: "uppercase" }}>{label}</p>
                   <div style={{ display: "flex", gap: "0.3rem" }}>
                     {[["gentle","🐢","+40%"],["steady","🌿","+30%"],["standard","⚖️","Std"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]].map(([k, e, l]) => (
-                      <button key={k} onClick={() => {
+                      <button key={k} onClick={async () => {
                         const next: Record<string,string> = {};
                         dashRoadmapSubjects.forEach(s => { next[s.id] = k; });
                         localStorage.setItem(key, JSON.stringify(next));
-                        saveFn(_uid, next);
+                        try { await saveFn(_uid, next); } catch {}
                         window.location.reload();
                       }} style={{
                         flex: 1, padding: "0.25rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
