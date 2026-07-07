@@ -14,7 +14,9 @@ import {
 } from "date-fns";
 import {
   loadGenericCalendar,
+  loadGenericCalendarFromDB,
   saveGenericCalendar,
+  calendarKey,
   type GenericSubjectDef,
   type CalendarData,
   type DayEntry,
@@ -93,6 +95,23 @@ export default function DashboardCalendar({
     setRevisionCal(loadGenericCalendar("revision", uid));
     setPracticeCal(loadGenericCalendar("practice", uid));
     setLoaded(true);
+    let cancelled = false;
+    (async () => {
+      const [rev, prac] = await Promise.all([
+        loadGenericCalendarFromDB("revision", uid),
+        loadGenericCalendarFromDB("practice", uid),
+      ]);
+      if (cancelled) return;
+      if (rev && Object.keys(rev).length > 0) {
+        setRevisionCal(rev);
+        try { localStorage.setItem(calendarKey("revision", uid), JSON.stringify(rev)); } catch {}
+      }
+      if (prac && Object.keys(prac).length > 0) {
+        setPracticeCal(prac);
+        try { localStorage.setItem(calendarKey("practice", uid), JSON.stringify(prac)); } catch {}
+      }
+    })();
+    return () => { cancelled = true; };
   }, [uid]);
 
   // Load today's plan tasks from localStorage

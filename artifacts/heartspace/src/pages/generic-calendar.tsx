@@ -97,6 +97,23 @@ export function saveGenericCalendar(
     .then(() => {})
     .catch(() => {});
 }
+export async function loadGenericCalendarFromDB(
+  namespace: string,
+  uid: string,
+): Promise<CalendarData | null> {
+  try {
+    const { data, error } = await supabase
+      .from("generic_calendars")
+      .select("data")
+      .eq("user_id", uid)
+      .eq("namespace", namespace)
+      .single();
+    if (error || !data) return null;
+    return data.data as CalendarData;
+  } catch {
+    return null;
+  }
+}
 
 export function getConsumedHours(
   data: CalendarData,
@@ -298,26 +315,38 @@ export default function GenericCalendar({
 
   useEffect(() => {
     if (!uid) return;
-    const existing = loadGenericCalendar(namespace, uid);
-    if (Object.keys(existing).length > 0) {
-      setCalendar(existing);
-    } else {
-      const remainingHoursBySubject: Record<string, number> = {};
-      subjects.forEach((s) => {
-        remainingHoursBySubject[s.id] = s.totalHours;
-      });
-      const generated = autoGenerateGeneric(
-        subjects,
-        remainingHoursBySubject,
-        startDate,
-        hoursPerDay,
-        selectedDays,
-        unavailablePeriods,
-      );
-      setCalendar(generated);
-      saveGenericCalendar(namespace, uid, generated);
-    }
-    setLoaded(true);
+    let cancelled = false;
+    (async () => {
+      const remote = await loadGenericCalendarFromDB(namespace, uid);
+      if (cancelled) return;
+      if (remote && Object.keys(remote).length > 0) {
+        setCalendar(remote);
+        try { localStorage.setItem(calendarKey(namespace, uid), JSON.stringify(remote)); } catch {}
+        setLoaded(true);
+        return;
+      }
+      const existing = loadGenericCalendar(namespace, uid);
+      if (Object.keys(existing).length > 0) {
+        setCalendar(existing);
+      } else {
+        const remainingHoursBySubject: Record<string, number> = {};
+        subjects.forEach((s) => {
+          remainingHoursBySubject[s.id] = s.totalHours;
+        });
+        const generated = autoGenerateGeneric(
+          subjects,
+          remainingHoursBySubject,
+          startDate,
+          hoursPerDay,
+          selectedDays,
+          unavailablePeriods,
+        );
+        setCalendar(generated);
+        saveGenericCalendar(namespace, uid, generated);
+      }
+      setLoaded(true);
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, namespace]);
 

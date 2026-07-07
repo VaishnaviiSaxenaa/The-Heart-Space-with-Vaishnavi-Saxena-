@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { loadRevisionSpeedFromDB, saveRevisionSpeedToDB } from "../lib/supabase-sync";
 import { format, differenceInDays } from "date-fns";
 import { ChevronDown, ChevronUp, RotateCcw, Send } from "lucide-react";
-import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
+import GenericCalendar, { GenericSubjectDef, loadGenericCalendarFromDB, calendarKey } from "./generic-calendar";
 
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
@@ -218,6 +218,16 @@ export default function RevisionTracker() {
       if (d) {
         try { localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(d)); } catch {}
         setRevSpeedMap(d as Record<string, string>);
+      }
+    });
+  }, [_effectiveUid]);
+  const [coverageTick, setCoverageTick] = useState(0);
+  useEffect(() => {
+    if (!_effectiveUid) return;
+    loadGenericCalendarFromDB("revision", _effectiveUid).then((d) => {
+      if (d && Object.keys(d).length > 0) {
+        try { localStorage.setItem(calendarKey("revision", _effectiveUid), JSON.stringify(d)); } catch {}
+        setCoverageTick((t) => t + 1);
       }
     });
   }, [_effectiveUid]);
