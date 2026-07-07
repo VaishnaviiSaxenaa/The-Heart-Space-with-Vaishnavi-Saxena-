@@ -4718,7 +4718,7 @@ function RoadmapView({
       {/* SCHEDULE TAB — live, auto-updates */}
       {activeTab === "calendar" && (() => {
         const debugUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })();
-        console.log("[UID DEBUG] viewAsId:", viewAsId, "userId:", userId, "effectiveUserId:", effectiveUserId, "debugUid passed to wrapper:", debugUid);
+        console.log("[UID DEBUG] effectiveUserId prop:", effectiveUserId, "debugUid passed to wrapper:", debugUid);
         return (
         <CalendarTabWrapper
           examType={rm.examType}
