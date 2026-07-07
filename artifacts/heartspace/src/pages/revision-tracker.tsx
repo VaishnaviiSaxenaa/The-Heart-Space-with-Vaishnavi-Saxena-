@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
-import { loadRevisionSpeedFromDB, saveRevisionSpeedToDB } from "../lib/supabase-sync";
+import { loadRevisionSpeedFromDB, saveRevisionSpeedToDB, loadTopicSpeedFromDB } from "../lib/supabase-sync";
 import { format, differenceInDays } from "date-fns";
 import { ChevronDown, ChevronUp, RotateCcw, Send } from "lucide-react";
 import GenericCalendar, { GenericSubjectDef, loadGenericCalendarFromDB, calendarKey } from "./generic-calendar";
@@ -218,6 +218,15 @@ export default function RevisionTracker() {
       if (d) {
         try { localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(d)); } catch {}
         setRevSpeedMap(d as Record<string, string>);
+      }
+    });
+  }, [_effectiveUid]);
+  useEffect(() => {
+    if (!_effectiveUid) return;
+    loadTopicSpeedFromDB(_effectiveUid).then((d) => {
+      if (d) {
+        try { localStorage.setItem(`hs_topic_speed_${_effectiveUid}`, JSON.stringify(d)); } catch {}
+        setStudySpeedMap(d as Record<string, string>);
       }
     });
   }, [_effectiveUid]);
