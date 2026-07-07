@@ -136,6 +136,19 @@ export async function saveRevisionSpeedToDB(
   return sbSet("revision_speed", userId, data);
 }
 
+/* ── Practice Speed ── */
+export async function loadPracticeSpeedFromDB(
+  userId: string,
+): Promise<unknown | null> {
+  return sbGet("practice_speed", userId);
+}
+export async function savePracticeSpeedToDB(
+  userId: string,
+  data: unknown,
+): Promise<void> {
+  return sbSet("practice_speed", userId, data);
+}
+
 /* ── Base Weeks ── */
 export async function loadBaseWeeksFromDB(
   userId: string,

@@ -26,6 +26,8 @@ import {
 import { Calendar, LeafyGreen, Plus, Trash2 } from "lucide-react";
 import { SYLLABUS, loadSyllabusProgress } from "./syllabus";
 import DashboardCalendar from "./dashboard-calendar";
+import { loadGenericCalendarFromDB, calendarKey } from "./generic-calendar";
+import { loadTopicSpeedFromDB, loadRevisionSpeedFromDB, loadPracticeSpeedFromDB } from "../lib/supabase-sync";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -452,6 +454,7 @@ export default function StudentDashboard() {
   const [notesState, setNotesState] = useState<Array<{topic_key:string;subject:string;topic:string;done:boolean}>>([]);
   const [calSyncTick, setCalSyncTick] = useState(0);
   useEffect(() => {
+    if (!effectiveUserId) return;
     supabase.from("roadmap_calendar").select("data").eq("user_id", effectiveUserId).single()
       .then(({ data: sd }) => {
         if (sd?.data) {
@@ -459,6 +462,36 @@ export default function StudentDashboard() {
           setCalSyncTick((t) => t + 1);
         }
       });
+    Promise.all([
+      loadGenericCalendarFromDB("revision", effectiveUserId),
+      loadGenericCalendarFromDB("practice", effectiveUserId),
+      loadTopicSpeedFromDB(effectiveUserId),
+      loadRevisionSpeedFromDB(effectiveUserId),
+      loadPracticeSpeedFromDB(effectiveUserId),
+    ]).then(([revCal, pracCal, studySpeed, revSpeed, pracSpeed]) => {
+      let changed = false;
+      if (revCal && Object.keys(revCal).length > 0) {
+        try { localStorage.setItem(calendarKey("revision", effectiveUserId), JSON.stringify(revCal)); } catch {}
+        changed = true;
+      }
+      if (pracCal && Object.keys(pracCal).length > 0) {
+        try { localStorage.setItem(calendarKey("practice", effectiveUserId), JSON.stringify(pracCal)); } catch {}
+        changed = true;
+      }
+      if (studySpeed) {
+        try { localStorage.setItem(`hs_topic_speed_${effectiveUserId}`, JSON.stringify(studySpeed)); } catch {}
+        changed = true;
+      }
+      if (revSpeed) {
+        try { localStorage.setItem(`hs_revision_speed_${effectiveUserId}`, JSON.stringify(revSpeed)); } catch {}
+        changed = true;
+      }
+      if (pracSpeed) {
+        try { localStorage.setItem(`hs_practice_speed_${effectiveUserId}`, JSON.stringify(pracSpeed)); } catch {}
+        changed = true;
+      }
+      if (changed) setCalSyncTick((t) => t + 1);
+    });
   }, [effectiveUserId]);
   const [noteSubjectTotalsState, setNoteSubjectTotalsState] = useState<Array<{name:string,total:number}>>([]);
   useEffect(() => {
@@ -585,7 +618,7 @@ export default function StudentDashboard() {
   ];
   const dashRoadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET_DASH : ROADMAP_SUBJECTS_JAM_DASH;
   // Load speed multipliers
-  const _uid = String((user as any)?.id ?? "");
+  const _uid = effectiveUserId;
   const _studySpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${_uid}`) ?? "{}"); } catch { return {}; } })();
   const _revSpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_revision_speed_${_uid}`) ?? "{}"); } catch { return {}; } })();
   const _pracSpeedMap = (() => { try { return JSON.parse(localStorage.getItem(`hs_practice_speed_${_uid}`) ?? "{}"); } catch { return {}; } })();
@@ -775,7 +808,7 @@ export default function StudentDashboard() {
 
       {/* ── Today's Plan + Next Session ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <TodaysOverview uid={String(user?.id ?? "")} studySubjects={dashStudySubjects} revisionSubjects={dashRevisionSubjects} practiceSubjects={dashPracticeSubjects} />
+        <TodaysOverview uid={effectiveUserId} studySubjects={dashStudySubjects} revisionSubjects={dashRevisionSubjects} practiceSubjects={dashPracticeSubjects} />
         <Card className="p-6 flex flex-col">
           <SectionTitle>Upcoming Session</SectionTitle>
           {/* Reschedule popup */}
