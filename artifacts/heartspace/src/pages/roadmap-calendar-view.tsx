@@ -259,14 +259,11 @@ export default function RoadmapCalendar({
   const allSubjectIds = subjects.map((s) => s.id);
 
   useEffect(() => {
-    console.log("[CAL DEBUG] effect firing, uid:", uid, "subjects:", subjects?.length);
     try {
       if (!uid) {
-        console.log("[CAL DEBUG] no uid - skipping, loaded stays false");
         return;
       }
       const existing = loadCalendar(uid);
-      console.log("[CAL DEBUG] existing keys:", Object.keys(existing).length);
       if (Object.keys(existing).length > 0) {
         setCalendar(existing);
       } else {
@@ -280,14 +277,11 @@ export default function RoadmapCalendar({
           unavailablePeriods,
           variablePeriods,
         );
-        console.log("[CAL DEBUG] generated keys:", Object.keys(generated).length);
         setCalendar(generated);
         saveCalendarLocal(uid, generated);
       }
       setLoaded(true);
-      console.log("[CAL DEBUG] loaded = true");
     } catch (err) {
-      console.error("[CAL DEBUG] CRASH:", err);
       setLoaded(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

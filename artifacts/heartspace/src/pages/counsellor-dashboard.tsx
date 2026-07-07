@@ -74,7 +74,6 @@ const TOPIC_PREFIX_MAP: Record<string, string> = {
 };
 
 async function fetchStudentData(userId: string): Promise<StudentData> {
-  console.log("[FETCH DEBUG] fetching for userId:", userId);
   const tables = [
     "syllabus_progress",
     "practice_progress",
