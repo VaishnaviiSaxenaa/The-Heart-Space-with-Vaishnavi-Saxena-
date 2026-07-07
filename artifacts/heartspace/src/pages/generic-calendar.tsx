@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   format,
   addDays,
@@ -330,24 +330,29 @@ export default function GenericCalendar({
     persist(generated);
   }
 
+  const paceLoadedRef = useRef(false);
   useEffect(() => {
+    if (!paceLoadedRef.current) return;
     try {
       localStorage.setItem(paceKey, JSON.stringify({ hoursPerDay, daysPerWeek, selectedDays }));
     } catch {}
     saveCalendarPaceToDB(namespace, uid, { hoursPerDay, daysPerWeek, selectedDays });
   }, [hoursPerDay, daysPerWeek, selectedDays, paceKey]);
   useEffect(() => {
-    if (!uid) return;
+    if (!uid) { paceLoadedRef.current = true; return; }
     let cancelled = false;
     loadCalendarPaceFromDB(namespace, uid).then((remote) => {
-      if (cancelled || !remote) return;
-      try { localStorage.setItem(paceKey, JSON.stringify(remote)); } catch {}
-      if (typeof remote.hoursPerDay === "number") setHoursPerDay(remote.hoursPerDay);
-      if (typeof remote.daysPerWeek === "number") setDaysPerWeek(remote.daysPerWeek);
-      if (Array.isArray(remote.selectedDays) && remote.selectedDays.length > 0) {
-        setSelectedDays(remote.selectedDays);
-        setPendingDays(remote.selectedDays);
+      if (cancelled) return;
+      if (remote) {
+        try { localStorage.setItem(paceKey, JSON.stringify(remote)); } catch {}
+        if (typeof remote.hoursPerDay === "number") setHoursPerDay(remote.hoursPerDay);
+        if (typeof remote.daysPerWeek === "number") setDaysPerWeek(remote.daysPerWeek);
+        if (Array.isArray(remote.selectedDays) && remote.selectedDays.length > 0) {
+          setSelectedDays(remote.selectedDays);
+          setPendingDays(remote.selectedDays);
+        }
       }
+      paceLoadedRef.current = true;
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
