@@ -1400,10 +1400,16 @@ export default function CounsellorDashboard() {
 
   useEffect(() => {
     if (!selected) return;
+    let cancelled = false;
     setLoading(true);
     fetchStudentData(selected.id)
-      .then(setStudentData)
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!cancelled) setStudentData(data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [selected]);
 
   async function handleScheduleSave(key: string, val: unknown) {
