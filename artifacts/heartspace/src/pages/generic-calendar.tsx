@@ -88,14 +88,23 @@ export function saveGenericCalendar(
   try {
     localStorage.setItem(calendarKey(namespace, uid), JSON.stringify(data));
   } catch {}
-  supabase
-    .from("generic_calendars")
-    .upsert(
-      { user_id: uid, namespace, data, updated_at: new Date().toISOString() },
-      { onConflict: "user_id,namespace" },
-    )
-    .then(() => {})
-    .catch(() => {});
+  if (!uid) return;
+  (async () => {
+    try {
+      const { data: existing } = await supabase
+        .from("calendar_data")
+        .select("data")
+        .eq("user_id", uid)
+        .single();
+      const merged = { ...(existing?.data ?? {}), [namespace]: data };
+      await supabase
+        .from("calendar_data")
+        .upsert(
+          { user_id: uid, data: merged, updated_at: new Date().toISOString() },
+          { onConflict: "user_id" },
+        );
+    } catch {}
+  })();
 }
 export async function loadGenericCalendarFromDB(
   namespace: string,
@@ -103,13 +112,13 @@ export async function loadGenericCalendarFromDB(
 ): Promise<CalendarData | null> {
   try {
     const { data, error } = await supabase
-      .from("generic_calendars")
+      .from("calendar_data")
       .select("data")
       .eq("user_id", uid)
-      .eq("namespace", namespace)
       .single();
-    if (error || !data) return null;
-    return data.data as CalendarData;
+    if (error || !data?.data) return null;
+    const namespaced = (data.data as Record<string, CalendarData>)[namespace];
+    return namespaced ?? null;
   } catch {
     return null;
   }
