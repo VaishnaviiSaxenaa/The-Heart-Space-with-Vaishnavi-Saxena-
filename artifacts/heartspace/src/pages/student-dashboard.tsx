@@ -809,7 +809,7 @@ export default function StudentDashboard() {
 
       {/* ── Today's Plan + Next Session ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <TodaysOverview uid={effectiveUserId} studySubjects={dashStudySubjects} revisionSubjects={dashRevisionSubjects} practiceSubjects={dashPracticeSubjects} />
+        <TodaysOverview key={calSyncTick} uid={effectiveUserId} studySubjects={dashStudySubjects} revisionSubjects={dashRevisionSubjects} practiceSubjects={dashPracticeSubjects} />
         <Card className="p-6 flex flex-col">
           <SectionTitle>Upcoming Session</SectionTitle>
           {/* Reschedule popup */}
@@ -1028,7 +1028,7 @@ export default function StudentDashboard() {
       {/* ── Analytics ── */}
       <Card className="p-6">
         <SectionTitle>Your Analytics</SectionTitle>
-        <AnalyticsSection userId={effectiveUserId} />
+        <AnalyticsSection key={calSyncTick} userId={effectiveUserId} />
       </Card>
 
                 </div>
