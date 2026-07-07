@@ -443,6 +443,16 @@ export default function StudentDashboard() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const effectiveUserId = viewAsId ?? String(user?.id ?? "");
   const [notesState, setNotesState] = useState<Array<{topic_key:string;subject:string;topic:string;done:boolean}>>([]);
+  const [calSyncTick, setCalSyncTick] = useState(0);
+  useEffect(() => {
+    supabase.from("roadmap_calendar").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => {
+        if (sd?.data) {
+          try { localStorage.setItem(`hs_calendar_${effectiveUserId}`, JSON.stringify(sd.data)); } catch {}
+          setCalSyncTick((t) => t + 1);
+        }
+      });
+  }, [effectiveUserId]);
   const [noteSubjectTotalsState, setNoteSubjectTotalsState] = useState<Array<{name:string,total:number}>>([]);
   useEffect(() => {
     if (!effectiveUserId) return;
