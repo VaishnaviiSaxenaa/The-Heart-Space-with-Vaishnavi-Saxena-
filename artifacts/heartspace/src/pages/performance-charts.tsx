@@ -120,6 +120,12 @@ export default function PerformanceCharts() {
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0); // 0 = current, -1 = prev, etc.
 
+  const [examType, setExamType] = useState<string | null>((user as any)?.exam_type ?? null);
+  useEffect(() => {
+    if (!viewAsId) return;
+    supabase.from("profiles").select("exam_type").eq("id", viewAsId).single()
+      .then(({ data }) => setExamType(data?.exam_type ?? null));
+  }, [viewAsId]);
   const [daily, setDaily] = useState(() => loadDailyAll(uid));
   const [syllabus, setSyllabus] = useState(() => loadSyllabusProgress(uid));
   const [practice, setPractice] = useState<Record<string, unknown>>(() => loadPractice(uid));
@@ -177,7 +183,7 @@ export default function PerformanceCharts() {
     .filter((d) => d.mood !== null || d.stress !== null || d.sleep !== null || d.study !== null || d.physical !== null);
 
   /* ── Syllabus progress ── */
-  const syllabusStats = SYLLABUS.filter(s => !s.netOnly).map((s) => {
+  const syllabusStats = SYLLABUS.filter(s => examType === "NET_GATE" ? !s.jamOnly : !s.netOnly).map((s) => {
     const allSubtopicIds: string[] = [];
     s.topics.forEach((t) => {
       t.subtopics.forEach((st) => { allSubtopicIds.push(st.id); });
