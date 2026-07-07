@@ -114,6 +114,38 @@ export async function loadGenericCalendarFromDB(
     return null;
   }
 }
+export async function loadCalendarPaceFromDB(
+  namespace: string,
+  uid: string,
+): Promise<{ hoursPerDay: number; daysPerWeek: number; selectedDays: number[] } | null> {
+  try {
+    const { data, error } = await supabase
+      .from("calendar_pace")
+      .select("data")
+      .eq("user_id", uid)
+      .eq("namespace", namespace)
+      .single();
+    if (error || !data) return null;
+    return data.data as { hoursPerDay: number; daysPerWeek: number; selectedDays: number[] };
+  } catch {
+    return null;
+  }
+}
+export function saveCalendarPaceToDB(
+  namespace: string,
+  uid: string,
+  data: { hoursPerDay: number; daysPerWeek: number; selectedDays: number[] },
+) {
+  if (!uid) return;
+  supabase
+    .from("calendar_pace")
+    .upsert(
+      { user_id: uid, namespace, data, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,namespace" },
+    )
+    .then(() => {})
+    .catch(() => {});
+}
 
 export function getConsumedHours(
   data: CalendarData,
@@ -302,7 +334,24 @@ export default function GenericCalendar({
     try {
       localStorage.setItem(paceKey, JSON.stringify({ hoursPerDay, daysPerWeek, selectedDays }));
     } catch {}
+    saveCalendarPaceToDB(namespace, uid, { hoursPerDay, daysPerWeek, selectedDays });
   }, [hoursPerDay, daysPerWeek, selectedDays, paceKey]);
+  useEffect(() => {
+    if (!uid) return;
+    let cancelled = false;
+    loadCalendarPaceFromDB(namespace, uid).then((remote) => {
+      if (cancelled || !remote) return;
+      try { localStorage.setItem(paceKey, JSON.stringify(remote)); } catch {}
+      if (typeof remote.hoursPerDay === "number") setHoursPerDay(remote.hoursPerDay);
+      if (typeof remote.daysPerWeek === "number") setDaysPerWeek(remote.daysPerWeek);
+      if (Array.isArray(remote.selectedDays) && remote.selectedDays.length > 0) {
+        setSelectedDays(remote.selectedDays);
+        setPendingDays(remote.selectedDays);
+      }
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, namespace]);
 
   const [view, setView] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState(new Date());
