@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
+import { loadRevisionSpeedFromDB, saveRevisionSpeedToDB } from "../lib/supabase-sync";
 import { format, differenceInDays } from "date-fns";
 import { ChevronDown, ChevronUp, RotateCcw, Send } from "lucide-react";
 import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
@@ -211,6 +212,15 @@ export default function RevisionTracker() {
   const SPEED_OPTS = [["gentle","🐢","Gentle +40%"],["steady","🌿","Steady +30%"],["standard","⚖️","Standard"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;
   const [studySpeedMap, setStudySpeedMap] = useState<Record<string,string>>(() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } });
   const [revSpeedMap, setRevSpeedMap] = useState<Record<string,string>>(() => { try { return JSON.parse(localStorage.getItem(`hs_revision_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } });
+  useEffect(() => {
+    if (!_effectiveUid) return;
+    loadRevisionSpeedFromDB(_effectiveUid).then((d) => {
+      if (d) {
+        try { localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(d)); } catch {}
+        setRevSpeedMap(d as Record<string, string>);
+      }
+    });
+  }, [_effectiveUid]);
   const revisionSubjects: GenericSubjectDef[] = roadmapSubjects.map((s) => {
     const studyMult = SPEED_MULTS[studySpeedMap[s.id]] ?? 1.0;
     const revMult = SPEED_MULTS[revSpeedMap[s.id]] ?? 1.0;
@@ -388,6 +398,7 @@ export default function RevisionTracker() {
                         const next = { ...revSpeedMap, [s.id]: key };
                         setRevSpeedMap(next);
                         localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(next));
+                        saveRevisionSpeedToDB(_effectiveUid, next);
                       }}
                       style={{
                         flex: 1, padding: "0.2rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",

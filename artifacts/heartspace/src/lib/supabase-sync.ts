@@ -123,6 +123,19 @@ export async function saveStudyPeriodsToDB(
   return sbSet("study_periods", userId, data);
 }
 
+/* ── Revision Speed ── */
+export async function loadRevisionSpeedFromDB(
+  userId: string,
+): Promise<unknown | null> {
+  return sbGet("revision_speed", userId);
+}
+export async function saveRevisionSpeedToDB(
+  userId: string,
+  data: unknown,
+): Promise<void> {
+  return sbSet("revision_speed", userId, data);
+}
+
 /* ── Base Weeks ── */
 export async function loadBaseWeeksFromDB(
   userId: string,
@@ -166,6 +179,7 @@ export async function syncAllFromDB(userId: string): Promise<void> {
     { table: "subject_order", lsKey: `hs_subject_order_${userId}` },
     { table: "study_periods", lsKey: `hs_study_periods_${userId}` },
     { table: "base_weeks", lsKey: `hs_base_weeks_${userId}` },
+    { table: "revision_speed", lsKey: `hs_revision_speed_${userId}` },
   ];
 
   await Promise.all(
@@ -192,6 +206,7 @@ export async function pushAllToDB(userId: string): Promise<void> {
     { table: "subject_order", lsKey: `hs_subject_order_${userId}` },
     { table: "study_periods", lsKey: `hs_study_periods_${userId}` },
     { table: "base_weeks", lsKey: `hs_base_weeks_${userId}` },
+    { table: "revision_speed", lsKey: `hs_revision_speed_${userId}` },
   ];
 
   await Promise.all(
