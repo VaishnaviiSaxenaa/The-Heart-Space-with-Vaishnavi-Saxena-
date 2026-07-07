@@ -4716,20 +4716,16 @@ function RoadmapView({
       )}
 
       {/* SCHEDULE TAB — live, auto-updates */}
-      {activeTab === "calendar" && (() => {
-        const debugUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch{return "";} })();
-        console.log("[UID DEBUG] effectiveUserId prop:", effectiveUserId, "debugUid passed to wrapper:", debugUid);
-        return (
+      {activeTab === "calendar" && (
         <CalendarTabWrapper
           examType={rm.examType}
           startDate={rm.startDate}
           syllabusProgress={syllabusProgress}
-          effectiveUserId={debugUid}
+          effectiveUserId={effectiveUserId}
           unavailablePeriods={rm.unavailablePeriods}
           variableWeeks={rm.variableWeeks ?? []}
         />
-        );
-      })()}
+      )}
 
       {activeTab === "schedule" && (
         <>
@@ -4981,7 +4977,7 @@ export default function Roadmap() {
       <RoadmapSelector examType={examType ?? "JAM"} onSelect={handleSelect} />
     );
   return (
-    <RoadmapView roadmap={roadmap} userId={effectiveUserId} onReset={handleReset} />
+    <RoadmapView roadmap={roadmap} effectiveUserId={effectiveUserId} onReset={handleReset} />
   );
 }
 
