@@ -822,10 +822,17 @@ export default function DailyTracker() {
     loadDailyAll(effectiveUserId),
   );
   useEffect(() => {
+    if (!effectiveUserId) return;
     supabase.from("daily_tracker").select("data").eq("user_id", effectiveUserId).single()
       .then(({ data: sd }) => {
-        if (sd?.data) setAllEntries(sd.data as Record<string, DailyEntry>);
+        if (sd?.data) {
+          const remote = sd.data as Record<string, DailyEntry>;
+          try { localStorage.setItem(lsKey(effectiveUserId), JSON.stringify(remote)); } catch {}
+          setAllEntries(remote);
+          if (remote[selectedDate]) setForm(remote[selectedDate]);
+        }
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveUserId]);
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState<DailyEntry>(
