@@ -27,7 +27,7 @@ import { Calendar, LeafyGreen, Plus, Trash2 } from "lucide-react";
 import { SYLLABUS, loadSyllabusProgress } from "./syllabus";
 import DashboardCalendar from "./dashboard-calendar";
 import { loadGenericCalendarFromDB, calendarKey } from "./generic-calendar";
-import { loadTopicSpeedFromDB, loadRevisionSpeedFromDB, loadPracticeSpeedFromDB } from "../lib/supabase-sync";
+import { loadTopicSpeedFromDB, loadRevisionSpeedFromDB, loadPracticeSpeedFromDB, saveTopicSpeedToDB, saveRevisionSpeedToDB, savePracticeSpeedToDB } from "../lib/supabase-sync";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -769,10 +769,10 @@ export default function StudentDashboard() {
           {/* Speed pickers for study, revision and practice */}
           <div className="flex gap-3 mb-4 flex-wrap">
             {[
-              { label: "Study Speed", key: `hs_topic_speed_${_uid}`, color: "#2C4A73" },
-              { label: "Revision Speed", key: `hs_revision_speed_${_uid}`, color: "#E07A28" },
-              { label: "Practice Speed", key: `hs_practice_speed_${_uid}`, color: "#2E7D52" },
-            ].map(({ label, key, color }) => {
+              { label: "Study Speed", key: `hs_topic_speed_${_uid}`, color: "#2C4A73", saveFn: saveTopicSpeedToDB },
+              { label: "Revision Speed", key: `hs_revision_speed_${_uid}`, color: "#E07A28", saveFn: saveRevisionSpeedToDB },
+              { label: "Practice Speed", key: `hs_practice_speed_${_uid}`, color: "#2E7D52", saveFn: savePracticeSpeedToDB },
+            ].map(({ label, key, color, saveFn }) => {
               const speedMap = (() => { try { return JSON.parse(localStorage.getItem(key) ?? "{}"); } catch { return {}; } })();
               const current = speedMap[dashRoadmapSubjects[0]?.id] ?? "standard";
               return (
@@ -784,6 +784,7 @@ export default function StudentDashboard() {
                         const next: Record<string,string> = {};
                         dashRoadmapSubjects.forEach(s => { next[s.id] = k; });
                         localStorage.setItem(key, JSON.stringify(next));
+                        saveFn(_uid, next);
                         window.location.reload();
                       }} style={{
                         flex: 1, padding: "0.25rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
@@ -798,7 +799,7 @@ export default function StudentDashboard() {
             })}
           </div>
           <DashboardCalendar
-            uid={String(user.id)}
+            uid={effectiveUserId}
             studySubjects={dashStudySubjects}
             revisionSubjects={dashRevisionSubjects}
             practiceSubjects={dashPracticeSubjects}
