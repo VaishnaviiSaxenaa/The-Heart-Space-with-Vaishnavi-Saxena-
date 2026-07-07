@@ -3002,6 +3002,20 @@ function StudySchedulePlanner({ uid, examType }: { uid: string; examType: string
   const [pendingPlannerDays, setPendingPlannerDays] = useState<number[]>(inputs.selectedDays ?? DEFAULT_SCHEDULE_SELECTED_DAYS);
   const [plannerDayPickError, setPlannerDayPickError] = useState<string>("");
 
+  useEffect(() => {
+    supabase.from("schedule_inputs").select("data").eq("user_id", uid).single()
+      .then(({ data: sd }) => {
+        if (sd?.data) {
+          const d = sd.data as any;
+          try { localStorage.setItem(`hs_schedule_inputs_${uid}`, JSON.stringify(d)); } catch {}
+          if (d.hoursPerDay !== undefined) setHoursPerDay(d.hoursPerDay);
+          if (d.daysPerWeek !== undefined) setDaysPerWeek(d.daysPerWeek);
+          if (d.targetMonths !== undefined) setTargetMonths(d.targetMonths);
+          if (d.selectedDays !== undefined) setPendingPlannerDays(d.selectedDays);
+        }
+      });
+  }, [uid]);
+
   const syllabusProgress = loadSyllabusProgress(uid);
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
   const skipped = Object.values(syllabusPercs).filter((p) => p === 100).length;
@@ -3012,6 +3026,7 @@ function StudySchedulePlanner({ uid, examType }: { uid: string; examType: string
     try {
       localStorage.setItem(`hs_schedule_inputs_${uid}`, JSON.stringify(next));
     } catch {}
+    supabase.from("schedule_inputs").upsert({ user_id: uid, data: next }, { onConflict: "user_id" }).then(() => {});
     if (patch.hoursPerDay !== undefined) setHoursPerDay(patch.hoursPerDay);
     if (patch.daysPerWeek !== undefined) setDaysPerWeek(patch.daysPerWeek);
     if (patch.targetMonths !== undefined) setTargetMonths(patch.targetMonths);
