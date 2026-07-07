@@ -4417,8 +4417,7 @@ function RoadmapView({
   onReset: () => void;
 }) {
   const [rm, setRm] = useState(roadmap);
-  const initializedRef = useRef(false);
-  useEffect(() => { if (!initializedRef.current && roadmap) { setRm(roadmap); initializedRef.current = true; } }, [roadmap]);
+  useEffect(() => { if (roadmap) setRm(roadmap); }, [roadmap]);
   const [editMonths, setEditMonths] = useState(false);
   const [newMonths, setNewMonths] = useState(rm.totalMonths);
   const [showUnavail, setShowUnavail] = useState(false);
