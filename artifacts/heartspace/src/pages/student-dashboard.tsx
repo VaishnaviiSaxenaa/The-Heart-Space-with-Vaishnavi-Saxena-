@@ -365,15 +365,22 @@ function WeeklyRhythmCard({ uid }: { uid: string }) {
   const [ticked, setTicked] = useState<number[]>(() => {
     try { return JSON.parse(localStorage.getItem(storageKey) ?? "[]"); } catch { return []; }
   });
-  
+
   useEffect(() => {
     try { setTicked(JSON.parse(localStorage.getItem(`hs_weekly_rhythm_${uid}_${getWeekStart(weekOffset)}`) ?? "[]")); } catch { setTicked([]); }
+    const key = `${uid}_${getWeekStart(weekOffset)}`;
+    supabase.from("weekly_rhythm").select("data").eq("id", key).single()
+      .then(({ data: sd }) => { if (sd?.data) setTicked(sd.data as number[]); });
   }, [weekOffset, uid]);
 
   const toggle = (i: number) => {
     const next = ticked.includes(i) ? ticked.filter(x => x !== i) : [...ticked, i];
     setTicked(next);
     localStorage.setItem(`hs_weekly_rhythm_${uid}_${weekKey}`, JSON.stringify(next));
+    supabase.from("weekly_rhythm").upsert(
+      { id: `${uid}_${weekKey}`, data: next, updated_at: new Date().toISOString() },
+      { onConflict: "id" },
+    ).then(() => {}).catch(() => {});
   };
 
   const days = ["M", "T", "W", "T", "F", "S", "S"];
@@ -953,7 +960,7 @@ export default function StudentDashboard() {
           })()}
         </Card>
         <div className="grid grid-cols-2 gap-4 md:col-span-2">
-          <WeeklyRhythmCard uid={String(user?.id ?? "")} />
+          <WeeklyRhythmCard uid={effectiveUserId} />
           <Card
             className="p-7 relative overflow-hidden"
             style={{ background: "linear-gradient(135deg, #E8E0F5 0%, #D8D0F0 100%)" }}
@@ -987,7 +994,7 @@ export default function StudentDashboard() {
       {/* ── Analytics ── */}
       <Card className="p-6">
         <SectionTitle>Your Analytics</SectionTitle>
-        <AnalyticsSection userId={String(user?.id ?? "guest")} />
+        <AnalyticsSection userId={effectiveUserId} />
       </Card>
 
                 </div>
