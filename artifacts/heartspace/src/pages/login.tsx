@@ -320,6 +320,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    if (window.location.hash.includes("type=recovery")) {
+      setLocation("/reset-password" + window.location.hash);
+      return;
+    }
     if (!isAuthenticated || !user) return;
     const space = (user as any)?.space as string | null;
     if (user.role === "counsellor") setLocation("/counsellor");
