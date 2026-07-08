@@ -664,7 +664,9 @@ export default function RoadmapCalendar({
           background: CARD,
           border: `1px solid ${BORDER}`,
           borderRadius: 16,
-          overflow: "hidden",
+          overflowX: "auto",
+          overflowY: "hidden",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         <div
@@ -672,6 +674,7 @@ export default function RoadmapCalendar({
             display: "grid",
             gridTemplateColumns: "repeat(7, 1fr)",
             borderBottom: `1px solid ${BORDER}`,
+            minWidth: 640,
           }}
         >
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
@@ -690,7 +693,7 @@ export default function RoadmapCalendar({
             </div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", minWidth: 640 }}>
           {days.map((day) => {
             const key = format(day, "yyyy-MM-dd");
             const entries = calendar[key] ?? [];
