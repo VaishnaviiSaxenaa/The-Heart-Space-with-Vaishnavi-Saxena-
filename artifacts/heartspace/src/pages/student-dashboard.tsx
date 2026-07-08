@@ -1026,9 +1026,12 @@ export default function StudentDashboard() {
       </div>
 
       {/* ── Analytics ── */}
-      <Card className="p-6">
-        <SectionTitle>Your Analytics</SectionTitle>
-        <AnalyticsSection key={calSyncTick} userId={effectiveUserId} />
+      <Card className="p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/charts")}>
+        <div className="flex items-center justify-between">
+          <SectionTitle>Your Analytics</SectionTitle>
+          <span className="text-xs font-medium" style={{ color: "#9B7BB0" }}>View full reports →</span>
+        </div>
+        <p className="text-sm mt-1" style={{ color: MUTED }}>Tap to see your Study · Revision · Practice trends and question practice progress.</p>
       </Card>
 
                 </div>
