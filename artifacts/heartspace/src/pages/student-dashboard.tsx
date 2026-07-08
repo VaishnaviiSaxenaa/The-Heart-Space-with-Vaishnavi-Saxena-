@@ -17,6 +17,9 @@ import {
   Line,
   BarChart,
   Bar,
+  AreaChart,
+  Area,
+  Legend,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -106,28 +109,24 @@ function AnalyticsSection({ userId }: { userId: string }) {
   const data = useMemo(() => {
     try {
       const todayLocal = new Date();
+      const revCalAll = JSON.parse(localStorage.getItem(`hs_cal_revision_${userId}`) ?? "{}");
+      const pracCalAll = JSON.parse(localStorage.getItem(`hs_cal_practice_${userId}`) ?? "{}");
+      const studyCalAll = JSON.parse(localStorage.getItem(`hs_calendar_${userId}`) ?? "{}");
       return Array.from({ length: 7 }, (_, i) => {
         const d = subDays(todayLocal, 6 - i);
         const dayKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        const studyCal = JSON.parse(localStorage.getItem(`hs_calendar_${userId}`) ?? "{}");
-        const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${userId}`) ?? "{}");
-        const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${userId}`) ?? "{}");
         const sumHours = (cal: any) => (cal[dayKey] ?? []).reduce((a: number, e: any) => a + (e.hours ?? 0), 0);
-        const notesRaw = localStorage.getItem(`hs_note_logs_${userId}`);
-        const notes = notesRaw ? JSON.parse(notesRaw) : [];
-        const notesDone = notes.filter((n: any) => n.done && n.noted_at?.startsWith(dayKey)).length;
         return {
-          day: format(d, "EEE"),
-          study: sumHours(studyCal) || null,
-          revision: sumHours(revCal) || null,
-          practice: sumHours(pracCal) || null,
-          notes: notesDone || null,
+          date: format(d, "d MMM"),
+          study: sumHours(studyCalAll),
+          revision: sumHours(revCalAll),
+          practice: sumHours(pracCalAll),
         };
       });
     } catch { return []; }
   }, [userId]);
 
-  const hasData = data.some(d => d.study || d.revision || d.practice || d.notes);
+  const hasData = data.some(d => d.study || d.revision || d.practice);
 
   if (!hasData) {
     return (
@@ -139,36 +138,35 @@ function AnalyticsSection({ userId }: { userId: string }) {
   }
 
   return (
-    <div>
-      <div className="flex gap-4 mb-3 flex-wrap">
-        {[
-          { key: "study", label: "Study", color: STUDY_BLUE },
-          { key: "revision", label: "Revision", color: REVISION_ORANGE },
-          { key: "practice", label: "Practice", color: "#2E7D52" },
-          { key: "notes", label: "Notes", color: PROGRESS_PURPLE },
-        ].map(({ key, label, color }) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ background: color }} />
-            <span className="text-[10px] font-semibold" style={{ color: MUTED }}>{label}</span>
-          </div>
-        ))}
-      </div>
-      <ResponsiveContainer width="100%" height={180}>
-        <LineChart data={data} margin={{ top: 5, right: 8, left: -24, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-          <XAxis dataKey="day" tick={{ fontSize: 10, fill: MUTED }} />
-          <YAxis tick={{ fontSize: 10, fill: MUTED }} />
-          <Tooltip
-            contentStyle={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 11 }}
-            formatter={(val: any, name: string) => [val !== null ? `${val}h` : "–", name]}
-          />
-          <Line type="monotone" dataKey="study" stroke={STUDY_BLUE} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
-          <Line type="monotone" dataKey="revision" stroke={REVISION_ORANGE} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
-          <Line type="monotone" dataKey="practice" stroke="#2E7D52" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
-          <Line type="monotone" dataKey="notes" stroke={PROGRESS_PURPLE} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <ResponsiveContainer width="100%" height={220}>
+      <AreaChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+        <defs>
+          <linearGradient id="dashStudyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#2C4A73" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#2C4A73" stopOpacity={0.02} />
+          </linearGradient>
+          <linearGradient id="dashRevGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#E07A28" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#E07A28" stopOpacity={0.02} />
+          </linearGradient>
+          <linearGradient id="dashPracGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#2E7D52" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#2E7D52" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
+        <XAxis dataKey="date" tick={{ fontSize: 10, fill: MUTED }} />
+        <YAxis tick={{ fontSize: 10, fill: MUTED }} unit="h" />
+        <Tooltip
+          contentStyle={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 11 }}
+          formatter={(val: any, name: string) => [`${val}h`, name]}
+        />
+        <Legend wrapperStyle={{ fontSize: 10 }} />
+        <Area type="monotone" dataKey="study" name="Study" stroke="#2C4A73" strokeWidth={2} fill="url(#dashStudyGrad)" />
+        <Area type="monotone" dataKey="revision" name="Revision" stroke="#E07A28" strokeWidth={2} fill="url(#dashRevGrad)" />
+        <Area type="monotone" dataKey="practice" name="Practice" stroke="#2E7D52" strokeWidth={2} fill="url(#dashPracGrad)" />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -176,10 +174,12 @@ function Card({
   children,
   className = "",
   style = {},
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  onClick?: () => void;
 }) {
   return (
     <div
@@ -190,6 +190,7 @@ function Card({
         boxShadow: "0 2px 8px rgba(61,53,48,.06)",
         ...style,
       }}
+      onClick={onClick}
     >
       {children}
     </div>
