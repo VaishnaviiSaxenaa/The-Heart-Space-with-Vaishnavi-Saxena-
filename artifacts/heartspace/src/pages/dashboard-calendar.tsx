@@ -482,32 +482,43 @@ export default function DashboardCalendar({
                     </div>
                   );
                 })()}
-                {entries.slice(0, view === "month" ? 3 : 7).map((e, i) => {
-                  const subj = subjectsFor(e.type).find(
-                    (s) => s.id === e.subjectId,
-                  );
-                  const color = TYPE_CONFIG[e.type].color;
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        fontSize: "0.58rem",
-                        fontWeight: 600,
-                        color: "#fff",
-                        background: color,
-                        borderRadius: 4,
-                        padding: "0.05rem 0.3rem",
-                        marginTop: "0.12rem",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {TYPE_CONFIG[e.type].emoji} {subj?.name ?? e.subjectId} ·{" "}
-                      {e.hours}h
-                    </div>
-                  );
-                })}
+                {(() => {
+                  let doneList: string[] = [];
+                  try { doneList = JSON.parse(localStorage.getItem(`hs_cal_done_${uid}_${key}`) ?? "[]"); } catch {}
+                  const typeCounters: Record<string, number> = {};
+                  return entries.slice(0, view === "month" ? 3 : 7).map((e, i) => {
+                    const subj = subjectsFor(e.type).find(
+                      (s) => s.id === e.subjectId,
+                    );
+                    const color = TYPE_CONFIG[e.type].color;
+                    const idxWithinType = typeCounters[e.type] ?? 0;
+                    typeCounters[e.type] = idxWithinType + 1;
+                    const entryKey = `${e.type}-${e.subjectId}-${idxWithinType}`;
+                    const isDone = doneList.includes(entryKey);
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          fontSize: "0.58rem",
+                          fontWeight: 600,
+                          color: "#fff",
+                          background: isDone ? "#9B9689" : color,
+                          opacity: isDone ? 0.6 : 1,
+                          borderRadius: 4,
+                          padding: "0.05rem 0.3rem",
+                          marginTop: "0.12rem",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          textDecoration: isDone ? "line-through" : "none",
+                        }}
+                      >
+                        {isDone ? "✓" : TYPE_CONFIG[e.type].emoji} {subj?.name ?? e.subjectId} ·{" "}
+                        {e.hours}h
+                      </div>
+                    );
+                  });
+                })()}
                 {entries.length > (view === "month" ? 3 : 7) && (
                   <span style={{ fontSize: "0.56rem", color: MUTED }}>
                     +{entries.length - (view === "month" ? 3 : 7)}
