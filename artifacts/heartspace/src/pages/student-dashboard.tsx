@@ -232,23 +232,39 @@ const CAT_COLORS: Record<
   Physical: { bg: `${SAGE}22`, text: "#3A6A38", active: "#3A6A38" },
   Personal: { bg: "rgba(61,53,48,.08)", text: MUTED, active: MUTED },
 };
-const PLAN_KEY = "heartspace_today_plan";
 function todayDate() {
   return new Date().toISOString().split("T")[0];
 }
-function loadPlanTasks(uid: string): PlanTask[] {
+function PLAN_KEY(uid: string, dateStr: string) {
+  return `heartspace_today_plan_${uid}_${dateStr}`;
+}
+const OLD_PLAN_KEY = (uid: string) => `heartspace_today_plan_${uid}`;
+function loadPlanTasks(uid: string, dateStr: string): PlanTask[] {
   try {
-    const raw = localStorage.getItem(PLAN_KEY(uid));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (parsed.date !== todayDate()) return [];
-    return parsed.tasks ?? [];
+    const raw = localStorage.getItem(PLAN_KEY(uid, dateStr));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed.tasks ?? [];
+    }
+    // One-time migration from old single-slot "today" key
+    if (dateStr === todayDate()) {
+      const oldRaw = localStorage.getItem(OLD_PLAN_KEY(uid));
+      if (oldRaw) {
+        const oldParsed = JSON.parse(oldRaw);
+        if (oldParsed.date === todayDate() && Array.isArray(oldParsed.tasks)) {
+          localStorage.setItem(PLAN_KEY(uid, dateStr), JSON.stringify({ tasks: oldParsed.tasks }));
+          localStorage.removeItem(OLD_PLAN_KEY(uid));
+          return oldParsed.tasks;
+        }
+      }
+    }
+    return [];
   } catch {
     return [];
   }
 }
-function savePlanTasks(uid: string, tasks: PlanTask[]) {
-  localStorage.setItem(PLAN_KEY(uid), JSON.stringify({ date: todayDate(), tasks }));
+function savePlanTasks(uid: string, dateStr: string, tasks: PlanTask[]) {
+  localStorage.setItem(PLAN_KEY(uid, dateStr), JSON.stringify({ tasks }));
 }
 
 function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects }: {
@@ -257,13 +273,16 @@ function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects
   revisionSubjects: Array<{id: string; name: string}>;
   practiceSubjects: Array<{id: string; name: string}>;
 }) {
-  const [tasks, setTasks] = useState<PlanTask[]>(() => loadPlanTasks(uid));
-  const persist = (next: PlanTask[]) => { setTasks(next); savePlanTasks(uid, next); };
-  const toggleDone = (id: string) => persist(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const [dayOffset, setDayOffset] = useState(0);
+  const selectedDate = subDays(new Date(), -dayOffset);
+  const todayKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth()+1).padStart(2,'0')}-${String(selectedDate.getDate()).padStart(2,'0')}`;
+  const todayLabel = selectedDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const isToday = dayOffset === 0;
 
-  const todayLocal = new Date();
-  const todayKey = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth()+1).padStart(2,'0')}-${String(todayLocal.getDate()).padStart(2,'0')}`;
-  const todayLabel = todayLocal.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const [tasks, setTasks] = useState<PlanTask[]>(() => loadPlanTasks(uid, todayKey));
+  useEffect(() => { setTasks(loadPlanTasks(uid, todayKey)); }, [uid, todayKey]);
+  const persist = (next: PlanTask[]) => { setTasks(next); savePlanTasks(uid, todayKey, next); };
+  const toggleDone = (id: string) => persist(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
 
   // Get calendar entries for today
   const studyCal = (() => { try { return JSON.parse(localStorage.getItem(`hs_calendar_${uid}`) ?? "{}"); } catch { return {}; } })();
@@ -281,14 +300,27 @@ function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects
     <Card className="lg:col-span-2 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>Today's Overview</h2>
+          <h2 className="font-serif text-lg font-semibold" style={{ color: CHARCOAL }}>{isToday ? "Today's Overview" : "Day Overview"}</h2>
           <p className="text-xs mt-0.5" style={{ color: MUTED }}>{todayLabel}</p>
         </div>
-        {tasks.length > 0 && (
-          <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: `${PROGRESS_PURPLE}15`, color: PROGRESS_PURPLE }}>
-            {doneCount}/{tasks.length} done
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setDayOffset(o => o - 1)}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+            style={{ background: CREAM, color: CHARCOAL, border: `1px solid ${BORDER}` }}
+          >‹</button>
+          <button
+            onClick={() => setDayOffset(o => Math.min(0, o + 1))}
+            disabled={isToday}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+            style={{ background: CREAM, color: isToday ? MUTED : CHARCOAL, border: `1px solid ${BORDER}`, opacity: isToday ? 0.4 : 1, cursor: isToday ? "default" : "pointer" }}
+          >›</button>
+          {tasks.length > 0 && (
+            <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: `${PROGRESS_PURPLE}15`, color: PROGRESS_PURPLE }}>
+              {doneCount}/{tasks.length} done
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Calendar scheduled items */}
