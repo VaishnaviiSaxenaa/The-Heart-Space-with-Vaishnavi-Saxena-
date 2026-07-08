@@ -2912,7 +2912,16 @@ function CalendarTabWrapper({
   const inputs = loadScheduleInputs(uid);
   const rawSubjectsBase = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const defaultOrder = rawSubjectsBase.map((s) => s.id);
-  const customOrder = loadSubjectOrder(effectiveUserId, defaultOrder);
+  const [customOrder, setCustomOrder] = useState<string[]>(() => loadSubjectOrder(effectiveUserId, defaultOrder));
+  useEffect(() => {
+    supabase.from("subject_order").select("data").eq("user_id", effectiveUserId).single()
+      .then(({ data: sd }) => {
+        if (sd?.data && Array.isArray(sd.data)) {
+          try { localStorage.setItem(`hs_subject_order_${effectiveUserId}`, JSON.stringify(sd.data)); } catch {}
+          setCustomOrder(sd.data as string[]);
+        }
+      });
+  }, [effectiveUserId]);
   const rawSubjects = customOrder
     .map((id) => rawSubjectsBase.find((s) => s.id === id))
     .filter((s): s is typeof rawSubjectsBase[number] => !!s);
