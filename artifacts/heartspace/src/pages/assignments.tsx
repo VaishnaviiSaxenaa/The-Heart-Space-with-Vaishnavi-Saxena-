@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { SYLLABUS } from "./syllabus";
 import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
+import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
 
 /* ─── Brand tokens ─────────────────────── */
 const CREAM = "#F8F5F0";
@@ -1279,29 +1280,7 @@ export default function QuestionPractice() {
   const [activeMainTab, setActiveMainTab] = useState<"log" | "calendar">("log");
 
   /* Question Practice calendar setup: 70% of each subject's study hours */
-  const ROADMAP_SUBJECTS_JAM_QP = [
-    { id: "la", name: "Linear Algebra", totalHours: 60 },
-    { id: "ra", name: "Real Analysis", totalHours: 60 },
-    { id: "dc", name: "Functions of One Variable", totalHours: 50 },
-    { id: "gt", name: "Group Theory", totalHours: 50 },
-    { id: "ode", name: "ODE", totalHours: 40 },
-    { id: "mvc", name: "Functions of Two Variables", totalHours: 25 },
-    { id: "mi", name: "Multiple Integration", totalHours: 30 },
-  ];
-  const ROADMAP_SUBJECTS_NET_QP = [
-    { id: "ra", name: "Real Analysis", totalHours: 60 },
-    { id: "la", name: "Linear Algebra", totalHours: 60 },
-    { id: "ca", name: "Complex Analysis", totalHours: 50 },
-    { id: "ma", name: "Modern Algebra (Group + Ring + Field)", totalHours: 90 },
-    { id: "tp", name: "Topology", totalHours: 40 },
-    { id: "fa", name: "Functional Analysis", totalHours: 40 },
-    { id: "ode", name: "ODE", totalHours: 40 },
-    { id: "pde", name: "PDE", totalHours: 40 },
-    { id: "na", name: "Numerical Analysis", totalHours: 30 },
-    { id: "ie", name: "Integral Equations", totalHours: 30 },
-    { id: "cv", name: "Calculus of Variations", totalHours: 30 },
-  ];
-  const qpRoadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET_QP : ROADMAP_SUBJECTS_JAM_QP;
+  const qpRoadmapSubjects = examType === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
   const _effectiveUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const QP_SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
   const QP_SPEED_OPTS = [["gentle","🐢","+40%"],["steady","🌿","+30%"],["standard","⚖️","Std"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;
