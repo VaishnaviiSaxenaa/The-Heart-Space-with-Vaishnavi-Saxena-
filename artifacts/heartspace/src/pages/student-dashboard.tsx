@@ -113,7 +113,7 @@ function AnalyticsSection({ userId }: { userId: string }) {
         const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${userId}`) ?? "{}");
         const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${userId}`) ?? "{}");
         const sumHours = (cal: any) => (cal[dayKey] ?? []).reduce((a: number, e: any) => a + (e.hours ?? 0), 0);
-        const notesRaw = localStorage.getItem(`hs_notes_${userId}`);
+        const notesRaw = localStorage.getItem(`hs_note_logs_${userId}`);
         const notes = notesRaw ? JSON.parse(notesRaw) : [];
         const notesDone = notes.filter((n: any) => n.done && n.noted_at?.startsWith(dayKey)).length;
         return {
