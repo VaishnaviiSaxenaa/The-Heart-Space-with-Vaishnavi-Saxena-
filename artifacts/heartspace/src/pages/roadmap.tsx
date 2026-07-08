@@ -2775,9 +2775,12 @@ function CalendarTabWrapper({
         }
       });
   }, [effectiveUserId]);
-  const rawSubjects = customOrder
-    .map((id) => rawSubjectsBase.find((s) => s.id === id))
-    .filter((s): s is typeof rawSubjectsBase[number] => !!s);
+  const rawSubjects = [
+    ...customOrder
+      .map((id) => rawSubjectsBase.find((s) => s.id === id))
+      .filter((s): s is typeof rawSubjectsBase[number] => Boolean(s)),
+    ...rawSubjectsBase.filter((s) => customOrder.indexOf(s.id) === -1),
+  ];
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
 
   const calTopicSpeed = loadTopicSpeed(uid);
