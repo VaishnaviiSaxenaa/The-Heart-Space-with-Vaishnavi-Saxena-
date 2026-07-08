@@ -257,33 +257,50 @@ export default function RoadmapCalendar({
   const [dragSubject, setDragSubject] = useState<string | null>(null);
 
   const allSubjectIds = subjects.map((s) => s.id);
+  const isViewMode = !!(new URLSearchParams(window.location.search).get("viewAs"));
 
   useEffect(() => {
-    try {
-      if (!uid) {
-        return;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!uid) {
+          return;
+        }
+        const { data: remote } = await supabase
+          .from("roadmap_calendar")
+          .select("data")
+          .eq("user_id", uid)
+          .single();
+        if (cancelled) return;
+        if (remote?.data && Object.keys(remote.data).length > 0) {
+          setCalendar(remote.data as CalendarData);
+          try { localStorage.setItem(lsKey(uid), JSON.stringify(remote.data)); } catch {}
+          setLoaded(true);
+          return;
+        }
+        const existing = loadCalendar(uid);
+        if (Object.keys(existing).length > 0) {
+          setCalendar(existing);
+        } else if (!isViewMode) {
+          const generated = autoGenerateCalendar(
+            subjects,
+            remainingHoursBySubject,
+            startDate,
+            hoursPerDay,
+            selectedDays,
+            simSlots,
+            unavailablePeriods,
+            variablePeriods,
+          );
+          setCalendar(generated);
+          saveCalendarLocal(uid, generated);
+        }
+        setLoaded(true);
+      } catch (err) {
+        if (!cancelled) setLoaded(true);
       }
-      const existing = loadCalendar(uid);
-      if (Object.keys(existing).length > 0) {
-        setCalendar(existing);
-      } else {
-        const generated = autoGenerateCalendar(
-          subjects,
-          remainingHoursBySubject,
-          startDate,
-          hoursPerDay,
-          selectedDays,
-          simSlots,
-          unavailablePeriods,
-          variablePeriods,
-        );
-        setCalendar(generated);
-        saveCalendarLocal(uid, generated);
-      }
-      setLoaded(true);
-    } catch (err) {
-      setLoaded(true);
-    }
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
