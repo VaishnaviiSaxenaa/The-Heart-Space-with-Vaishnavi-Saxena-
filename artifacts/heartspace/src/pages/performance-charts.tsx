@@ -139,7 +139,9 @@ export default function PerformanceCharts() {
   }, [uid]);
 
   const range = viewMode === "week" ? 7 : 30;
-  const allDates = Object.keys(daily).sort();
+  const revCalAll = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
+  const pracCalAll = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
+  const allDates = Array.from(new Set([...Object.keys(daily), ...Object.keys(revCalAll), ...Object.keys(pracCalAll)])).sort();
   // Calculate date window based on offset
   const windowEnd = new Date();
   windowEnd.setDate(windowEnd.getDate() + offset * range);
@@ -152,11 +154,8 @@ export default function PerformanceCharts() {
   /* ── Study hours data ── */
   const studyData = sortedDates.map((d) => {
     const e = daily[d] as Record<string, unknown>;
-    // Get revision hours from revision calendar
-    const revCal = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
-    const pracCal = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
-    const revHours = ((revCal[d] ?? []) as any[]).reduce((s: number, e: any) => s + (e.hours ?? 0), 0);
-    const pracHours = ((pracCal[d] ?? []) as any[]).reduce((s: number, e: any) => s + (e.hours ?? 0), 0);
+    const revHours = ((revCalAll[d] ?? []) as any[]).reduce((s: number, e: any) => s + (e.hours ?? 0), 0);
+    const pracHours = ((pracCalAll[d] ?? []) as any[]).reduce((s: number, e: any) => s + (e.hours ?? 0), 0);
     return {
       date: new Date(d + 'T12:00:00').toLocaleDateString('en-IN', {day:'numeric',month:'short'}),
       fullDate: d,
