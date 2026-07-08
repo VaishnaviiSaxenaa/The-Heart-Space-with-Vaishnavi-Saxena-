@@ -77,15 +77,9 @@ async function saveStudentData(
 }
 
 /* ── Syllabus subject list ── */
-const JAM_SUBJECTS = [
-  { id: "linear_algebra",        name: "Linear Algebra" },
-  { id: "real_analysis",         name: "Real Analysis" },
-  { id: "differential_calculus", name: "Functions of One Variable" },
-  { id: "abstract_algebra",      name: "Group Theory" },
-  { id: "ode",                   name: "ODE" },
-  { id: "mvc",                   name: "Multivariable Calculus" },
-  { id: "mi",                    name: "Mathematical Intuition" },
-];
+/* JAM_SUBJECTS now derived from ./subjects.ts (canonical source) */
+import { JAM_SUBJECTS as CANONICAL_JAM_SUBJECTS } from "./subjects";
+const JAM_SUBJECTS = CANONICAL_JAM_SUBJECTS.map((s) => ({ id: s.syllabusId, name: s.name }));
 
 /* ── Schedule inputs display ── */
 function SchedulePanel({ data, onChange }: {

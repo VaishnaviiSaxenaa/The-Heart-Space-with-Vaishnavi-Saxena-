@@ -905,6 +905,53 @@ export const SYLLABUS: Subject[] = [
       },
     ],
   },
+  {
+    id: "mechanics",
+    name: "Mechanics",
+    jamOnly: true,
+    topics: [
+      { id: "mech_vc", name: "Vector Calculus Prerequisites", subtopics: [
+        { id: "mech_vc_1", name: "Gradient, Divergence, Curl" },
+        { id: "mech_vc_2", name: "Greens, Stokes, Gauss Divergence Theorem" },
+      ]},
+      { id: "mech_statics", name: "Statics", subtopics: [
+        { id: "mech_statics_1", name: "Forces, Equilibrium, Moments, Couples" },
+        { id: "mech_statics_2", name: "Friction, Centre of Mass and Gravity" },
+      ]},
+      { id: "mech_dyn_particle", name: "Dynamics - Particle", subtopics: [
+        { id: "mech_dyn_particle_1", name: "Newtons Laws, Rectilinear Motion, SHM" },
+        { id: "mech_dyn_particle_2", name: "Projectile, Circular Motion" },
+        { id: "mech_dyn_particle_3", name: "Work-Energy Theorem, Conservation of Energy" },
+        { id: "mech_dyn_particle_4", name: "Impulse and Momentum" },
+      ]},
+      { id: "mech_dyn_system", name: "Dynamics - System of Particles", subtopics: [
+        { id: "mech_dyn_system_1", name: "Centre of Mass Motion, Conservation of Linear Momentum" },
+        { id: "mech_dyn_system_2", name: "Angular Momentum, Conservation of Angular Momentum" },
+      ]},
+      { id: "mech_central", name: "Central Forces", subtopics: [
+        { id: "mech_central_1", name: "Central Force Motion, Orbit Equation" },
+        { id: "mech_central_2", name: "Keplers Laws, Inverse Square Law" },
+      ]},
+      { id: "mech_rigid", name: "Rigid Body Dynamics", subtopics: [
+        { id: "mech_rigid_1", name: "Moment of Inertia, Parallel/Perpendicular Axis Theorems" },
+        { id: "mech_rigid_2", name: "Rotation About Fixed Axis, Rolling Motion" },
+      ]},
+    ],
+  },
+  {
+    id: "integral_equations",
+    name: "Integral Equations",
+    topics: [
+      { id: "ie_intro", name: "Introduction to Integral Equations", subtopics: [
+        { id: "ie_intro_1", name: "Fredholm and Volterra Equations" },
+        { id: "ie_intro_2", name: "Classification - First and Second Kind" },
+      ]},
+      { id: "ie_methods", name: "Solution Methods", subtopics: [
+        { id: "ie_methods_1", name: "Method of Successive Approximations" },
+        { id: "ie_methods_2", name: "Relation to ODEs and Boundary Value Problems" },
+      ]},
+    ],
+  },
 ];
 
 /* ─── Status config ────────────────────── */
@@ -1077,6 +1124,8 @@ const SUBJECT_HOURS: Record<string, number> = {
   statistics: 30,
   topology: 30,
   functional_analysis: 30,
+  mechanics: 33,
+  integral_equations: 30,
 };
 
 // Map syllabus subject IDs to roadmap calendar subject IDs
@@ -1084,7 +1133,7 @@ const SYLLABUS_TO_CAL_ID: Record<string, string> = {
   linear_algebra: "la",
   real_analysis: "ra",
   differential_calculus: "dc",
-  abstract_algebra: "gt",
+  abstract_algebra: "aa",
   complex_analysis: "ca",
   ode: "ode",
   pde: "pde",
@@ -1092,9 +1141,11 @@ const SYLLABUS_TO_CAL_ID: Record<string, string> = {
   calculus_of_variations: "cv",
   integration: "dc",
   linear_programming: "lp",
-  statistics: "st",
+  statistics: "sp",
   topology: "top",
   functional_analysis: "fa",
+  mechanics: "mech",
+  integral_equations: "ie",
 };
 
 export default function Syllabus() {

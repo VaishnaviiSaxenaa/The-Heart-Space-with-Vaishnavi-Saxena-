@@ -5,6 +5,7 @@ import { loadRevisionSpeedFromDB, saveRevisionSpeedToDB, loadTopicSpeedFromDB } 
 import { format, differenceInDays } from "date-fns";
 import { ChevronDown, ChevronUp, RotateCcw, Send } from "lucide-react";
 import GenericCalendar, { GenericSubjectDef, loadGenericCalendarFromDB, calendarKey } from "./generic-calendar";
+import { JAM_SUBJECTS as ROADMAP_SUBJECTS_JAM, NET_SUBJECTS as ROADMAP_SUBJECTS_NET } from "./subjects";
 
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
@@ -18,28 +19,7 @@ const OLIVE = "#6E8B6B";
 
 /* Roadmap subjects with hours, used ONLY for the Revision Calendar below.
    These match roadmap.tsx exactly so revision hours = 40% of study hours. */
-const ROADMAP_SUBJECTS_JAM = [
-  { id: "la", name: "Linear Algebra", totalHours: 60 },
-  { id: "ra", name: "Real Analysis", totalHours: 60 },
-  { id: "dc", name: "Functions of One Variable", totalHours: 50 },
-  { id: "gt", name: "Group Theory", totalHours: 50 },
-  { id: "ode", name: "ODE", totalHours: 40 },
-  { id: "mvc", name: "Functions of Two Variables", totalHours: 25 },
-  { id: "mi", name: "Multiple Integration", totalHours: 30 },
-];
-const ROADMAP_SUBJECTS_NET = [
-  { id: "ra", name: "Real Analysis", totalHours: 60 },
-  { id: "la", name: "Linear Algebra", totalHours: 60 },
-  { id: "ca", name: "Complex Analysis", totalHours: 50 },
-  { id: "ma", name: "Modern Algebra (Group + Ring + Field)", totalHours: 90 },
-  { id: "tp", name: "Topology", totalHours: 40 },
-  { id: "fa", name: "Functional Analysis", totalHours: 40 },
-  { id: "ode", name: "ODE", totalHours: 40 },
-  { id: "pde", name: "PDE", totalHours: 40 },
-  { id: "na", name: "Numerical Analysis", totalHours: 30 },
-  { id: "ie", name: "Integral Equations", totalHours: 30 },
-  { id: "cv", name: "Calculus of Variations", totalHours: 30 },
-];
+/* ROADMAP_SUBJECTS now imported from ./subjects.ts (canonical source) */
 
 // JAM subjects and topics (matches syllabus tracker)
 const JAM_SUBJECTS = [

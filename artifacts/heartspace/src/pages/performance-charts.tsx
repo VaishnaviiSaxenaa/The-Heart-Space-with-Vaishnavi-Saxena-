@@ -28,19 +28,9 @@ const CHARCOAL = "#3D2314";
 const OLIVE = "#6E8B6B";
 const ROSE = "#D4A5A5";
 
-const JAM_SUBJECTS = [
-  { id: "linear_algebra", name: "Linear Algebra", short: "LA" },
-  { id: "real_analysis", name: "Real Analysis", short: "RA" },
-  {
-    id: "differential_calculus",
-    name: "Functions of One Variable",
-    short: "DC",
-  },
-  { id: "abstract_algebra", name: "Group Theory", short: "GT" },
-  { id: "ode", name: "ODE", short: "ODE" },
-  { id: "mvc", name: "Multivariable Calculus", short: "MVC" },
-  { id: "mi", name: "Mathematical Intuition", short: "MI" },
-];
+/* JAM_SUBJECTS now derived from ./subjects.ts (canonical source) */
+import { JAM_SUBJECTS as CANONICAL_JAM_SUBJECTS } from "./subjects";
+const JAM_SUBJECTS = CANONICAL_JAM_SUBJECTS.map((s) => ({ id: s.syllabusId, name: s.name, short: s.id.toUpperCase() }));
 
 function lsSyllabusKey(uid: string) {
   return `hs_syllabus_${uid}`;
