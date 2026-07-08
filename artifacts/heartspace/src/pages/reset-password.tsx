@@ -61,13 +61,27 @@ export default function ResetPassword() {
       }
     });
 
-    /* Fallback: if no token in hash at all, show error after short delay */
+    supabase.auth.getSession().then(({ data }) => {
+      if (!settled && data.session) {
+        settled = true;
+        setPageState("ready");
+      }
+    });
+
+    /* Fallback: if no token in hash at all, show error after longer delay */
     const timer = setTimeout(() => {
       if (!settled) {
-        setPageState("error");
-        setErrorMsg("This reset link is invalid or has expired. Please request a new one.");
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session) {
+            settled = true;
+            setPageState("ready");
+          } else {
+            setPageState("error");
+            setErrorMsg("This reset link is invalid or has expired. Please request a new one.");
+          }
+        });
       }
-    }, 3500);
+    }, 6000);
 
     return () => {
       subscription.unsubscribe();
