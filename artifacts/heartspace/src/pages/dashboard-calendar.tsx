@@ -695,6 +695,49 @@ export default function DashboardCalendar({
               })}
             </div>
 
+            {(() => {
+              const dayTasks = getCustomTasksForDate(editingDay);
+              if (dayTasks.length === 0) return null;
+              return (
+                <div style={{ marginBottom: "0.8rem" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: MUTED, marginBottom: "0.4rem" }}>TASKS</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    {dayTasks.map((t) => (
+                      <div
+                        key={t.id}
+                        onClick={() => {
+                          const key = `heartspace_custom_tasks_${uid}_${editingDay}`;
+                          const raw = localStorage.getItem(key);
+                          const tasks = raw ? JSON.parse(raw) : [];
+                          const next = tasks.map((x: any) => x.id === t.id ? { ...x, done: !x.done } : x);
+                          localStorage.setItem(key, JSON.stringify(next));
+                          setTaskRefresh((r) => r + 1);
+                        }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "0.5rem",
+                          padding: "0.4rem 0.6rem", borderRadius: 8, cursor: "pointer",
+                          background: CREAM, border: `1px solid ${BORDER}`,
+                        }}
+                      >
+                        <div style={{
+                          width: 16, height: 16, borderRadius: 999, border: `2px solid ${t.done ? OLIVE : BORDER}`,
+                          background: t.done ? OLIVE : "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        }}>
+                          {t.done && <span style={{ color: "#fff", fontSize: "0.55rem", fontWeight: 700 }}>✓</span>}
+                        </div>
+                        <span style={{
+                          fontSize: "0.78rem", fontWeight: 600, color: CHARCOAL, flex: 1,
+                          textDecoration: t.done ? "line-through" : "none",
+                          opacity: t.done ? 0.6 : 1,
+                        }}>{t.name}</span>
+                        <span style={{ fontSize: "0.65rem", fontWeight: 600, color: MUTED }}>{t.category}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ marginBottom: "0.6rem" }}>
               <label
                 style={{
