@@ -290,11 +290,24 @@ function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects
   const pracCal = (() => { try { return JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}"); } catch { return {}; } })();
   const customTasks = (() => { try { return JSON.parse(localStorage.getItem(`heartspace_custom_tasks_${uid}_${todayKey}`) ?? "[]"); } catch { return []; } })();
 
-  const studyEntries = (studyCal[todayKey] ?? []).map((e: any) => ({ ...e, type: "Study", color: STUDY_BLUE, subj: studySubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId }));
-  const revEntries = (revCal[todayKey] ?? []).map((e: any) => ({ ...e, type: "Revision", color: REVISION_ORANGE, subj: revisionSubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId }));
-  const pracEntries = (pracCal[todayKey] ?? []).map((e: any) => ({ ...e, type: "Practice", color: "#2E7D52", subj: practiceSubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId }));
+  const studyEntries = (studyCal[todayKey] ?? []).map((e: any, i: number) => ({ ...e, type: "Study", color: STUDY_BLUE, subj: studySubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId, entryKey: `study-${e.subjectId}-${i}` }));
+  const revEntries = (revCal[todayKey] ?? []).map((e: any, i: number) => ({ ...e, type: "Revision", color: REVISION_ORANGE, subj: revisionSubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId, entryKey: `revision-${e.subjectId}-${i}` }));
+  const pracEntries = (pracCal[todayKey] ?? []).map((e: any, i: number) => ({ ...e, type: "Practice", color: "#2E7D52", subj: practiceSubjects.find((s: any) => s.id === e.subjectId)?.name ?? e.subjectId, entryKey: `practice-${e.subjectId}-${i}` }));
   const allCalEntries = [...studyEntries, ...revEntries, ...pracEntries];
   const doneCount = tasks.filter(t => t.done).length;
+
+  const CAL_DONE_KEY = (uidX: string, dateX: string) => `hs_cal_done_${uidX}_${dateX}`;
+  const [doneEntries, setDoneEntries] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(CAL_DONE_KEY(uid, todayKey)) ?? "[]"); } catch { return []; }
+  });
+  useEffect(() => {
+    try { setDoneEntries(JSON.parse(localStorage.getItem(CAL_DONE_KEY(uid, todayKey)) ?? "[]")); } catch { setDoneEntries([]); }
+  }, [uid, todayKey]);
+  const toggleCalDone = (entryKey: string) => {
+    const next = doneEntries.includes(entryKey) ? doneEntries.filter(k => k !== entryKey) : [...doneEntries, entryKey];
+    setDoneEntries(next);
+    localStorage.setItem(CAL_DONE_KEY(uid, todayKey), JSON.stringify(next));
+  };
 
   return (
     <Card className="lg:col-span-2 p-6">
@@ -328,14 +341,24 @@ function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects
         <div className="mb-4">
           <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>📅 Scheduled Today</p>
           <div className="space-y-1.5">
-            {allCalEntries.map((e: any, i: number) => (
-              <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl" style={{ background: `${e.color}10`, border: `1px solid ${e.color}30` }}>
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: e.color }} />
-                <span className="text-xs font-semibold flex-1" style={{ color: CHARCOAL }}>{e.subj}</span>
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: `${e.color}20`, color: e.color }}>{e.type}</span>
-                <span className="text-[10px] font-bold" style={{ color: e.color }}>{e.hours}h</span>
-              </div>
-            ))}
+            {allCalEntries.map((e: any) => {
+              const isDone = doneEntries.includes(e.entryKey);
+              return (
+                <div
+                  key={e.entryKey}
+                  onClick={() => toggleCalDone(e.entryKey)}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer"
+                  style={{ background: isDone ? CREAM : `${e.color}10`, border: `1px solid ${isDone ? BORDER : `${e.color}30`}`, opacity: isDone ? 0.55 : 1 }}
+                >
+                  <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: isDone ? OLIVE : e.color, background: isDone ? OLIVE : "transparent" }}>
+                    {isDone && <span className="text-white text-[8px] font-bold">✓</span>}
+                  </div>
+                  <span className="text-xs font-semibold flex-1" style={{ color: CHARCOAL, textDecoration: isDone ? "line-through" : "none" }}>{e.subj}</span>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: `${e.color}20`, color: e.color }}>{e.type}</span>
+                  <span className="text-[10px] font-bold" style={{ color: e.color }}>{e.hours}h</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
