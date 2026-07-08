@@ -27,7 +27,7 @@ const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
 
 const RESET_REDIRECT =
-  "https://the-heart-space-with-vaishnavi-saxe-eight.vercel.app";
+  "https://preppilot.co.in/reset-password";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
