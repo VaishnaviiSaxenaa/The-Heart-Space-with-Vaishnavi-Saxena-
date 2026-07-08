@@ -394,7 +394,9 @@ export default function DashboardCalendar({
           background: CARD,
           border: `1px solid ${BORDER}`,
           borderRadius: 14,
-          overflow: "hidden",
+          overflowX: "auto",
+          overflowY: "hidden",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         <div
@@ -402,6 +404,7 @@ export default function DashboardCalendar({
             display: "grid",
             gridTemplateColumns: "repeat(7, 1fr)",
             borderBottom: `1px solid ${BORDER}`,
+            minWidth: 640,
           }}
         >
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
@@ -419,7 +422,7 @@ export default function DashboardCalendar({
             </div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", minWidth: 640 }}>
           {days.map((day) => {
             const key = format(day, "yyyy-MM-dd");
             const entries = merged[key] ?? [];
