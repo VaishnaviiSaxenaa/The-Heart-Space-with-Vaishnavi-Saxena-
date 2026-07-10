@@ -11,6 +11,7 @@ import Login from "./pages/login";
 import Signup from "./pages/signup";
 import ResetPassword from "./pages/reset-password";
 import ExamSelect from "./pages/exam-select";
+import { PrivacyPolicy, TermsConditions, CancellationRefund, ShippingDelivery, ContactUs } from "./pages/legal";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
 import MySessions from "./pages/my-sessions";
@@ -173,6 +174,11 @@ function Router() {
         <Route path="/signup" component={Signup} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/exam-select" component={ExamSelect} />
+        <Route path="/privacy-policy" component={PrivacyPolicy} />
+        <Route path="/terms-and-conditions" component={TermsConditions} />
+        <Route path="/cancellation-refund" component={CancellationRefund} />
+        <Route path="/delivery-policy" component={ShippingDelivery} />
+        <Route path="/contact-us" component={ContactUs} />
 
         <Route path="/admin">
           <ProtectedRoute component={AdminPanel} allowedRole="counsellor" />
