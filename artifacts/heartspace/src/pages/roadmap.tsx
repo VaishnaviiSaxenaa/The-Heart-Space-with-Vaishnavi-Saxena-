@@ -2807,6 +2807,11 @@ function CalendarTabWrapper({
 
   const remainingHoursBySubject: Record<string, number> = {};
   rawSubjects.forEach((s) => {
+    const syllabusDone = syllabusPercs[(s as any).syllabusId] === 100;
+    if (syllabusDone) {
+      remainingHoursBySubject[s.id] = 0;
+      return;
+    }
     const total = (s as any).totalHours ?? 0;
     const consumed = consumedHoursBySubject[s.id] ?? 0;
     remainingHoursBySubject[s.id] = Math.max(0, total - consumed);
