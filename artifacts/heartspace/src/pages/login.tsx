@@ -667,6 +667,19 @@ export default function Login() {
             Mood Tracking &middot; Trends &middot; Reports &middot; And more.
           </p>
         </div>
+        <div className="text-center mt-6 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+          <p className="text-xs" style={{ color: MUTED }}>
+            <a href="/privacy-policy" style={{ color: MUTED }}>Privacy Policy</a>
+            {" "}&middot;{" "}
+            <a href="/terms-and-conditions" style={{ color: MUTED }}>Terms &amp; Conditions</a>
+            {" "}&middot;{" "}
+            <a href="/cancellation-refund" style={{ color: MUTED }}>Cancellation &amp; Refund</a>
+            {" "}&middot;{" "}
+            <a href="/delivery-policy" style={{ color: MUTED }}>Delivery Policy</a>
+            {" "}&middot;{" "}
+            <a href="/contact-us" style={{ color: MUTED }}>Contact Us</a>
+          </p>
+        </div>
       </div>
     </div>
   );
