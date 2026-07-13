@@ -133,6 +133,23 @@ function SuspendedScreen() {
   );
 }
 
+function RenewalScreen() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F5F0" }}>
+      <div style={{ textAlign: "center", maxWidth: 400, padding: "2rem" }}>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏰</div>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2D2A25", marginBottom: "0.5rem" }}>Subscription Expired</h1>
+        <p style={{ color: "#7A7267", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+          Your subscription has ended. Please renew to continue using PrepPilot.
+        </p>
+        <a href="https://wa.me/919336019395?text=Hello%2C%20I%20want%20to%20renew%20my%20PrepPilot%20subscription." style={{ display: "inline-block", background: "#6B568F", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
+          Renew Subscription
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function StudentRoute({
   component: Component,
 }: {
@@ -141,6 +158,8 @@ function StudentRoute({
   const { isAuthenticated, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const status = (user as any)?.status as string | null;
+  const paidUntil = (user as any)?.paid_until as string | null;
+  const isExpired = paidUntil ? new Date(paidUntil) < new Date() : false;
 
   useEffect(() => {
     if (isLoading) return;
@@ -160,6 +179,7 @@ function StudentRoute({
   if (!isAuthenticated) return null;
   if (status === "pending") return <PendingScreen />;
   if (status === "suspended") return <SuspendedScreen />;
+  if (status === "active" && isExpired) return <RenewalScreen />;
   return <Component />;
 }
 

@@ -410,7 +410,7 @@ function DetailsForm({
           email: v.email.trim(),
           role: selectedKey,
           plan: plan,
-          status: "pending",
+          status: price > 0 ? "active" : "pending",
           paid_until: paidUntil,
         },
         { onConflict: "id" },

@@ -55,7 +55,7 @@ async function resolveSupabaseUser(
     const result = await withTimeout(
       supabase
         .from("profiles")
-        .select("id, email, full_name, role, plan, avatar_url, exam_type, status")
+        .select("id, email, full_name, role, plan, avatar_url, exam_type, status, paid_until")
         .eq("id", supabaseUser.id)
         .single()
         .then((r) => r),
@@ -133,6 +133,7 @@ async function resolveSupabaseUser(
       avatarUrl: profile?.avatar_url ?? null,
       exam_type: examType,
       status: profile?.status ?? null,
+      paid_until: profile?.paid_until ?? null,
     } as any;
 
     return { user: heartUser, token: accessToken };
