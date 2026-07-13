@@ -75,6 +75,7 @@ async function payForPlan(
   amountRupees: number,
   fullName: string,
   email: string,
+  description: string = "Plan purchase",
 ): Promise<boolean> {
   const scriptLoaded = await loadRazorpayScript();
   if (!scriptLoaded) {
@@ -88,7 +89,7 @@ async function payForPlan(
     body: JSON.stringify({
       amount: amountRupees,
       receipt: `receipt_${Date.now()}`,
-      notes: { email, fullName },
+      notes: { email, fullName, description },
     }),
   });
   if (!orderRes.ok) {
@@ -103,7 +104,7 @@ async function payForPlan(
       amount: order.amount,
       currency: order.currency,
       name: "PrepPilot",
-      description: "Plan purchase",
+      description,
       order_id: order.id,
       prefill: { name: fullName, email },
       handler: async (response: any) => {
@@ -132,6 +133,7 @@ interface Service {
   color: string;
   tagBg: string;
   tagline: string;
+  priceLabel: string;
   bullets: string[];
 }
 
@@ -143,6 +145,7 @@ const SERVICES: Service[] = [
     color: "#6B568F",
     tagBg: "rgba(107,86,143,0.12)",
     tagline: "Full mentorship + counsellor support",
+    priceLabel: "Free",
     bullets: [
       "1-on-1 sessions with Sagar Sir and Vaishnavi Ma'am",
       "Fully customized to your pace and schedule",
@@ -158,6 +161,7 @@ const SERVICES: Service[] = [
     color: "#8B7FC7",
     tagBg: "rgba(139,127,199,0.12)",
     tagline: "Self-prep plan for independent learners",
+    priceLabel: "₹149/month",
     bullets: [
       "Syllabus & question practice tracking",
       "Fully customized to your pace and schedule",
@@ -173,6 +177,7 @@ const SERVICES: Service[] = [
     color: "#D4A5A5",
     tagBg: "rgba(212,165,165,0.15)",
     tagline: "Personal counselling + emotional support",
+    priceLabel: "From ₹999/month",
     bullets: [
       "Dedicated counsellor sessions",
       "Emotional wellness tracking",
@@ -195,7 +200,7 @@ function BrandHeader() {
 function ServiceSelector({
   onSelect,
 }: {
-  onSelect: (key: ServiceKey) => void;
+  onSelect: (key: ServiceKey, heartspaceTier?: 1 | 2) => void;
 }) {
   const [hover, setHover] = useState<ServiceKey | null>(null);
 
@@ -220,7 +225,7 @@ function ServiceSelector({
           return (
             <div
               key={s.key}
-              onClick={() => onSelect(s.key)}
+              onClick={() => { if (s.key !== "counseling_client") onSelect(s.key); }}
               onMouseEnter={() => setHover(s.key)}
               onMouseLeave={() => setHover(null)}
               className="rounded-2xl p-6 cursor-pointer transition-all duration-200 flex flex-col"
@@ -248,6 +253,12 @@ function ServiceSelector({
                   </p>
                 </div>
               </div>
+              <div
+                className="text-sm font-bold mb-3"
+                style={{ color: s.color }}
+              >
+                {s.priceLabel}
+              </div>
 
               <div className="flex-1 space-y-2 mb-5">
                 {s.bullets.map((b) => (
@@ -273,16 +284,55 @@ function ServiceSelector({
                 ))}
               </div>
 
-              <button
-                className="w-full py-2.5 rounded-xl font-semibold text-sm transition-all duration-200"
-                style={{
-                  background: isHovered ? s.color : "transparent",
-                  color: isHovered ? CREAM : s.color,
-                  border: `1.5px solid ${s.color}`,
-                }}
-              >
-                Select {s.name}
-              </button>
+              {s.key === "counseling_client" ? (
+                <div className="space-y-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(s.key, 1);
+                    }}
+                    className="w-full py-2 rounded-xl font-semibold text-xs transition-all duration-200 text-left px-3"
+                    style={{
+                      background: "transparent",
+                      color: s.color,
+                      border: `1.5px solid ${s.color}`,
+                    }}
+                  >
+                    <div className="font-bold">1 session/month — ₹999</div>
+                    <div className="text-[10px] font-normal opacity-80">
+                      One 1-hour counselling session per month
+                    </div>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(s.key, 2);
+                    }}
+                    className="w-full py-2 rounded-xl font-semibold text-xs transition-all duration-200 text-left px-3"
+                    style={{
+                      background: "transparent",
+                      color: s.color,
+                      border: `1.5px solid ${s.color}`,
+                    }}
+                  >
+                    <div className="font-bold">2 sessions/month — ₹1,899</div>
+                    <div className="text-[10px] font-normal opacity-80">
+                      Two 1-hour counselling sessions per month
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="w-full py-2.5 rounded-xl font-semibold text-sm transition-all duration-200"
+                  style={{
+                    background: isHovered ? s.color : "transparent",
+                    color: isHovered ? CREAM : s.color,
+                    border: `1.5px solid ${s.color}`,
+                  }}
+                >
+                  Select {s.name}
+                </button>
+              )}
             </div>
           );
         })}
@@ -317,9 +367,11 @@ function ServiceSelector({
 /* ── Details form ──────────────────────────────────────────── */
 function DetailsForm({
   selectedKey,
+  heartspaceTier,
   onBack,
 }: {
   selectedKey: ServiceKey;
+  heartspaceTier?: 1 | 2;
   onBack: () => void;
 }) {
   const [, setLocation] = useLocation();
@@ -383,9 +435,25 @@ function DetailsForm({
       }
 
       /* ── Step 2.5: Payment (skip for free plans) ── */
-      const price = PRICES[selectedKey];
+      const price =
+        selectedKey === "counseling_client"
+          ? heartspaceTier === 2
+            ? 1899
+            : 999
+          : PRICES[selectedKey];
       if (price > 0) {
-        const paid = await payForPlan(price, v.fullName, v.email.trim());
+        const paymentDescription =
+          selectedKey === "counseling_client"
+            ? heartspaceTier === 2
+              ? "HeartSpace — 2 sessions/month (1 hour each)"
+              : "HeartSpace — 1 session/month (1 hour)"
+            : `${service.name} plan`;
+        const paid = await payForPlan(
+          price,
+          v.fullName,
+          v.email.trim(),
+          paymentDescription,
+        );
         if (!paid) {
           toast({
             title: "Payment not completed",
@@ -398,7 +466,10 @@ function DetailsForm({
       }
 
       /* ── Step 3: Upsert profile with correct role AND plan ── */
-      const plan = PLAN_MAP[selectedKey];
+      const plan =
+        selectedKey === "counseling_client"
+          ? `heartspace_${heartspaceTier ?? 1}`
+          : PLAN_MAP[selectedKey];
       const paidUntil =
         price > 0
           ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -638,6 +709,7 @@ function DetailsForm({
 /* ── Page ────────────────────────────────────────────────────── */
 export default function Signup() {
   const [selected, setSelected] = useState<ServiceKey | null>(null);
+  const [heartspaceTier, setHeartspaceTier] = useState<1 | 2 | undefined>(undefined);
 
   const bgStyle = {
     background: "#F5EEEC",
@@ -664,9 +736,18 @@ export default function Signup() {
       </div>
 
       {selected === null ? (
-        <ServiceSelector onSelect={setSelected} />
+        <ServiceSelector
+          onSelect={(key, tier) => {
+            setHeartspaceTier(tier);
+            setSelected(key);
+          }}
+        />
       ) : (
-        <DetailsForm selectedKey={selected} onBack={() => setSelected(null)} />
+        <DetailsForm
+          selectedKey={selected}
+          heartspaceTier={heartspaceTier}
+          onBack={() => setSelected(null)}
+        />
       )}
     </div>
   );
