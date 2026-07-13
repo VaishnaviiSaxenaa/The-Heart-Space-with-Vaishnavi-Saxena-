@@ -296,7 +296,7 @@ function ServiceSelector({
                     style={{
                       background: "rgba(212,165,165,0.10)",
                       color: CHARCOAL,
-                      border: `1.5px solid ${s.color}`,
+                      border: `1.5px solid ${LEAF_GREEN}`,
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -316,7 +316,7 @@ function ServiceSelector({
                     style={{
                       background: "rgba(212,165,165,0.10)",
                       color: CHARCOAL,
-                      border: `1.5px solid ${s.color}`,
+                      border: `1.5px solid ${LEAF_GREEN}`,
                     }}
                   >
                     <div className="flex items-center justify-between">
