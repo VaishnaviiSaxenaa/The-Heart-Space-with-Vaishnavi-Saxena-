@@ -287,6 +287,14 @@ function ServiceSelector({
           );
         })}
       </div>
+      <p className="text-center text-xs mt-6 max-w-2xl mx-auto leading-relaxed" style={{ color: MUTED }}>
+        Please choose your plan carefully. If it is found that a plan or batch was
+        selected intentionally to access content not meant for you, your subscription
+        will be permanently cancelled with no refund.{" "}
+        <a href="https://wa.me/919336019395?text=Hello%2C%20I%20need%20help%20regarding%20PrepPilot." target="_blank" rel="noopener noreferrer" className="underline font-medium" style={{ color: GOLD }}>Contact us</a>{" "}
+        in case of any issue.
+      </p>
+
 
       <p className="text-center text-sm mt-6" style={{ color: MUTED }}>
         Already have an account?{" "}
