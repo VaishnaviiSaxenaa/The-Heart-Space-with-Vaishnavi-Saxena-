@@ -30,6 +30,7 @@ const GOLD = "#8B7FC7";
 const SIDEBAR = "#2D2A25";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
+const LEAF_GREEN = "#6B8F5A";
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -255,7 +256,7 @@ function ServiceSelector({
               </div>
               <div
                 className="text-lg font-extrabold mb-3"
-                style={{ color: s.key === "counseling_client" ? CHARCOAL : s.color }}
+                style={{ color: s.key === "counseling_client" ? LEAF_GREEN : s.color }}
               >
                 {s.priceLabel}
               </div>
@@ -300,7 +301,7 @@ function ServiceSelector({
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-[13px]" style={{ color: s.color }}>1 session/month</span>
-                      <span className="font-extrabold text-[13px]" style={{ color: s.color }}>₹999</span>
+                      <span className="font-extrabold text-[13px]" style={{ color: LEAF_GREEN }}>₹999</span>
                     </div>
                     <div className="text-[10px] font-normal mt-0.5" style={{ color: MUTED }}>
                       One 1-hour counselling session per month
@@ -320,7 +321,7 @@ function ServiceSelector({
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-[13px]" style={{ color: s.color }}>2 sessions/month</span>
-                      <span className="font-extrabold text-[13px]" style={{ color: s.color }}>₹1,899</span>
+                      <span className="font-extrabold text-[13px]" style={{ color: LEAF_GREEN }}>₹1,899</span>
                     </div>
                     <div className="text-[10px] font-normal mt-0.5" style={{ color: MUTED }}>
                       Two 1-hour counselling sessions per month
