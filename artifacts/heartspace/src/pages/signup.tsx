@@ -186,7 +186,7 @@ const SERVICES: Service[] = [
 function BrandHeader() {
   return (
     <div className="text-center mb-2">
-      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 190, height: "auto", margin: "0 auto" }} />
+      <img src={logoImg} alt="PrepPilot by The Heart Space with Vaishnavi Saxena" style={{ width: 130, height: "auto", margin: "0 auto" }} />
     </div>
   );
 }
@@ -202,7 +202,7 @@ function ServiceSelector({
   return (
     <div className="w-full max-w-3xl z-10">
       <BrandHeader />
-      <div className="text-center mb-6">
+      <div className="text-center mb-3">
         <h2
           className="font-serif text-2xl font-bold"
           style={{ color: SIDEBAR }}
@@ -287,13 +287,16 @@ function ServiceSelector({
           );
         })}
       </div>
-      <p className="text-center text-xs mt-6 max-w-2xl mx-auto leading-relaxed" style={{ color: MUTED }}>
-        Please choose your plan carefully. If it is found that a plan or batch was
+      <div
+        className="text-center text-xs mt-6 max-w-2xl mx-auto leading-relaxed rounded-xl px-5 py-3"
+        style={{ color: CHARCOAL, background: "rgba(212,165,165,0.15)", border: "1px solid rgba(212,165,165,0.35)" }}
+      >
+        <strong>Please choose your plan carefully.</strong> If it is found that a plan or batch was
         selected intentionally to access content not meant for you, your subscription
         will be permanently cancelled with no refund.{" "}
-        <a href="https://wa.me/919336019395?text=Hello%2C%20I%20need%20help%20regarding%20PrepPilot." target="_blank" rel="noopener noreferrer" className="underline font-medium" style={{ color: GOLD }}>Contact us</a>{" "}
+        <a href="https://wa.me/919336019395?text=Hello%2C%20I%20need%20help%20regarding%20PrepPilot." target="_blank" rel="noopener noreferrer" className="underline font-semibold" style={{ color: GOLD }}>Contact us</a>{" "}
         in case of any issue.
-      </p>
+      </div>
 
 
       <p className="text-center text-sm mt-6" style={{ color: MUTED }}>
@@ -641,7 +644,7 @@ export default function Signup() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-start pt-8 p-6 relative overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-start pt-3 p-6 relative overflow-hidden"
       style={bgStyle}
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
