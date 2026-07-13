@@ -179,7 +179,7 @@ const SERVICES: Service[] = [
     tagline: "Personal counselling + emotional support",
     priceLabel: "From ₹999/month",
     bullets: [
-      "Dedicated counsellor sessions",
+      "Dedicated counsellor sessions (1 hour each)",
       "Emotional wellness tracking",
       "Mood & daily journals",
       "Safe space support",
@@ -254,8 +254,8 @@ function ServiceSelector({
                 </div>
               </div>
               <div
-                className="text-sm font-bold mb-3"
-                style={{ color: s.color }}
+                className="text-2xl font-extrabold mb-3"
+                style={{ color: s.key === "counseling_client" ? CHARCOAL : s.color }}
               >
                 {s.priceLabel}
               </div>
