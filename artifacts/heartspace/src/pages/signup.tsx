@@ -254,7 +254,7 @@ function ServiceSelector({
                 </div>
               </div>
               <div
-                className="text-2xl font-extrabold mb-3"
+                className="text-lg font-extrabold mb-3"
                 style={{ color: s.key === "counseling_client" ? CHARCOAL : s.color }}
               >
                 {s.priceLabel}
@@ -285,21 +285,24 @@ function ServiceSelector({
               </div>
 
               {s.key === "counseling_client" ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelect(s.key, 1);
                     }}
-                    className="w-full py-2 rounded-xl font-semibold text-xs transition-all duration-200 text-left px-3"
+                    className="w-full py-2.5 rounded-xl font-semibold text-xs transition-all duration-150 text-left px-3.5 hover:shadow-md active:scale-[0.98]"
                     style={{
-                      background: "transparent",
-                      color: s.color,
+                      background: "rgba(212,165,165,0.10)",
+                      color: CHARCOAL,
                       border: `1.5px solid ${s.color}`,
                     }}
                   >
-                    <div className="font-bold">1 session/month — ₹999</div>
-                    <div className="text-[10px] font-normal opacity-80">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[13px]" style={{ color: s.color }}>1 session/month</span>
+                      <span className="font-extrabold text-[13px]" style={{ color: s.color }}>₹999</span>
+                    </div>
+                    <div className="text-[10px] font-normal mt-0.5" style={{ color: MUTED }}>
                       One 1-hour counselling session per month
                     </div>
                   </button>
@@ -308,15 +311,18 @@ function ServiceSelector({
                       e.stopPropagation();
                       onSelect(s.key, 2);
                     }}
-                    className="w-full py-2 rounded-xl font-semibold text-xs transition-all duration-200 text-left px-3"
+                    className="w-full py-2.5 rounded-xl font-semibold text-xs transition-all duration-150 text-left px-3.5 hover:shadow-md active:scale-[0.98]"
                     style={{
-                      background: "transparent",
-                      color: s.color,
+                      background: "rgba(212,165,165,0.10)",
+                      color: CHARCOAL,
                       border: `1.5px solid ${s.color}`,
                     }}
                   >
-                    <div className="font-bold">2 sessions/month — ₹1,899</div>
-                    <div className="text-[10px] font-normal opacity-80">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[13px]" style={{ color: s.color }}>2 sessions/month</span>
+                      <span className="font-extrabold text-[13px]" style={{ color: s.color }}>₹1,899</span>
+                    </div>
+                    <div className="text-[10px] font-normal mt-0.5" style={{ color: MUTED }}>
                       Two 1-hour counselling sessions per month
                     </div>
                   </button>
