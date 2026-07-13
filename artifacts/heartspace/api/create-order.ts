@@ -1,4 +1,5 @@
-import Razorpay from 'razorpay';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Razorpay = require('razorpay');
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
