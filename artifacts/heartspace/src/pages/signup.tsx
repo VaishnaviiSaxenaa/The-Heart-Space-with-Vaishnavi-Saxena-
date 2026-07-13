@@ -47,6 +47,84 @@ const PLAN_MAP: Record<ServiceKey, string> = {
   counseling_client: "heartspace",
 };
 
+/* Price in INR. 0 = free, no payment required */
+const PRICES: Record<ServiceKey, number> = {
+  academy_student: 0,
+  prep_student: 149,
+  counseling_client: 999,
+};
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+async function payForPlan(
+  amountRupees: number,
+  fullName: string,
+  email: string,
+): Promise<boolean> {
+  const scriptLoaded = await loadRazorpayScript();
+  if (!scriptLoaded) {
+    alert("Unable to load payment gateway. Please check your connection.");
+    return false;
+  }
+
+  const orderRes = await fetch("/api/create-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      amount: amountRupees,
+      receipt: `receipt_${Date.now()}`,
+      notes: { email, fullName },
+    }),
+  });
+  if (!orderRes.ok) {
+    alert("Could not start payment. Please try again.");
+    return false;
+  }
+  const order = await orderRes.json();
+
+  return new Promise((resolve) => {
+    const rzp = new window.Razorpay({
+      key: "rzp_test_TCsvfuNk0rdyGR",
+      amount: order.amount,
+      currency: order.currency,
+      name: "PrepPilot",
+      description: "Plan purchase",
+      order_id: order.id,
+      prefill: { name: fullName, email },
+      handler: async (response: any) => {
+        const verifyRes = await fetch("/api/verify-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(response),
+        });
+        const verifyData = await verifyRes.json();
+        resolve(Boolean(verifyData.verified));
+      },
+      modal: {
+        ondismiss: () => resolve(false),
+      },
+      theme: { color: "#8B7FC7" },
+    });
+    rzp.on("payment.failed", () => resolve(false));
+    rzp.open();
+  });
+}
+
 interface Service {
   key: ServiceKey;
   name: string;
@@ -292,8 +370,27 @@ function DetailsForm({
         return;
       }
 
+      /* ── Step 2.5: Payment (skip for free plans) ── */
+      const price = PRICES[selectedKey];
+      if (price > 0) {
+        const paid = await payForPlan(price, v.fullName, v.email.trim());
+        if (!paid) {
+          toast({
+            title: "Payment not completed",
+            description: "Please complete payment to activate this plan.",
+            variant: "destructive",
+          });
+          setIsPending(false);
+          return;
+        }
+      }
+
       /* ── Step 3: Upsert profile with correct role AND plan ── */
       const plan = PLAN_MAP[selectedKey];
+      const paidUntil =
+        price > 0
+          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          : null;
       const { error: upsertErr } = await supabase.from("profiles").upsert(
         {
           id: signInData.user.id,
@@ -302,6 +399,7 @@ function DetailsForm({
           role: selectedKey,
           plan: plan,
           status: "pending",
+          paid_until: paidUntil,
         },
         { onConflict: "id" },
       );
