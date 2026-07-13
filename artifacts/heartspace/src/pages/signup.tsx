@@ -300,7 +300,7 @@ function ServiceSelector({
                     }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-[13px]" style={{ color: s.color }}>1 session/month</span>
+                      <span className="font-bold text-[13px]" style={{ color: LEAF_GREEN }}>1 session/month</span>
                       <span className="font-extrabold text-[13px]" style={{ color: LEAF_GREEN }}>₹999</span>
                     </div>
                     <div className="text-[10px] font-normal mt-0.5" style={{ color: MUTED }}>
@@ -320,7 +320,7 @@ function ServiceSelector({
                     }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-[13px]" style={{ color: s.color }}>2 sessions/month</span>
+                      <span className="font-bold text-[13px]" style={{ color: LEAF_GREEN }}>2 sessions/month</span>
                       <span className="font-extrabold text-[13px]" style={{ color: LEAF_GREEN }}>₹1,899</span>
                     </div>
                     <div className="text-[10px] font-normal mt-0.5" style={{ color: MUTED }}>
