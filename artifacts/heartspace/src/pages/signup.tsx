@@ -293,8 +293,9 @@ function ServiceSelector({
       >
         <strong>Please choose your plan carefully.</strong> If it is found that a plan or batch was
         selected intentionally to access content not meant for you, your subscription
-        will be permanently cancelled with no refund.{" "}
-        <a href="https://wa.me/919336019395?text=Hello%2C%20I%20need%20help%20regarding%20PrepPilot." target="_blank" rel="noopener noreferrer" className="underline font-semibold" style={{ color: GOLD }}>Contact us</a>{" "}
+        will be permanently cancelled with no refund.
+        <br />
+        <a href="https://wa.me/919336019395?text=Hello%2C%20I%20need%20help%20regarding%20PrepPilot." target="_blank" rel="noopener noreferrer" className="inline-block mt-2 underline font-bold text-sm" style={{ color: GOLD }}>Contact us</a>{" "}
         in case of any issue.
       </div>
 
