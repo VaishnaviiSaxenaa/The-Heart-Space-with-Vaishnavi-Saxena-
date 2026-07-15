@@ -27,6 +27,7 @@ import StudentDetail from "./pages/student-detail";
 import Roadmap from "./pages/roadmap";
 import PerformanceCharts from "./pages/performance-charts";
 import AdminPanel from "./pages/admin-panel";
+import AdminCoupons from "./pages/admin-coupons";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -202,6 +203,9 @@ function Router() {
 
         <Route path="/admin">
           <ProtectedRoute component={AdminPanel} allowedRole="counsellor" />
+        </Route>
+        <Route path="/admin-coupons">
+          <ProtectedRoute component={AdminCoupons} allowedRole="counsellor" />
         </Route>
         <Route path="/dashboard">
           <StudentRoute component={StudentDashboard} />

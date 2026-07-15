@@ -81,10 +81,30 @@ export default function AdminPanel() {
   return (
     <div style={{ minHeight: "100vh", background: CREAM, padding: "2rem" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: CHARCOAL, marginBottom: "0.5rem" }}>
-          🎛️ Student Access Control
-        </h1>
-        <p style={{ color: MUTED, marginBottom: "1.5rem" }}>Manage student subscriptions and access</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
+          <div>
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: CHARCOAL, marginBottom: "0.5rem" }}>
+              🎛️ Student Access Control
+            </h1>
+            <p style={{ color: MUTED, marginBottom: "1.5rem" }}>Manage student subscriptions and access</p>
+          </div>
+          <a
+            href="/admin-coupons"
+            style={{
+              display: "inline-block",
+              padding: "0.6rem 1.2rem",
+              borderRadius: 12,
+              background: PURPLE,
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🎟️ Manage Coupons
+          </a>
+        </div>
 
         {/* Search box */}
         <input
