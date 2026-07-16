@@ -388,7 +388,29 @@ function DetailsForm({
   const [showPassword, setShowPassword] = useState(false);
 
   const service = SERVICES.find((s) => s.key === selectedKey)!;
+  const basePrice = selectedKey === "counseling_client" ? (heartspaceTier === 2 ? 1899 : 999) : PRICES[selectedKey];
+  const [couponCode, setCouponCode] = useState("");
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const finalPrice = appliedCoupon ? Math.max(0, appliedCoupon.discount_type === "percent" ? basePrice - (basePrice * appliedCoupon.discount_value) / 100 : basePrice - appliedCoupon.discount_value) : basePrice;
 
+  async function applyCoupon() {
+    if (!couponCode.trim()) return;
+    setCouponChecking(true);
+    setCouponError("");
+    const planKey = selectedKey === "counseling_client" ? `heartspace_${heartspaceTier ?? 1}` : PLAN_MAP[selectedKey];
+    const { data, error } = await supabase.from("coupons").select("*").eq("code", couponCode.trim().toUpperCase()).eq("active", true).single();
+    if (error || !data) { setCouponError("Invalid or inactive coupon code."); setCouponChecking(false); return; }
+    if (data.expires_at && new Date(data.expires_at) < new Date()) { setCouponError("This coupon has expired."); setCouponChecking(false); return; }
+    if (data.max_uses && data.used_count >= data.max_uses) { setCouponError("This coupon has reached its usage limit."); setCouponChecking(false); return; }
+    if (data.applicable_plans) {
+      const allowedPlans = data.applicable_plans.split(",");
+      if (!allowedPlans.includes(planKey)) { setCouponError("This coupon is not valid for the selected plan."); setCouponChecking(false); return; }
+    }
+    setAppliedCoupon({ id: data.id, code: data.code, discount_type: data.discount_type, discount_value: data.discount_value, used_count: data.used_count });
+    setCouponChecking(false);
+  }
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { fullName: "", email: "", password: "" },
@@ -442,12 +464,7 @@ function DetailsForm({
       }
 
       /* ── Step 2.5: Payment (skip for free plans) ── */
-      const price =
-        selectedKey === "counseling_client"
-          ? heartspaceTier === 2
-            ? 1899
-            : 999
-          : PRICES[selectedKey];
+      const price = finalPrice;
       if (price > 0) {
         const paymentDescription =
           selectedKey === "counseling_client"
@@ -469,6 +486,12 @@ function DetailsForm({
           });
           setIsPending(false);
           return;
+        }
+        if (appliedCoupon) {
+          await supabase
+            .from("coupons")
+            .update({ used_count: (appliedCoupon as any).used_count + 1 })
+            .eq("id", appliedCoupon.id);
         }
       }
 
@@ -669,6 +692,45 @@ function DetailsForm({
               />
             ))}
 
+            {basePrice > 0 && (
+              <div style={{ marginTop: 8, marginBottom: 4 }}>
+                {!appliedCoupon ? (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="Coupon code (optional)"
+                      style={{ flex: 1, padding: "0.5rem 0.75rem", borderRadius: 10, border: "1px solid #E5DDD0", fontSize: "0.85rem" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      disabled={couponChecking || !couponCode.trim()}
+                      style={{ padding: "0.5rem 1rem", borderRadius: 10, background: service.color, color: "#fff", fontWeight: 600, fontSize: "0.85rem", border: "none", cursor: "pointer" }}
+                    >
+                      {couponChecking ? "Checking…" : "Apply"}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", borderRadius: 10, background: "rgba(107,143,90,0.10)", border: "1px solid #6B8F5A" }}>
+                    <span style={{ fontSize: "0.85rem", color: "#6B8F5A", fontWeight: 600 }}>
+                      "{appliedCoupon.code}" applied — ₹{finalPrice} (was ₹{basePrice})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { setAppliedCoupon(null); setCouponCode(""); }}
+                      style={{ fontSize: "0.75rem", color: "#7A7267", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+                {couponError && (
+                  <p style={{ fontSize: "0.75rem", color: "#C0392B", marginTop: 4 }}>{couponError}</p>
+                )}
+              </div>
+            )}
             <Button
               type="submit"
               disabled={isPending}
