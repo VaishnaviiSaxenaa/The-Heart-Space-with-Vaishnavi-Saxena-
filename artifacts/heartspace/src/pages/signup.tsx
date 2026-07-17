@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -395,12 +395,13 @@ function DetailsForm({
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const finalPrice = appliedCoupon ? Math.max(0, appliedCoupon.discount_type === "percent" ? basePrice - (basePrice * appliedCoupon.discount_value) / 100 : basePrice - appliedCoupon.discount_value) : basePrice;
 
-  async function applyCoupon() {
-    if (!couponCode.trim()) return;
+  async function applyCoupon(codeOverride?: string) {
+    const rawCode = codeOverride ?? couponCode;
+    if (!rawCode.trim()) return;
     setCouponChecking(true);
     setCouponError("");
     const planKey = selectedKey === "counseling_client" ? `heartspace_${heartspaceTier ?? 1}` : PLAN_MAP[selectedKey];
-    const { data, error } = await supabase.from("coupons").select("*").eq("code", couponCode.trim().toUpperCase()).eq("active", true).single();
+    const { data, error } = await supabase.from("coupons").select("*").eq("code", rawCode.trim().toUpperCase()).eq("active", true).single();
     if (error || !data) { setCouponError("Invalid or inactive coupon code."); setCouponChecking(false); return; }
     if (data.expires_at && new Date(data.expires_at) < new Date()) { setCouponError("This coupon has expired."); setCouponChecking(false); return; }
     if (data.max_uses && data.used_count >= data.max_uses) { setCouponError("This coupon has reached its usage limit."); setCouponChecking(false); return; }
@@ -411,6 +412,14 @@ function DetailsForm({
     setAppliedCoupon({ id: data.id, code: data.code, discount_type: data.discount_type, discount_value: data.discount_value, used_count: data.used_count });
     setCouponChecking(false);
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const urlCoupon = params.get("coupon");
+    if (urlCoupon) applyCoupon(urlCoupon);
+  }, []);
+
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { fullName: "", email: "", password: "" },
