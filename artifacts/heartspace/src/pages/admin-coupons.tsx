@@ -93,6 +93,12 @@ export default function AdminCoupons() {
     setEditingId(null);
   }
 
+  function copyLink(code: string) {
+    const url = `https://preppilot.co.in/signup?coupon=${encodeURIComponent(code)}`;
+    navigator.clipboard.writeText(url);
+    alert("Signup link copied to clipboard!");
+  }
+
   function startEdit(c: Coupon) {
     setEditingId(c.id);
     setCode(c.code);
@@ -292,6 +298,12 @@ export default function AdminCoupons() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    onClick={() => copyLink(c.code)}
+                    style={{ padding: "0.4rem 0.9rem", borderRadius: 10, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", background: OLIVE, color: "#fff", border: "none" }}
+                  >
+                    Copy Link
+                  </button>
                   <button
                     onClick={() => startEdit(c)}
                     style={{ padding: "0.4rem 0.9rem", borderRadius: 10, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", background: CREAM, color: PURPLE, border: `1px solid ${BORDER}` }}
