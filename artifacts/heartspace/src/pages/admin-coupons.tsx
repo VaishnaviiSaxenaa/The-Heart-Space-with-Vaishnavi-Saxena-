@@ -40,6 +40,7 @@ export default function AdminCoupons() {
   const [maxUses, setMaxUses] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadCoupons();
@@ -60,29 +61,47 @@ export default function AdminCoupons() {
     );
   }
 
-  async function createCoupon() {
+  async function saveCoupon() {
     if (!code.trim() || !discountValue) return;
     setSaving(true);
-    const { error } = await supabase.from("coupons").insert({
+    const payload = {
       code: code.trim().toUpperCase(),
       discount_type: discountType,
       discount_value: Number(discountValue),
       max_uses: maxUses ? Number(maxUses) : null,
       applicable_plans: selectedPlans.length > 0 ? selectedPlans.join(",") : null,
       expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
-      active: true,
-    });
+    };
+    const { error } = editingId
+      ? await supabase.from("coupons").update(payload).eq("id", editingId)
+      : await supabase.from("coupons").insert({ ...payload, active: true });
     if (error) {
-      alert("Error creating coupon: " + error.message);
+      alert("Error saving coupon: " + error.message);
     } else {
-      setCode("");
-      setDiscountValue("");
-      setMaxUses("");
-      setExpiresAt("");
-      setSelectedPlans([]);
+      resetForm();
       loadCoupons();
     }
     setSaving(false);
+  }
+
+  function resetForm() {
+    setCode("");
+    setDiscountValue("");
+    setMaxUses("");
+    setExpiresAt("");
+    setSelectedPlans([]);
+    setEditingId(null);
+  }
+
+  function startEdit(c: Coupon) {
+    setEditingId(c.id);
+    setCode(c.code);
+    setDiscountType(c.discount_type);
+    setDiscountValue(String(c.discount_value));
+    setMaxUses(c.max_uses ? String(c.max_uses) : "");
+    setExpiresAt(c.expires_at ? c.expires_at.slice(0, 10) : "");
+    setSelectedPlans(c.applicable_plans ? c.applicable_plans.split(",") : []);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function toggleActive(id: string, current: boolean) {
@@ -201,7 +220,7 @@ export default function AdminCoupons() {
           </div>
 
           <button
-            onClick={createCoupon}
+            onClick={saveCoupon}
             disabled={saving || !code.trim() || !discountValue}
             style={{
               padding: "0.7rem 1.5rem",
@@ -214,8 +233,16 @@ export default function AdminCoupons() {
               cursor: saving ? "not-allowed" : "pointer",
             }}
           >
-            {saving ? "Creating…" : "Create Coupon"}
+            {saving ? "Saving…" : editingId ? "Update Coupon" : "Create Coupon"}
           </button>
+          {editingId && (
+            <button
+              onClick={resetForm}
+              style={{ marginLeft: "0.75rem", padding: "0.7rem 1.5rem", borderRadius: 12, background: "transparent", color: MUTED, fontWeight: 600, fontSize: "0.9rem", border: `1px solid ${BORDER}`, cursor: "pointer" }}
+            >
+              Cancel Edit
+            </button>
+          )}
         </div>
 
         {/* List */}
@@ -265,6 +292,12 @@ export default function AdminCoupons() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    onClick={() => startEdit(c)}
+                    style={{ padding: "0.4rem 0.9rem", borderRadius: 10, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", background: CREAM, color: PURPLE, border: `1px solid ${BORDER}` }}
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={() => toggleActive(c.id, c.active)}
                     style={{
