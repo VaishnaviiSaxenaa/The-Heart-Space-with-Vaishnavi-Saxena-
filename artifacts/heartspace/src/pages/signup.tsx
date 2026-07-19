@@ -101,7 +101,7 @@ async function payForPlan(
 
   return new Promise((resolve) => {
     const rzp = new window.Razorpay({
-      key: "rzp_test_TCvJJxH73s7fsp",
+      key: "rzp_live_TFP8LBdqrk5Evx",
       amount: order.amount,
       currency: order.currency,
       name: "PrepPilot",
