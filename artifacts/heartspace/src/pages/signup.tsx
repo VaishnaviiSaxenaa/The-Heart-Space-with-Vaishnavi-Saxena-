@@ -701,7 +701,7 @@ function DetailsForm({
               />
             ))}
 
-            {basePrice > 0 && typeof window !== "undefined" && window.location.search.includes("promo=1") && (
+            {basePrice > 0 && typeof window !== "undefined" && (window.location.search.includes("promo=1") || appliedCoupon || couponError) && (
               <div style={{ marginTop: 8, marginBottom: 4 }}>
                 {!appliedCoupon ? (
                   <div style={{ display: "flex", gap: 8 }}>
