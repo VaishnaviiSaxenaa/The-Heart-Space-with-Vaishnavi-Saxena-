@@ -310,6 +310,45 @@ function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects
     localStorage.setItem(CAL_DONE_KEY(uid, todayKey), JSON.stringify(next));
   };
 
+  /* ── Timers ── */
+  const TIMER_KEY = (uidX: string, dateX: string, entryKey: string) => `hs_timer_${uidX}_${dateX}_${entryKey}`;
+  const [timerTick, setTimerTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTimerTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  function loadTimerState(entryKey: string): { elapsed: number; running: boolean; startedAt: number | null } {
+    try {
+      const raw = localStorage.getItem(TIMER_KEY(uid, todayKey, entryKey));
+      if (raw === null) return { elapsed: 0, running: false, startedAt: null };
+      return JSON.parse(raw);
+    } catch { return { elapsed: 0, running: false, startedAt: null }; }
+  }
+  function getLiveElapsed(entryKey: string): number {
+    const s = loadTimerState(entryKey);
+    if (s.running === false || s.startedAt === null) return s.elapsed;
+    return s.elapsed + Math.floor((Date.now() - s.startedAt) / 1000);
+  }
+  function toggleTimer(entryKey: string) {
+    const s = loadTimerState(entryKey);
+    let next;
+    if (s.running) {
+      const totalElapsed = s.elapsed + (s.startedAt ? Math.floor((Date.now() - s.startedAt) / 1000) : 0);
+      next = { elapsed: totalElapsed, running: false, startedAt: null };
+    } else {
+      next = { elapsed: s.elapsed, running: true, startedAt: Date.now() };
+    }
+    localStorage.setItem(TIMER_KEY(uid, todayKey, entryKey), JSON.stringify(next));
+    setTimerTick((t) => t + 1);
+  }
+  function formatElapsed(totalSeconds: number): string {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
   return (
     <Card className="lg:col-span-2 p-6">
       <div className="flex items-center justify-between mb-4">
@@ -357,6 +396,19 @@ function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects
                   <span className="text-xs font-semibold flex-1" style={{ color: CHARCOAL, textDecoration: isDone ? "line-through" : "none" }}>{e.subj}</span>
                   <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: `${e.color}20`, color: e.color }}>{e.type}</span>
                   <span className="text-[10px] font-bold" style={{ color: e.color }}>{e.hours}h</span>
+                  {(() => {
+                    const ts = loadTimerState(e.entryKey);
+                    const liveElapsed = getLiveElapsed(e.entryKey);
+                    return (
+                      <button
+                        onClick={(ev) => { ev.stopPropagation(); toggleTimer(e.entryKey); }}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                        style={{ background: ts.running ? e.color : `${e.color}20`, color: ts.running ? "#fff" : e.color }}
+                      >
+                        {ts.running ? "⏸" : "▶"} {formatElapsed(liveElapsed)}
+                      </button>
+                    );
+                  })()}
                 </div>
               );
             })}
