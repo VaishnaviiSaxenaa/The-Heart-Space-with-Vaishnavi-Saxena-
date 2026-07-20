@@ -4169,7 +4169,7 @@ function RoadmapSelector({
           className="text-3xl font-serif font-bold"
           style={{ color: CHARCOAL }}
         >
-          My Roadmap
+          Topic Completion
         </h1>
         <p className="mt-1 text-sm" style={{ color: MUTED }}>
           Set up your {examType === "JAM" ? "IIT JAM" : "CSIR NET / GATE"}{" "}
@@ -4278,7 +4278,7 @@ function RoadmapSelector({
                 boxShadow: "0 4px 16px rgba(201,169,110,.35)",
               }}
             >
-              Create My Roadmap →
+              Create Topic Completion →
             </button>
           </div>
         )}
@@ -4380,7 +4380,7 @@ function RoadmapView({
             className="text-3xl font-serif font-bold"
             style={{ color: CHARCOAL }}
           >
-            My Roadmap
+            Topic Completion
           </h1>
           <p className="mt-1 text-sm" style={{ color: MUTED }}>
             {ROADMAP_TYPES[rm.type].emoji} {ROADMAP_TYPES[rm.type].label} ·{" "}
