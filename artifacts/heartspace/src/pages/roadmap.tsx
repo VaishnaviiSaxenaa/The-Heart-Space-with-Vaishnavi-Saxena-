@@ -25,7 +25,7 @@ import {
   Circle,
   PlayCircle,
 } from "lucide-react";
-import RoadmapCalendar, { loadCalendar } from "./roadmap-calendar-view";
+import RoadmapCalendar, { loadCalendar, saveCalendarLocal } from "./roadmap-calendar-view";
 import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
 import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 import {
@@ -2816,6 +2816,25 @@ function CalendarTabWrapper({
     const consumed = consumedHoursBySubject[s.id] ?? 0;
     remainingHoursBySubject[s.id] = Math.max(0, total - consumed);
   });
+  useEffect(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const doneSubjectIds = new Set(
+      rawSubjects.filter((s) => syllabusPercs[(s as any).syllabusId] === 100).map((s) => s.id)
+    );
+    if (doneSubjectIds.size === 0) return;
+    const cal = loadCalendar(effectiveUserId);
+    let changed = false;
+    const cleaned: typeof cal = {};
+    Object.entries(cal).forEach(([dateKey, entries]) => {
+      const isFuture = dateKey >= todayStr;
+      const filtered = isFuture
+        ? entries.filter((e) => doneSubjectIds.has(e.subjectId) === false)
+        : entries;
+      if (filtered.length !== entries.length) changed = true;
+      if (filtered.length > 0) cleaned[dateKey] = filtered;
+    });
+    if (changed) saveCalendarLocal(effectiveUserId, cleaned);
+  }, [effectiveUserId, JSON.stringify(syllabusPercs)]);
 
   const savedSimSlots = loadStudyPeriods(effectiveUserId);
   const simSlotsForCalendar = savedSimSlots

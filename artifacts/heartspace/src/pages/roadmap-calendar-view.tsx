@@ -73,7 +73,7 @@ export function loadCalendar(uid: string): CalendarData {
     return {};
   }
 }
-function saveCalendarLocal(uid: string, data: CalendarData) {
+export function saveCalendarLocal(uid: string, data: CalendarData) {
   try {
     localStorage.setItem(lsKey(uid), JSON.stringify(data));
   } catch {}
