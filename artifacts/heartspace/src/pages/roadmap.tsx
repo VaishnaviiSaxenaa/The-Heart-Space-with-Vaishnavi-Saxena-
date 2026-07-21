@@ -1256,15 +1256,17 @@ function TickButton({
 }
 
 /* ─── My Progress Tab ──────────────────── */
-function MyProgressTab({
+export function MyProgressTab({
   userId,
   examType,
+  storagePrefix = "topic",
 }: {
   userId: string;
   examType: string;
+  storagePrefix?: string;
 }) {
   const isJAM = examType === "JAM";
-  const TC_SYLLABUS_KEY = (uidX: string) => `hs_topic_syllabus_${uidX}`;
+  const TC_SYLLABUS_KEY = (uidX: string) => `hs_${storagePrefix}_syllabus_${uidX}`;
   const [progress, setProgress] = useState<SyllabusProgress>(() => {
     try { return JSON.parse(localStorage.getItem(TC_SYLLABUS_KEY(userId)) ?? "{}"); } catch { return {}; }
   });
@@ -4447,7 +4449,7 @@ function RoadmapView({
 
       {/* MY PROGRESS TAB */}
       {activeTab === "progress" && (
-        <MyProgressTab userId={effectiveUserId} examType={examType} />
+        <MyProgressTab userId={effectiveUserId} examType={examType} storagePrefix="topic" />
       )}
 
       {/* SCHEDULE TAB — live, auto-updates */}

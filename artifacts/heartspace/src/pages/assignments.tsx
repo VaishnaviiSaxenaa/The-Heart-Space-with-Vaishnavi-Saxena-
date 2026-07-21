@@ -18,6 +18,7 @@ import {
 import { SYLLABUS } from "./syllabus";
 import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
 import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
+import { MyProgressTab } from "./roadmap";
 
 /* ─── Brand tokens ─────────────────────── */
 const CREAM = "#F8F5F0";
@@ -1277,7 +1278,7 @@ export default function QuestionPractice() {
   const examType = isViewMode ? viewedExamType : ((user as any)?.exam_type as string | null);
   const isJAM = examType === "JAM";
 
-  const [activeMainTab, setActiveMainTab] = useState<"log" | "calendar">("log");
+  const [activeMainTab, setActiveMainTab] = useState<"log" | "calendar" | "progress">("log");
 
   /* Question Practice calendar setup: 70% of each subject's study hours */
   const qpRoadmapSubjects = examType === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
@@ -1430,7 +1431,7 @@ export default function QuestionPractice() {
 
       {/* Tab Switcher */}
       <div className="flex gap-2">
-        {(["log", "calendar"] as const).map((tab) => (
+        {(["log", "calendar", "progress"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveMainTab(tab)}
@@ -1441,10 +1442,13 @@ export default function QuestionPractice() {
                 : { background: `${BORDER}88`, color: MUTED }
             }
           >
-            {tab === "log" ? "📝 Practice Log" : "📅 Calendar"}
+            {tab === "log" ? "📝 Practice Log" : tab === "calendar" ? "📅 Calendar" : "📊 My Progress"}
           </button>
         ))}
       </div>
+      {activeMainTab === "progress" && effectiveUserId && examType && (
+        <MyProgressTab userId={effectiveUserId} examType={examType} storagePrefix="qp" />
+      )}
 
       {activeMainTab === "calendar" && effectiveUserId && (
         <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>

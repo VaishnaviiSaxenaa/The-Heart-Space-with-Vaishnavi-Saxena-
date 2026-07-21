@@ -6,6 +6,7 @@ import { format, differenceInDays } from "date-fns";
 import { ChevronDown, ChevronUp, RotateCcw, Send } from "lucide-react";
 import GenericCalendar, { GenericSubjectDef, loadGenericCalendarFromDB, calendarKey } from "./generic-calendar";
 import { JAM_SUBJECTS as ROADMAP_SUBJECTS_JAM, NET_SUBJECTS as ROADMAP_SUBJECTS_NET } from "./subjects";
+import { MyProgressTab } from "./roadmap";
 
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
@@ -239,7 +240,7 @@ export default function RevisionTracker() {
     if (inputs.hoursPerDay) revisionHoursPerDay = inputs.hoursPerDay;
     if (inputs.daysPerWeek) revisionDaysPerWeek = inputs.daysPerWeek;
   } catch {}
-  const [activeTab, setActiveTab] = useState<"log" | "calendar">("log");
+  const [activeTab, setActiveTab] = useState<"log" | "calendar" | "progress">("log");
 
   const [logs, setLogs] = useState<RevisionLog[]>([]);
   const [methodResponses, setMethodResponses] = useState<string[]>([]);
@@ -459,7 +460,7 @@ export default function RevisionTracker() {
 
         {/* Tab Switcher */}
         <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1.5rem" }}>
-          {(["log", "calendar"] as const).map((tab) => (
+          {(["log", "calendar", "progress"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -474,10 +475,13 @@ export default function RevisionTracker() {
                 cursor: "pointer",
               }}
             >
-              {tab === "log" ? "📝 Revision Log" : "📅 Calendar"}
+              {tab === "log" ? "📝 Revision Log" : tab === "calendar" ? "📅 Calendar" : "📊 My Progress"}
             </button>
           ))}
         </div>
+        {activeTab === "progress" && userId && (
+          <MyProgressTab userId={userId} examType={examType} storagePrefix="rev" />
+        )}
 
         {activeTab === "calendar" && userId && (
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem" }}>
