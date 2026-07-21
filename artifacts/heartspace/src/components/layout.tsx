@@ -25,6 +25,7 @@ import {
   X,
   Sparkles,
   ClipboardList,
+  ClipboardCheck,
   Users,
   GraduationCap,
   Map,
@@ -101,6 +102,9 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         key: "assignments",
         href: "/assignments",
       },
+      { icon: RotateCcw, label: "Revision Tracker", key: "revision-tracker", href: "/revision-tracker" },
+      { icon: BookOpen, label: "Note Tracker", key: "note-tracker", href: "/note-tracker" },
+      { icon: ClipboardCheck, label: "Mock Tests", key: "mock-tests", soon: true },
       {
         icon: ClipboardList,
         label: "Daily Tracker",
@@ -108,8 +112,6 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         href: "/daily-tracker",
       },
       { icon: CalendarDays, label: "Sessions with Vaishnavi Ma'am", key: "my-sessions", href: "/my-sessions" },
-      { icon: RotateCcw, label: "Revision Tracker", key: "revision-tracker", href: "/revision-tracker" },
-      { icon: BookOpen, label: "Note Tracker", key: "note-tracker", href: "/note-tracker" },
       { icon: Calendar, label: "Sessions with Sagar Sir", key: "sessions", href: "/sessions" },
       { icon: BarChart2, label: "Reports", key: "reports2", href: "/charts" },
     ];
