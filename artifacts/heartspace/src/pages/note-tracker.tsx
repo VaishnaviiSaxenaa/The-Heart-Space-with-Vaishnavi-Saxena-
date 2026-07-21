@@ -831,7 +831,12 @@ export default function NoteTracker() {
 
               {expanded && (
                 <div style={{ borderTop: `1px solid ${BORDER}` }}>
-                  {subject.topics.map((topic) => {
+                  {subject.topics.map((topicGroup) => (
+                    <div key={topicGroup.name}>
+                      <div style={{ padding: "0.6rem 1.25rem", background: `${BORDER}33`, fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em" }}>
+                        {topicGroup.name}
+                      </div>
+                      {topicGroup.subtopics.map((topic) => {
                     const note = getNote(subject.key, topic);
                     const done = note?.done ?? false;
                     return (
@@ -912,7 +917,9 @@ export default function NoteTracker() {
                         </button>
                       </div>
                     );
-                  })}
+                      })}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
