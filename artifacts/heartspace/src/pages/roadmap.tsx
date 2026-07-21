@@ -4345,8 +4345,8 @@ function RoadmapView({
   const [expandPhase, setExpandPhase] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "progress" | "calendar" | "schedule"
-  >("overview");
+    "progress" | "calendar" | "schedule"
+  >("progress");
 
   const syllabusProgress: SyllabusProgress = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_syllabus_${effectiveUserId}`) ?? "{}"); } catch { return {}; } })();
   const examType = rm.examType;
@@ -4425,7 +4425,7 @@ function RoadmapView({
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
-        {(["overview", "progress", "calendar", "schedule"] as const).map((tab) => (
+        {(["progress", "calendar", "schedule"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -4436,9 +4436,7 @@ function RoadmapView({
                 : { background: `${BORDER}88`, color: MUTED }
             }
           >
-            {tab === "overview"
-              ? "📋 Overview"
-              : tab === "progress"
+            {tab === "progress"
                 ? "📊 My Progress"
                 : tab === "calendar"
                   ? "🗓️ Calendar"
@@ -4446,166 +4444,6 @@ function RoadmapView({
           </button>
         ))}
       </div>
-
-      {/* OVERVIEW TAB */}
-      {activeTab === "overview" && (
-        <div className="space-y-6">
-          
-          {/* Phases */}
-          <div>
-            <h2
-              className="font-serif text-lg font-semibold mb-3"
-              style={{ color: CHARCOAL }}
-            >
-              Preparation Phases
-            </h2>
-            <div className="space-y-3">
-              {calc.adjustedPhases.map((phase, idx) => {
-                const isOpen = expandPhase[phase.id] ?? false;
-                const weekStart = calc.adjustedPhases
-                  .slice(0, idx)
-                  .reduce((s, p) => s + p.durationWeeks, 0);
-                const phaseStart = addWeeks(parseISO(rm.startDate), weekStart);
-                const phaseEnd = addWeeks(phaseStart, phase.durationWeeks);
-
-
-                return (
-                  <div
-                    key={phase.id}
-                    className="rounded-2xl overflow-hidden"
-                    style={{ background: CARD, border: `1px solid ${BORDER}` }}
-                  >
-                    <div className="flex items-center gap-3 px-5 py-4">
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                        style={{
-                          background:
-                            phase.status === "done"
-                              ? `${OLIVE}22`
-                              : `${PROGRESS_PURPLE}22`,
-                          color: phase.status === "done" ? OLIVE : DARK,
-                        }}
-                      >
-                        {idx + 1}
-                      </div>
-                      <button
-                        onClick={() =>
-                          setExpandPhase((p) => ({
-                            ...p,
-                            [phase.id]: !p[phase.id],
-                          }))
-                        }
-                        className="flex-1 text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="text-sm font-semibold"
-                            style={{ color: CHARCOAL }}
-                          >
-                            {phase.title}
-                          </span>
-                          {isOpen ? (
-                            <ChevronDown
-                              className="w-3.5 h-3.5"
-                              style={{ color: MUTED }}
-                            />
-                          ) : (
-                            <ChevronRight
-                              className="w-3.5 h-3.5"
-                              style={{ color: MUTED }}
-                            />
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                          <span className="text-xs" style={{ color: MUTED }}>
-                            {phase.durationWeeks} weeks ·{" "}
-                            {format(phaseStart, "MMM d")} →{" "}
-                            {format(phaseEnd, "MMM d")}
-                          </span>
-                          {(phase as any).marks && (
-                            <span
-                              className="text-[10px] px-1.5 py-0.5 rounded-full"
-                              style={{ background: `${PROGRESS_PURPLE}15`, color: DARK }}
-                            >
-                              {(phase as any).marks}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                      <div className="flex gap-1 flex-shrink-0">
-                        {(
-                          [
-                            "not_started",
-                            "in_progress",
-                            "done",
-                          ] as PhaseStatus[]
-                        ).map((s) => {
-                          const cfg = PHASE_STATUS[s];
-                          const active = phase.status === s;
-                          return (
-                            <button
-                              key={s}
-                              onClick={() => updatePhaseStatus(phase.id, s)}
-                              className="w-8 h-8 rounded-lg text-xs font-bold transition-all"
-                              style={
-                                active
-                                  ? {
-                                      background:
-                                        cfg.color === MUTED ? DARK : cfg.color,
-                                      color: "#fff",
-                                    }
-                                  : { background: `${BORDER}88`, color: MUTED }
-                              }
-                            >
-                              {cfg.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {isOpen && (
-                      <div
-                        className="px-5 pb-4"
-                        style={{ borderTop: `1px solid ${BORDER}` }}
-                      >
-                        <p
-                          className="text-xs mt-3 mb-3"
-                          style={{ color: MUTED }}
-                        >
-                          {phase.description}
-                        </p>
-                        <div className="space-y-2">
-                          {phase.topics.map((t, ti) => (
-                            <div
-                              key={ti}
-                              className="flex items-start gap-2 px-3 py-2 rounded-xl"
-                              style={{
-                                background: CREAM,
-                                border: `1px solid ${BORDER}`,
-                              }}
-                            >
-                              <div
-                                className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
-                                style={{ background: PROGRESS_PURPLE }}
-                              />
-                              <span
-                                className="text-xs leading-relaxed"
-                                style={{ color: CHARCOAL }}
-                              >
-                                {t}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MY PROGRESS TAB */}
       {activeTab === "progress" && (
