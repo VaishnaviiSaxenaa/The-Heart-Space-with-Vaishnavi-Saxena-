@@ -1485,58 +1485,6 @@ export function MyProgressTab({
         })()}
       </div>
 
-      {/* Recent completions */}
-      {recentDone.length > 0 && (
-        <div
-          className="rounded-2xl p-5"
-          style={{ background: CARD, border: `1px solid ${BORDER}` }}
-        >
-          <h3
-            className="font-semibold text-sm mb-3"
-            style={{ color: CHARCOAL }}
-          >
-            Recently Completed
-          </h3>
-          <div className="space-y-2">
-            {recentDone.map(([id, entry]) => {
-              let subtopicName = id;
-              SYLLABUS.forEach((subj) =>
-                subj.topics.forEach((t) =>
-                  t.subtopics.forEach((st) => {
-                    if (st.id === id) subtopicName = st.name;
-                  }),
-                ),
-              );
-              return (
-                <div
-                  key={id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                  style={{
-                    background: `${OLIVE}10`,
-                    border: `1px solid ${OLIVE}33`,
-                  }}
-                >
-                  <CheckCircle2
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: OLIVE }}
-                  />
-                  <span className="flex-1 text-sm" style={{ color: CHARCOAL }}>
-                    {subtopicName}
-                  </span>
-                  {entry.doneAt && (
-                    <span
-                      className="text-[10px] flex-shrink-0"
-                      style={{ color: OLIVE }}
-                    >
-                      {format(new Date(entry.doneAt), "MMM d, yyyy")}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Subject breakdown */}
       <div>
