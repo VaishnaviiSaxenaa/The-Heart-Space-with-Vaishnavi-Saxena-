@@ -162,7 +162,8 @@ export const SYLLABUS: Subject[] = [
         { id: "real_analysis_2_2", name: "SOPT" },
         { id: "real_analysis_2_3", name: "Tests for SOPT" },
         { id: "real_analysis_2_4", name: "Comparison Tests" },
-        { id: "real_analysis_2_5", name: "Integral Test" },
+        { id: "real_analysis_2_5", name: "Integral Test (of Test)" },
+        { id: "real_analysis_2_5b", name: "Integral Test" },
         { id: "real_analysis_2_6", name: "Ratio & Root Test" },
         { id: "real_analysis_2_7", name: "Log Test" },
         { id: "real_analysis_2_8", name: "Raabe's Test" },
@@ -191,6 +192,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "abstract_algebra",
     name: "Abstract Algebra",
+    netOnly: true,
     topics: [
       {
         id: "aa_gt1",
@@ -425,6 +427,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "numerical_analysis",
     name: "Numerical Analysis",
+    netOnly: true,
     topics: [
       {
         id: "na_rf",
@@ -474,6 +477,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "linear_programming",
     name: "Linear Programming",
+    netOnly: true,
     topics: [
       {
         id: "lp_form",
@@ -521,6 +525,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "statistics",
     name: "Statistics & Probability",
+    netOnly: true,
     topics: [
       {
         id: "stat_prob",
@@ -699,7 +704,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "mechanics",
     name: "Mechanics",
-    jamOnly: true,
+    netOnly: true,
     topics: [
       { id: "mech_vc", name: "Vector Calculus Prerequisites", subtopics: [
         { id: "mech_vc_1", name: "Gradient, Divergence, Curl" },
@@ -732,6 +737,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "integral_equations",
     name: "Integral Equations",
+    netOnly: true,
     topics: [
       { id: "ie_intro", name: "Introduction to Integral Equations", subtopics: [
         { id: "ie_intro_1", name: "Fredholm and Volterra Equations" },
@@ -827,9 +833,9 @@ export const SYLLABUS: Subject[] = [
         { id: "functions_of_one_variable_3_2", name: "Inverse Derivative Theorem" },
         { id: "functions_of_one_variable_3_3", name: "Darboux's Theorem" },
         { id: "functions_of_one_variable_3_4", name: "Mean Value Theorem" },
-        { id: "functions_of_one_variable_3_5", name: "Rolle's Theorem" },
-        { id: "functions_of_one_variable_3_6", name: "LMVT" },
-        { id: "functions_of_one_variable_3_7", name: "Cauchy's MVT" },
+        { id: "functions_of_one_variable_3_5", name: "Mean Value Theorem - Rolle's Theorem" },
+        { id: "functions_of_one_variable_3_6", name: "Mean Value Theorem - LMVT" },
+        { id: "functions_of_one_variable_3_7", name: "Mean Value Theorem - Cauchy's MVT" },
       ]},
       { id: "functions_of_one_variable_t4", name: "Inc-Dec Functions & Max-Min", subtopics: [
         { id: "functions_of_one_variable_4_0", name: "Inc-Dec Function over an Interval" },
