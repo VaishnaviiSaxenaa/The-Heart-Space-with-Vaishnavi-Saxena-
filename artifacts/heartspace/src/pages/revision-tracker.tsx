@@ -624,38 +624,6 @@ export default function RevisionTracker() {
           </p>
         </div>
 
-        {/* Revision Speed Picker - Topic-wise */}
-        <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
-          <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Revision Speed per Subject</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            {roadmapSubjects.map(s => (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#2D2A25", minWidth: 120 }}>{s.name}</span>
-                <div style={{ display: "flex", gap: "0.25rem", flex: 1 }}>
-                  {SPEED_OPTS.map(([key, emoji, label]) => {
-                    const current = revSpeedMap[s.id] ?? "standard";
-                    return (
-                      <button key={key} onClick={() => {
-                        const next = { ...revSpeedMap, [s.id]: key };
-                        setRevSpeedMap(next);
-                        localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(next));
-                        saveRevisionSpeedToDB(_effectiveUid, next);
-                      }}
-                      style={{
-                        flex: 1, padding: "0.2rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
-                        background: current === key ? "#6B568F" : "#F8F5F0",
-                        color: current === key ? "#fff" : "#7A7267",
-                        border: `1px solid ${current === key ? "#6B568F" : "#E5DDD0"}`,
-                      }}>{emoji} {label}</button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-
         {/* Tab Switcher */}
         <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1.5rem" }}>
           {(["log", "calendar", "progress"] as const).map((tab) => (
@@ -696,6 +664,38 @@ export default function RevisionTracker() {
 
         {activeTab === "calendar" && userId && (
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem" }}>
+        {/* Revision Speed Picker - Topic-wise */}
+        <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+          <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Revision Speed per Subject</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {roadmapSubjects.map(s => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#2D2A25", minWidth: 120 }}>{s.name}</span>
+                <div style={{ display: "flex", gap: "0.25rem", flex: 1 }}>
+                  {SPEED_OPTS.map(([key, emoji, label]) => {
+                    const current = revSpeedMap[s.id] ?? "standard";
+                    return (
+                      <button key={key} onClick={() => {
+                        const next = { ...revSpeedMap, [s.id]: key };
+                        setRevSpeedMap(next);
+                        localStorage.setItem(`hs_revision_speed_${_effectiveUid}`, JSON.stringify(next));
+                        saveRevisionSpeedToDB(_effectiveUid, next);
+                      }}
+                      style={{
+                        flex: 1, padding: "0.2rem 0.1rem", borderRadius: 6, fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
+                        background: current === key ? "#6B568F" : "#F8F5F0",
+                        color: current === key ? "#fff" : "#7A7267",
+                        border: `1px solid ${current === key ? "#6B568F" : "#E5DDD0"}`,
+                      }}>{emoji} {label}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+
             <GenericCalendar
               namespace="revision"
               uid={userId}
