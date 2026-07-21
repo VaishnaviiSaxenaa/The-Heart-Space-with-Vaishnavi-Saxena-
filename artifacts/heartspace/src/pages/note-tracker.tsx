@@ -367,6 +367,9 @@ export const NET_EXTRA = [
     ],
   },
 ];
+function flatSubtopics(s: any): string[] {
+  return s.topics.flatMap((t: any) => t.subtopics);
+}
 
 interface NoteLog {
   id: string;
@@ -411,7 +414,7 @@ export default function NoteTracker() {
         try {
           localStorage.setItem(`hs_note_logs_${userId}`, JSON.stringify(notesRes.data));
           // Cache subject totals for dashboard
-          const subjectTotals = subjects.map(s => ({ name: s.name, total: s.topics.length }));
+          const subjectTotals = subjects.map(s => ({ name: s.name, total: flatSubtopics(s).length }));
           localStorage.setItem(`hs_note_subject_totals_${userId}`, JSON.stringify(subjectTotals));
         } catch {}
       }
@@ -485,7 +488,7 @@ export default function NoteTracker() {
     });
   }
 
-  const totalTopics = subjects.reduce((a, s) => a + s.topics.length, 0);
+  const totalTopics = subjects.reduce((a, s) => a + flatSubtopics(s).length, 0);
   const doneCount = notes.filter((n) => n.done).length;
 
   if (loading)
@@ -569,7 +572,7 @@ export default function NoteTracker() {
             <div style={{ height:"100%", borderRadius:999, width:`${totalTopics > 0 ? Math.round((doneCount/totalTopics)*100) : 0}%`, background:"linear-gradient(90deg,#6B568F,#9B7BB0)" }} />
           </div>
           {subjects.map(s => {
-            const topicIds = s.topics;
+            const topicIds = flatSubtopics(s);
             const subDone = notes.filter(n => n.topic_key?.startsWith(`${s.key}::`) && n.done).length;
             const subTotal = topicIds.length;
             const p = subTotal > 0 ? Math.round((subDone/subTotal)*100) : 0;
@@ -751,7 +754,7 @@ export default function NoteTracker() {
         {/* Subject + Topic list */}
         {subjects.map((subject) => {
           const expanded = expandedSubjects.has(subject.key);
-          const subjectNotes = subject.topics
+          const subjectNotes = flatSubtopics(subject)
             .map((t) => getNote(subject.key, t))
             .filter(Boolean);
           const doneInSubject = subjectNotes.filter((n) => n?.done).length;
@@ -797,7 +800,7 @@ export default function NoteTracker() {
                     {subject.name}
                   </span>
                   <span style={{ fontSize: "0.75rem", color: MUTED }}>
-                    {doneInSubject}/{subject.topics.length} done
+                    {doneInSubject}/{flatSubtopics(subject).length} done
                   </span>
                   {/* Progress bar */}
                   <div
@@ -811,7 +814,7 @@ export default function NoteTracker() {
                   >
                     <div
                       style={{
-                        width: `${(doneInSubject / subject.topics.length) * 100}%`,
+                        width: `${(doneInSubject / flatSubtopics(subject).length) * 100}%`,
                         height: "100%",
                         background: OLIVE,
                         borderRadius: 10,
