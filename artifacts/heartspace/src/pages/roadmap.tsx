@@ -1264,9 +1264,10 @@ function MyProgressTab({
   examType: string;
 }) {
   const isJAM = examType === "JAM";
-  const [progress, setProgress] = useState<SyllabusProgress>(() =>
-    loadSyllabusProgress(userId),
-  );
+  const TC_SYLLABUS_KEY = (uidX: string) => `hs_topic_syllabus_${uidX}`;
+  const [progress, setProgress] = useState<SyllabusProgress>(() => {
+    try { return JSON.parse(localStorage.getItem(TC_SYLLABUS_KEY(userId)) ?? "{}"); } catch { return {}; }
+  });
   const calHours = (() => {
     try {
       const uid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
@@ -1327,7 +1328,7 @@ function MyProgressTab({
   function persistProgress(next: SyllabusProgress) {
     setProgress(next);
     try {
-      localStorage.setItem(`hs_syllabus_${userId}`, JSON.stringify(next));
+      localStorage.setItem(TC_SYLLABUS_KEY(userId), JSON.stringify(next));
     } catch {
       /* ignore */
     }
@@ -2901,7 +2902,7 @@ function StudySchedulePlanner({ uid, examType }: { uid: string; examType: string
       });
   }, [uid]);
 
-  const syllabusProgress = loadSyllabusProgress(uid);
+  const syllabusProgress: SyllabusProgress = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_syllabus_${uid}`) ?? "{}"); } catch { return {}; } })();
   const syllabusPercs = getSyllabusPercents(syllabusProgress, examType);
   const skipped = Object.values(syllabusPercs).filter((p) => p === 100).length;
   const hoursPerWeek = hoursPerDay * daysPerWeek;
@@ -4340,7 +4341,7 @@ function RoadmapView({
     "overview" | "progress" | "calendar" | "schedule"
   >("overview");
 
-  const syllabusProgress = loadSyllabusProgress(effectiveUserId);
+  const syllabusProgress: SyllabusProgress = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_syllabus_${effectiveUserId}`) ?? "{}"); } catch { return {}; } })();
   const examType = rm.examType;
   const calc = runAIEngine(rm);
   const statusCfg = STATUS_CFG[calc.status];

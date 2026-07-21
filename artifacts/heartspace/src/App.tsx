@@ -246,9 +246,6 @@ function Router() {
         <Route path="/daily-tracker">
           <StudentRoute component={DailyTracker} />
         </Route>
-        <Route path="/syllabus">
-          <StudentRoute component={Syllabus} />
-        </Route>
         <Route path="/assignments">
           <StudentRoute component={QuestionPractice} />
         </Route>

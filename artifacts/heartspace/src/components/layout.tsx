@@ -96,12 +96,6 @@ function getNavItems(role: string, space: string | null): NavItem[] {
       },
       { icon: Map, label: "Topic Completion", key: "roadmap", href: "/roadmap" },
       {
-        icon: GraduationCap,
-        label: "Syllabus Tracker",
-        key: "syllabus",
-        href: "/syllabus",
-      },
-      {
         icon: PenLine,
         label: "Question Practice",
         key: "assignments",
