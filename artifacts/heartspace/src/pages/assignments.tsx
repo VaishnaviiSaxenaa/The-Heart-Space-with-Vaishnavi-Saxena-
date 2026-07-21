@@ -994,17 +994,17 @@ function SubjectBlock({
 
   function addSubjectAttempt(attempt: Omit<PracticeAttempt, "id" | "date">) {
     const now = new Date().toISOString();
-    const next = { ...progress };
-    allSubtopicsInSubj.forEach((st) => {
-      const prev = next[st.id] ?? { attempts: [] };
-      next[st.id] = {
+    const subjKey = `subject_${subject.id}`;
+    const prev = progress[subjKey] ?? { attempts: [] };
+    onUpdate({
+      ...progress,
+      [subjKey]: {
         attempts: [
           ...prev.attempts,
-          { id: `${Date.now()}_${st.id}`, date: now, ...attempt },
+          { id: `${Date.now()}_${subjKey}`, date: now, ...attempt },
         ],
-      };
+      },
     });
-    onUpdate(next);
     setShowSubjectForm(false);
   }
 
