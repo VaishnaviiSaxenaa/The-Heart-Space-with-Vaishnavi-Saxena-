@@ -1260,10 +1260,12 @@ export function MyProgressTab({
   userId,
   examType,
   storagePrefix = "topic",
+  getSubjectHours,
 }: {
   userId: string;
   examType: string;
   storagePrefix?: string;
+  getSubjectHours?: (syllabusId: string) => { consumed: number; total: number } | null;
 }) {
   const isJAM = examType === "JAM";
   const TC_SYLLABUS_KEY = (uidX: string) => `hs_${storagePrefix}_syllabus_${uidX}`;
@@ -1628,6 +1630,11 @@ export function MyProgressTab({
                         >
                           {pct}% · {done}/{total}
                           {inProg > 0 && ` · ${inProg} in progress`}
+                          {getSubjectHours && (() => {
+                            const h = getSubjectHours(subject.id);
+                            if (!h) return null;
+                            return <span style={{ marginLeft: 6 }}>· {Math.round(h.consumed*10)/10}/{h.total}h</span>;
+                          })()}
                         </span>
                       </div>
                       {SUBJ_HOURS[SYLLABUS_CAL_MAP[subject.id] ?? subject.id] && (
