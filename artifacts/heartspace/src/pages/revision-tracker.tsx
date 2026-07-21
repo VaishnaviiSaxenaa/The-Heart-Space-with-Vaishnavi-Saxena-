@@ -28,92 +28,327 @@ const JAM_SUBJECTS = [
     key: "linear_algebra",
     name: "Linear Algebra",
     topics: [
-      "Vector Spaces",
-      "Linear Transformations",
-      "Matrices",
-      "Eigenvalues & Eigenvectors",
-      "Inner Product Spaces",
-    ],
-  },
-  {
-    key: "calculus",
-    name: "Calculus",
-    topics: [
-      "Limits & Continuity",
-      "Differentiation",
-      "Integration",
-      "Sequences & Series",
-      "Multivariable Calculus",
+      { name: "SOLE", subtopics: [
+        "Simultaneous Eq.",
+        "ERO's & pivot",
+        "Rank",
+        "Investigation of Simultaneous Eq.",
+        "Matrix & determinants",
+      ]},
+      { name: "Vector Space", subtopics: [
+        "Vector Space",
+        "Field",
+        "Matrix Space",
+        "Space for All Polynomials",
+        "Subspace & its Test",
+        "Span",
+        "LI & LD Vectors",
+        "Basis & Dimension",
+        "Investigation on Subspaces",
+      ]},
+      { name: "Linear Transformation", subtopics: [
+        "Linear Transformation",
+        "Matrix Representation of LT",
+        "Null Space",
+        "Range Space",
+        "Onto & One-One Criteria",
+        "Rank-Nullity Theorem",
+        "Composition in LT",
+        "Change of Basis",
+      ]},
+      { name: "Eigenvalues", subtopics: [
+        "Introduction of EV",
+        "Eigenvalues & Eigenvectors",
+        "Eigenspace of lambda",
+        "Diagonalizability",
+        "Eigenvalue Problem",
+        "Cases of Repeated Eigenvalues",
+        "Important Properties of EV",
+        "Properties of EV related to Matrices",
+        "Minimal & Characteristic Polynomial",
+        "Monic Polynomial",
+      ]},
     ],
   },
   {
     key: "real_analysis",
     name: "Real Analysis",
     topics: [
-      "Real Numbers",
-      "Sequences",
-      "Series",
-      "Continuity",
-      "Differentiability",
-      "Riemann Integration",
+      { name: "Set Theory & Point Set Topology", subtopics: [
+        "Sets & some terminologies",
+        "Relation & Functions",
+        "Countability & its properties",
+        "Natural Numbers",
+        "Rational Numbers & its drawbacks",
+        "Bounded Sets & LUB-GLB",
+        "Archimedean Property",
+        "Intervals",
+        "Neighbourhood of a Set",
+        "Interior Point & Open Sets",
+        "Limit Point & Derived Sets",
+        "Closed Sets",
+        "Isolated Point",
+        "Closure of a Set",
+        "Dense & Perfect Set",
+        "Open & Closed Covers",
+        "Heine-Borel Theorem",
+        "Lindelof Theorem",
+        "Sequential Compactness",
+        "Bolzano-Weierstrass Property",
+        "Connected & Disconnected Sets",
+        "Countable Sets & Properties",
+        "Denumerable Set",
+        "Power Set",
+        "Cardinal Numbers & its Types",
+        "Continuum Hypothesis",
+      ]},
+      { name: "Real Sequences", subtopics: [
+        "Real Sequences",
+        "Convergence of R.S.",
+        "Bounded Sequence",
+        "Limit Point of a Sequence",
+        "Limit Superior & Inferior",
+        "Bolzano-Weierstrass Theorem",
+        "Sandwich Theorem",
+        "Properties",
+        "Divergent Sequence",
+        "Methods of Convergence",
+        "Direct Substitution",
+        "Telescopic Method",
+        "Method of Inequalities",
+        "MCT & Wavy Curve",
+        "Cauchy Criteria of Convergence",
+        "AM-GM Inequality",
+        "Fixed Point Iteration",
+        "Subsequence",
+        "Contractive Sequences",
+        "Cauchy's Theorems on Limits",
+        "Stolz-Cesaro Theorem",
+      ]},
+      { name: "Infinite Series", subtopics: [
+        "Infinite Series & Properties",
+        "Cauchy Criteria of Convergence",
+        "SOPT (Series of Positive Terms)",
+        "Tests for SOPT",
+        "Comparison Tests",
+        "Integral Test (of Test)",
+        "Ratio & Root Test",
+        "Log Test",
+        "Raabe's Test",
+        "Integral Test",
+        "CCT",
+        "General Ratio & Root Test",
+        "Alternating Series",
+        "Test for Alternating Series",
+        "Absolute Convergence",
+        "Conditional Convergence",
+        "Leibnitz Test",
+        "Abel's Test",
+        "Dirichlet's Test",
+      ]},
+      { name: "Power Series", subtopics: [
+        "Power Series & its Types",
+        "Tests for Convergence",
+        "Ratio Test",
+        "Root Test",
+        "Manual Investigation",
+        "Sum of Series",
+        "Differentiation & Integration of Power Series",
+        "Representation of Some Functions as a Power Series",
+      ]},
     ],
   },
   {
-    key: "differential_equations",
-    name: "Differential Equations",
+    key: "functions_of_one_variable",
+    name: "Functions of One Variable",
     topics: [
-      "First Order ODEs",
-      "Second Order ODEs",
-      "Systems of ODEs",
-      "Laplace Transforms",
-      "PDEs",
+      { name: "Functions", subtopics: [
+        "Relation",
+        "Function",
+        "Types of Function",
+        "Transformation of Graphs",
+      ]},
+      { name: "Limits", subtopics: [
+        "Limits (formal+calculative)",
+        "L'Hospital Rule",
+        "Sequential Criteria of Limits",
+        "Squeeze Principle",
+      ]},
+      { name: "Continuity", subtopics: [
+        "Continuity (formal+calculative)",
+        "Sequential Criteria of Continuity",
+        "Properties of Continuity (basic+adv)",
+        "Discontinuity",
+      ]},
+      { name: "Differentiability", subtopics: [
+        "Differentiability",
+        "Properties of Differentiable Functions",
+        "Inverse Derivative Theorem",
+        "Darboux's Theorem",
+        "Mean Value Theorem",
+        "Mean Value Theorem - Rolle's Theorem",
+        "Mean Value Theorem - LMVT",
+        "Mean Value Theorem - Cauchy's MVT",
+      ]},
+      { name: "Inc-Dec Functions & Max-Min", subtopics: [
+        "Inc-Dec Function over an Interval",
+        "Differentiability & Inc-Dec Function",
+        "Local & Global Extrema",
+        "Critical Point",
+        "Stationary Point",
+        "Point of Inflection",
+        "Concavity",
+        "Derivative Tests",
+        "Leibnitz Rule",
+      ]},
     ],
   },
   {
-    key: "abstract_algebra",
-    name: "Abstract Algebra",
+    key: "group_theory",
+    name: "Group Theory",
     topics: [
-      "Groups",
-      "Rings",
-      "Fields",
-      "Homomorphisms",
-      "Quotient Structures",
+      { name: "Groups & Cyclic Groups", subtopics: [
+        "Group and its Properties",
+        "Cayley Table",
+        "Some Important Groups",
+        "Subgroups",
+        "Cyclic Groups & Generators",
+        "Results on Cyclic Groups",
+        "Fundamental Theorem of Cyclic Groups",
+        "Evaluation of Subgroups",
+      ]},
+      { name: "Permutation Group", subtopics: [
+        "Permutation & Symmetric Groups",
+        "Methods of Representation",
+        "Properties",
+        "Even and Odd Permutations",
+        "Alternating Group",
+        "Conjugacy in An/Sn",
+      ]},
+      { name: "Isomorphism", subtopics: [
+        "Isomorphism & Properties",
+        "Cayley's Theorem",
+        "Automorphism & Inner Automorphism",
+        "Some Important Results",
+        "Classification of Groups",
+      ]},
+      { name: "Cosets & EDP", subtopics: [
+        "Cosets and Properties",
+        "Lagrange's Theorem",
+        "Fermat's Little Theorem",
+        "External Direct Product",
+        "Properties of EDP",
+      ]},
+      { name: "Normal Subgroups & Quotient Group", subtopics: [
+        "Normal Subgroups",
+        "Quotient Group",
+        "Important Results",
+      ]},
+      { name: "Homomorphism & Sylow's Theorem", subtopics: [
+        "Homomorphism and its Kernel",
+        "Properties of Homomorphism wrt Elements",
+        "Properties of Homomorphism wrt Groups",
+        "Fundamental Theorem of Homomorphism",
+        "Normal Subgroups as Kernel",
+        "Results",
+        "Sylow's First Theorem",
+        "Sylow-P Subgroup",
+        "Conjugate Subgroup",
+        "Sylow's 2nd Theorem",
+        "Sylow's 3rd Theorem",
+      ]},
     ],
   },
   {
-    key: "complex_analysis",
-    name: "Complex Analysis",
+    key: "multiple_variable_calculus",
+    name: "Multiple Variable Calculus",
     topics: [
-      "Complex Numbers",
-      "Analytic Functions",
-      "Contour Integration",
-      "Laurent Series",
-      "Residue Theorem",
+      { name: "LCD (2 Variables)", subtopics: [
+        "Existence of Limits",
+        "Non-existence of Limits & Methods",
+        "Rational Limit Theorem",
+        "Sertoz Theorem",
+        "Polar Form of Limits",
+        "Simultaneous and Repeated Limits",
+        "Continuity and its Requirement",
+        "Formal Def of Limit and Continuity",
+        "Mixed & Higher Order Derivatives",
+        "Partial Derivatives and Continuity",
+        "Differentiability",
+        "Polar Form",
+      ]},
+      { name: "Maxima & Minima", subtopics: [
+        "Definition",
+        "Critical Point",
+        "Derivative Test for Local Extrema",
+        "Saddle Point",
+        "Euler's Homogenous Theorem",
+        "Directional Derivative and Gradient",
+        "Young's & Schwarz's Theorem",
+        "Implicit Differentiation Formula",
+      ]},
+      { name: "Lagrange's Multiplier", subtopics: [
+        "Lagrange's Multiplier",
+        "Tangent Plane",
+      ]},
     ],
   },
   {
-    key: "numerical_methods",
-    name: "Numerical Methods",
+    key: "ode",
+    name: "ODE",
     topics: [
-      "Root Finding",
-      "Interpolation",
-      "Numerical Integration",
-      "ODE Methods",
-      "Linear Systems",
+      { name: "First Order ODEs", subtopics: [
+        "Separable, Exact, Integrating Factors",
+        "Linear First Order, Bernoulli Equation",
+        "Clairaut Equation, Singular Solutions",
+        "Orthogonal Trajectories",
+      ]},
+      { name: "Higher Order Linear ODEs", subtopics: [
+        "Constant Coefficient - Homogeneous",
+        "Characteristic Equation, Complementary Function",
+        "Particular Integral - Undetermined Coefficients",
+        "Variation of Parameters, Cauchy-Euler Equation",
+      ]},
     ],
   },
   {
-    key: "statistics",
-    name: "Statistics & Probability",
+    key: "integration",
+    name: "Integration",
     topics: [
-      "Probability",
-      "Random Variables",
-      "Distributions",
-      "Estimation",
-      "Testing",
+      { name: "Double Integrals", subtopics: [
+        "Double Integrals - Cartesian Form",
+        "Double Integrals - Polar Form",
+        "Change of Order of Integration",
+      ]},
+      { name: "Triple Integrals", subtopics: [
+        "Triple Integrals - Cartesian Form",
+        "Triple Integrals - Spherical and Cylindrical Forms",
+      ]},
+      { name: "Applications", subtopics: [
+        "Surface Area",
+        "Solids of Revolution",
+        "Volume Calculations",
+      ]},
+    ],
+  },
+  {
+    key: "miscellaneous",
+    name: "Miscellaneous",
+    topics: [
+      { name: "Miscellaneous Topics", subtopics: [
+        "SOR/VOR",
+        "Surface Area",
+        "Riemann Integration",
+        "Taylor's Series",
+        "Permutation and Combination",
+        "Binomial Theorem",
+      ]},
     ],
   },
 ];
+function flatSubtopics(s) {
+  return s.topics.flatMap((t) => t.subtopics);
+}
 
 const NET_EXTRA = [
   {
@@ -339,11 +574,11 @@ export default function RevisionTracker() {
     });
   }
 
-  const totalTopics = subjects.reduce((a, s) => a + s.topics.length, 0);
+  const totalTopics = subjects.reduce((a, s) => a + flatSubtopics(s).length, 0);
   const revisedOnce = new Set(logs.map((l) => l.topic_key)).size;
   const dueCount = subjects.reduce(
     (a, s) =>
-      a + s.topics.filter((t) => getDueStatus(s.key, t) === "due").length,
+      a + flatSubtopics(s).filter((t) => getDueStatus(s.key, t) === "due").length,
     0,
   );
 
@@ -731,7 +966,7 @@ export default function RevisionTracker() {
                     {subject.name}
                   </span>
                   <span style={{ fontSize: "0.75rem", color: MUTED }}>
-                    {revisedCount}/{subject.topics.length} revised
+                    {revisedCount}/{flatSubtopics(subject).length} revised
                   </span>
                 </div>
                 {expanded ? (
@@ -743,7 +978,12 @@ export default function RevisionTracker() {
 
               {expanded && (
                 <div style={{ borderTop: `1px solid ${BORDER}` }}>
-                  {subject.topics.map((topic) => {
+                  {subject.topics.map((topicGroup) => (
+                    <div key={topicGroup.name}>
+                      <div style={{ padding: "0.6rem 1.25rem", background: `${BORDER}33`, fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em" }}>
+                        {topicGroup.name}
+                      </div>
+                      {topicGroup.subtopics.map((topic) => {
                     const topicKey = `${subject.key}::${topic}`;
                     const topicLogs = getTopicLogs(subject.key, topic);
                     const lastRevised = getLastRevised(subject.key, topic);
@@ -983,7 +1223,9 @@ export default function RevisionTracker() {
                         )}
                       </div>
                     );
-                  })}
+                      })}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
