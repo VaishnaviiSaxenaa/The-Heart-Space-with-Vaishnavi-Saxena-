@@ -8,16 +8,14 @@ export interface Subject {
 }
 
 export const JAM_SUBJECTS: Subject[] = [
-  { id: "la", syllabusId: "linear_algebra", name: "Linear Algebra", totalHours: 60, studyWeeks: 4, assignmentWeeks: 0.5 },
-  { id: "aa", syllabusId: "abstract_algebra", name: "Group Theory + Ring & Field", totalHours: 90, studyWeeks: 5, assignmentWeeks: 1 },
-  { id: "ra", syllabusId: "real_analysis", name: "Real Analysis", totalHours: 75, studyWeeks: 5, assignmentWeeks: 0.5 },
-  { id: "ca", syllabusId: "complex_analysis", name: "Complex Analysis", totalHours: 50, studyWeeks: 3, assignmentWeeks: 0.5 },
+  { id: "la", syllabusId: "linear_algebra", name: "Linear Algebra", totalHours: 70, studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "ra", syllabusId: "real_analysis", name: "Real Analysis", totalHours: 70, studyWeeks: 5, assignmentWeeks: 0.5 },
+  { id: "fov", syllabusId: "functions_of_one_variable", name: "Functions of One Variable", totalHours: 50, studyWeeks: 3, assignmentWeeks: 0.5 },
+  { id: "gt", syllabusId: "group_theory", name: "Group Theory", totalHours: 50, studyWeeks: 3, assignmentWeeks: 0.5 },
+  { id: "mvc", syllabusId: "multiple_variable_calculus", name: "Multiple Variable Calculus", totalHours: 25, studyWeeks: 1.5, assignmentWeeks: 0.5 },
   { id: "ode", syllabusId: "ode", name: "ODE", totalHours: 40, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "pde", syllabusId: "pde", name: "PDE", totalHours: 40, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "ie", syllabusId: "integral_equations", name: "Integral Equations", totalHours: 30, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "cv", syllabusId: "calculus_of_variations", name: "Calculus of Variations", totalHours: 30, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "na", syllabusId: "numerical_analysis", name: "Numerical Analysis", totalHours: 30, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "mech", syllabusId: "mechanics", name: "Mechanics", totalHours: 33, studyWeeks: 2, assignmentWeeks: 0.5 },
+  { id: "int", syllabusId: "integration", name: "Integration", totalHours: 30, studyWeeks: 2, assignmentWeeks: 0.5 },
+  { id: "misc", syllabusId: "miscellaneous", name: "Miscellaneous", totalHours: 25, studyWeeks: 1.5, assignmentWeeks: 0.5 },
 ];
 
 export const NET_SUBJECTS: Subject[] = [
