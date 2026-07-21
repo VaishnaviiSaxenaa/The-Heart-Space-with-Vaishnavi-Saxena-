@@ -1310,7 +1310,14 @@ function MyProgressTab({
         ...t,
         subtopics: t.subtopics.filter((st: any) => !(st.netOnly && isJAM)),
       })),
-  }));
+  })).sort((a, b) => {
+    const order = ["linear_algebra","real_analysis","functions_of_one_variable","group_theory","multiple_variable_calculus","ode","integration","miscellaneous"];
+    const ai = order.indexOf(a.id); const bi = order.indexOf(b.id);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
 
   const totalSubs = filteredSyllabus.reduce(
     (a, s) => a + s.topics.reduce((b, t) => b + t.subtopics.length, 0),
