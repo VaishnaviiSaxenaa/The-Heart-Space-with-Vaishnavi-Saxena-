@@ -725,7 +725,7 @@ function TopicBlock({
           </span>
         </button>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {attempted > 0 && avgAcc !== null ? (
+          {(attempted > 0 || topicEntry) && avgAcc !== null ? (
             <>
               <span
                 className="text-xs font-bold font-serif"
