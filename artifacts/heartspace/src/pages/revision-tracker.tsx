@@ -484,6 +484,12 @@ export default function RevisionTracker() {
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(
     new Set([subjects[0]?.key]),
   );
+  const [expandedTopicGroups, setExpandedTopicGroups] = useState<Set<string>>(new Set());
+  const toggleTopicGroup = (k: string) => setExpandedTopicGroups((prev) => {
+    const n = new Set(prev);
+    n.has(k) ? n.delete(k) : n.add(k);
+    return n;
+  });
   const [revising, setRevising] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -978,12 +984,19 @@ export default function RevisionTracker() {
 
               {expanded && (
                 <div style={{ borderTop: `1px solid ${BORDER}` }}>
-                  {subject.topics.map((topicGroup) => (
+                  {subject.topics.map((topicGroup) => {
+                    const tgKey = `${subject.key}::${topicGroup.name}`;
+                    const tgOpen = expandedTopicGroups.has(tgKey);
+                    return (
                     <div key={topicGroup.name}>
-                      <div style={{ padding: "0.6rem 1.25rem", background: `${BORDER}33`, fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em" }}>
+                      <button
+                        onClick={() => toggleTopicGroup(tgKey)}
+                        style={{ width: "100%", textAlign: "left", padding: "0.6rem 1.25rem", background: `${BORDER}33`, fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                      >
                         {topicGroup.name}
-                      </div>
-                      {topicGroup.subtopics.map((topic) => {
+                        <span>{tgOpen ? "−" : "+"}</span>
+                      </button>
+                      {tgOpen && topicGroup.subtopics.map((topic) => {
                     const topicKey = `${subject.key}::${topic}`;
                     const topicLogs = getTopicLogs(subject.key, topic);
                     const lastRevised = getLastRevised(subject.key, topic);
@@ -1225,7 +1238,8 @@ export default function RevisionTracker() {
                     );
                       })}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
