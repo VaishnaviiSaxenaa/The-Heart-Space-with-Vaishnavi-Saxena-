@@ -219,7 +219,7 @@ function AttemptForm({
           {mistakeCount > 0 && (
             <div className="space-y-2">
               <p className="text-[10px] font-semibold" style={{ color: MUTED }}>Describe each mistake:</p>
-              {Array.from({ length: mistakeCount }).map((_, i) => (
+              {Array.from({ length: Math.max(mistakeCount, mistakes.length) }).map((_, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-[10px] font-bold w-4" style={{ color: "#C0392B" }}>{i+1}.</span>
                   <input
@@ -232,6 +232,13 @@ function AttemptForm({
                   />
                 </div>
               ))}
+              {mistakeCount === 5 && (
+                <button onClick={() => setMistakes([...mistakes, ""])}
+                  className="text-[10px] font-semibold px-2 py-1 rounded-lg"
+                  style={{ background: CARD, color: "#C0392B", border: "1px dashed #C0392B" }}>
+                  + Add another mistake
+                </button>
+              )}
             </div>
           )}
         </div>
