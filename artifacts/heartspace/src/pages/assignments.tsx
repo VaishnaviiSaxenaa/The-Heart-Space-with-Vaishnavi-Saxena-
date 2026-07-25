@@ -153,7 +153,7 @@ function AttemptForm({
     { key: "concept" as const, label: "Concept Understanding", emoji: "🧠", value: concept, color: "#6B568F" },
     { key: "accuracy" as const, label: "Accuracy", emoji: "🎯", value: accuracy, color: "#2C4A73" },
     { key: "speed" as const, label: "Speed", emoji: "⚡", value: speed, color: "#2C4A73" },
-    { key: "mistakes" as const, label: "Mistake Recognition", emoji: "🔍", value: mistakeCount, color: "#C0392B" },
+    { key: "mistakes" as const, label: "Mistake Recognition", emoji: "🔍", value: Math.max(mistakeCount, mistakes.length), color: "#C0392B" },
   ];
 
   return (
@@ -173,7 +173,7 @@ function AttemptForm({
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold" style={{ color: p.color }}>{p.label}</p>
               <p className="text-sm font-bold" style={{ color: p.color }}>
-                {p.key === "mistakes" ? `${mistakeCount} mistake${mistakeCount !== 1 ? "s" : ""}` : `${p.value}%`}
+                {p.key === "mistakes" ? `${Math.max(mistakeCount, mistakes.length)} mistake${Math.max(mistakeCount, mistakes.length) !== 1 ? "s" : ""}` : `${p.value}%`}
               </p>
             </div>
           </button>
@@ -250,7 +250,7 @@ function AttemptForm({
           style={{ background: CREAM, color: MUTED, border: `1px solid ${BORDER}` }}>
           Cancel
         </button>
-        <button onClick={() => onSave({ accuracy, concept, speed, mistakeCount, mistakes: mistakes.filter(Boolean), note: "" })}
+        <button onClick={() => onSave({ accuracy, concept, speed, mistakeCount: Math.max(mistakeCount, mistakes.filter(Boolean).length), mistakes: mistakes.filter(Boolean), note: "" })}
           className="flex-1 py-2 rounded-xl text-xs font-bold text-white"
           style={{ background: PROGRESS_PURPLE }}>
           Save
