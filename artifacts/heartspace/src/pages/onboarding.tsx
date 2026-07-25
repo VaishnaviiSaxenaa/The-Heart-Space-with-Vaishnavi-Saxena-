@@ -128,6 +128,12 @@ export default function Onboarding() {
       localStorage.setItem(`hs_rev_schedule_inputs_${userId}`, JSON.stringify({
         hoursPerDay: revHours, daysPerWeek: revDays.length, selectedDays: revDays,
       }));
+      localStorage.setItem(`hs_cal_pace_practice_${userId}`, JSON.stringify({
+        hoursPerDay: qpHours, daysPerWeek: qpDays.length, selectedDays: qpDays,
+      }));
+      localStorage.setItem(`hs_cal_pace_revision_${userId}`, JSON.stringify({
+        hoursPerDay: revHours, daysPerWeek: revDays.length, selectedDays: revDays,
+      }));
     } catch {}
     setLocation("/roadmap");
   }
