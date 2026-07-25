@@ -1283,7 +1283,8 @@ export default function QuestionPractice() {
   try {
     const rm = JSON.parse(localStorage.getItem(`hs_roadmap_${effectiveUserId}`) || "{}");
     if (rm.startDate) practiceStartDate = rm.startDate;
-    const inputs = JSON.parse(localStorage.getItem(`hs_qp_schedule_inputs_${effectiveUserId}`) || "{}");
+    const qpRaw = localStorage.getItem(`hs_qp_schedule_inputs_${effectiveUserId}`);
+    const inputs = qpRaw ? JSON.parse(qpRaw) : JSON.parse(localStorage.getItem(`hs_schedule_inputs_${effectiveUserId}`) || "{}");
     if (inputs.hoursPerDay) practiceHoursPerDay = inputs.hoursPerDay;
     if (inputs.daysPerWeek) practiceDaysPerWeek = inputs.daysPerWeek;
   } catch {}

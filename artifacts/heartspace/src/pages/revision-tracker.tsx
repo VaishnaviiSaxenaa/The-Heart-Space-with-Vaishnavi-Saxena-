@@ -471,7 +471,8 @@ export default function RevisionTracker() {
   try {
     const rm = JSON.parse(localStorage.getItem(`hs_roadmap_${userId}`) || "{}");
     if (rm.startDate) revisionStartDate = rm.startDate;
-    const inputs = JSON.parse(localStorage.getItem(`hs_rev_schedule_inputs_${userId}`) || "{}");
+    const revRaw = localStorage.getItem(`hs_rev_schedule_inputs_${userId}`);
+    const inputs = revRaw ? JSON.parse(revRaw) : JSON.parse(localStorage.getItem(`hs_schedule_inputs_${userId}`) || "{}");
     if (inputs.hoursPerDay) revisionHoursPerDay = inputs.hoursPerDay;
     if (inputs.daysPerWeek) revisionDaysPerWeek = inputs.daysPerWeek;
   } catch {}
