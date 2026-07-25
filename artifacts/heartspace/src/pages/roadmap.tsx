@@ -47,7 +47,7 @@ const OLIVE = "#4A8F5C"; // now = COMPLETED_GREEN
 const ROSE = "#D4A5A5";
 
 /* ─── Types ────────────────────────────── */
-type RoadmapType =
+export type RoadmapType =
   | "bsc_1st"
   | "bsc_2nd"
   | "bsc_3rd"
@@ -154,7 +154,7 @@ const SPEED_CFG: Record<
 
 type BaseWeeksMap = Record<string, number>;
 
-interface Roadmap {
+export interface Roadmap {
   type: RoadmapType;
   examType: string;
   totalMonths: number;
@@ -458,7 +458,7 @@ function getSyllabusPercents(
 }
 
 /* ─── Roadmap types ────────────────────── */
-const ROADMAP_TYPES: Record<
+export const ROADMAP_TYPES: Record<
   RoadmapType,
   { label: string; emoji: string; defaultMonths: number; description: string }
 > = {
@@ -603,7 +603,7 @@ const NET_PHASES: Omit<RoadmapPhase, "durationWeeks" | "status">[] = [
   },
 ];
 
-function generatePhases(examType: string, totalMonths: number): RoadmapPhase[] {
+export function generatePhases(examType: string, totalMonths: number): RoadmapPhase[] {
   const totalWeeks = totalMonths * 4;
   const template = examType === "JAM" ? JAM_PHASES : NET_PHASES;
   const weights = [0.3, 0.28, 0.27, 0.15];
@@ -1081,7 +1081,7 @@ function loadRoadmap(userId: string): Roadmap | null {
     return null;
   }
 }
-function saveRoadmap(userId: string, rm: Roadmap) {
+export function saveRoadmap(userId: string, rm: Roadmap) {
   // Fallback: get userId from localStorage if not provided
   const effectiveId = userId || (() => {
     try { return JSON.parse(localStorage.getItem("heartspace_user") ?? "{}").id ?? ""; } catch { return ""; }
@@ -2103,7 +2103,7 @@ function loadScheduleInputs(userId: string) {
     };
   }
 }
-function saveScheduleInputs(
+export function saveScheduleInputs(
   userId: string,
   inputs: {
     hoursPerDay: number;
