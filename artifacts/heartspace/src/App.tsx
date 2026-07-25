@@ -174,6 +174,19 @@ function StudentRoute({
     const isHeartSpace = space === "heartspace";
     if (user?.role === "student" && !examType && !isHeartSpace) {
       setLocation("/exam-select");
+      return;
+    }
+    if (
+      user?.role === "student" &&
+      examType &&
+      !isHeartSpace &&
+      window.location.pathname !== "/onboarding"
+    ) {
+      const uid = (user as any)?.id as string;
+      const hasRoadmap = uid ? localStorage.getItem(`hs_roadmap_${uid}`) : null;
+      if (!hasRoadmap) {
+        setLocation("/onboarding");
+      }
     }
   }, [isLoading, isAuthenticated, user, setLocation]);
 

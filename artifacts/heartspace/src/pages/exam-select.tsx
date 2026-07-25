@@ -98,7 +98,7 @@ export default function ExamSelect() {
       /* Redirect to correct dashboard */
       const space = (user as any)?.space as string | null;
       if (space === "heartspace") setLocation("/self-dashboard");
-      else setLocation("/onboarding");
+      else setLocation("/dashboard");
     } catch (err) {
       console.error("Exam select error:", err);
       setSaving(false);
