@@ -1315,7 +1315,9 @@ export function MyProgressTab({
         subtopics: t.subtopics.filter((st: any) => !(st.netOnly && isJAM)),
       })),
   })).sort((a, b) => {
-    const order = ["linear_algebra","real_analysis","functions_of_one_variable","group_theory","multiple_variable_calculus","ode","integration","miscellaneous"];
+    const order = isJAM
+      ? ["linear_algebra","real_analysis","functions_of_one_variable","group_theory","multiple_variable_calculus","ode","integration","miscellaneous"]
+      : ["linear_algebra_net","complex_analysis","real_analysis_net","differential_calculus_net","abstract_algebra","integral_equations","calculus_of_variations","ode_net","pde","numerical_analysis"];
     const ai = order.indexOf(a.id); const bi = order.indexOf(b.id);
     if (ai === -1 && bi === -1) return 0;
     if (ai === -1) return 1;
