@@ -191,80 +191,29 @@ export const SYLLABUS: Subject[] = [
   },
   {
     id: "abstract_algebra",
-    name: "Abstract Algebra",
+    name: "Modern Algebra",
     netOnly: true,
     topics: [
-      {
-        id: "aa_gt1",
-        name: "Group Theory — Basics",
-        subtopics: [
-          { id: "aa_gt1_1", name: "Definition, Examples, Subgroups" },
-          { id: "aa_gt1_2", name: "Cyclic Groups, Order of Element" },
-          { id: "aa_gt1_3", name: "Cosets & Lagrange's Theorem" },
-        ],
-      },
-      {
-        id: "aa_gt2",
-        name: "Group Theory — Intermediate",
-        subtopics: [
-          { id: "aa_gt2_1", name: "Normal Subgroups & Quotient Groups" },
-          { id: "aa_gt2_2", name: "Group Homomorphisms" },
-          {
-            id: "aa_gt2_3",
-            name: "Isomorphism Theorems (First, Second, Third)",
-          },
-          { id: "aa_gt2_4", name: "Permutation Groups, Cayley's Theorem" },
-        ],
-      },
-      {
-        id: "aa_gt3",
-        name: "Group Theory — Advanced",
-        netOnly: true,
-        subtopics: [
-          { id: "aa_gt3_1", name: "Group Actions, Orbit-Stabiliser Theorem" },
-          { id: "aa_gt3_2", name: "Sylow Theorems" },
-          { id: "aa_gt3_3", name: "Simple & Solvable Groups" },
-        ],
-      },
-      {
-        id: "aa_rt1",
-        name: "Ring Theory — Basics",
-        netOnly: true,
-        subtopics: [
-          {
-            id: "aa_rt1_1",
-            name: "Definition, Subrings, Ideals, Quotient Rings",
-          },
-          { id: "aa_rt1_2", name: "Ring Homomorphisms & Isomorphism Theorems" },
-          { id: "aa_rt1_3", name: "Integral Domains & Fields" },
-        ],
-      },
-      {
-        id: "aa_rt2",
-        name: "Ring Theory — Advanced",
-        netOnly: true,
-        subtopics: [
-          { id: "aa_rt2_1", name: "Prime & Maximal Ideals" },
-          { id: "aa_rt2_2", name: "PID, UFD, Euclidean Domains" },
-          { id: "aa_rt2_3", name: "Polynomial Rings, Eisenstein Criterion" },
-        ],
-      },
-      {
-        id: "aa_ft",
-        name: "Field Theory",
-        netOnly: true,
-        subtopics: [
-          {
-            id: "aa_ft_1",
-            name: "Field Extensions, Algebraic & Transcendental",
-          },
-          { id: "aa_ft_2", name: "Finite Fields, Splitting Fields" },
-          {
-            id: "aa_ft_3",
-            name: "Fundamental Theorem of Galois Theory (Statement)",
-          },
-        ],
-      },
+      { id: "abstract_algebra_t0", name: "Group Theory", subtopics: [
+        { id: "abstract_algebra_0_0", name: "Cyclic Groups" },
+        { id: "abstract_algebra_0_1", name: "Isomorphism" },
+        { id: "abstract_algebra_0_2", name: "Cosets and Lagrange's Theorem" },
+        { id: "abstract_algebra_0_3", name: "External Direct Product" },
+        { id: "abstract_algebra_0_4", name: "Sylow's Theorems" },
+        { id: "abstract_algebra_0_5", name: "Homomorphism" },
+      ]},
+      { id: "abstract_algebra_t1", name: "Ring Theory", subtopics: [
+        { id: "abstract_algebra_1_0", name: "Rings and Subrings" },
+        { id: "abstract_algebra_1_1", name: "Integral Domain" },
+        { id: "abstract_algebra_1_2", name: "Ring Homomorphism" },
+        { id: "abstract_algebra_1_3", name: "Ideals" },
+        { id: "abstract_algebra_1_4", name: "Polynomial Rings - Irreducibility Criteria, Eisenstein Criterion, Test of Degree 2 and 3, Gauss Test, Tests on Z" },
+        { id: "abstract_algebra_1_5", name: "UFD, PID and ED" },
+      ]},
+      { id: "abstract_algebra_t2", name: "Field Theory", subtopics: [
+        { id: "abstract_algebra_2_0", name: "Field Extensions - Algebraic and Transcendental Extension, Finite Field and its Properties" },
+        { id: "abstract_algebra_2_1", name: "Galois Theory" },
+      ]},
     ],
   },
   {
@@ -272,76 +221,39 @@ export const SYLLABUS: Subject[] = [
     name: "Complex Analysis",
     netOnly: true,
     topics: [
-      {
-        id: "ca_cn",
-        name: "Complex Numbers",
-        subtopics: [
-          { id: "ca_cn_1", name: "Algebra, Modulus, Argument, Polar Form" },
-          { id: "ca_cn_2", name: "De Moivre's Theorem, Roots of Unity" },
-        ],
-      },
-      {
-        id: "ca_af",
-        name: "Analytic Functions",
-        subtopics: [
-          { id: "ca_af_1", name: "Cauchy-Riemann Equations" },
-          { id: "ca_af_2", name: "Harmonic Functions & Conjugates" },
-        ],
-      },
-      {
-        id: "ca_ci",
-        name: "Complex Integration",
-        subtopics: [
-          { id: "ca_ci_1", name: "Contour Integrals, Cauchy-Goursat Theorem" },
-          { id: "ca_ci_2", name: "Cauchy Integral Formula" },
-          { id: "ca_ci_3", name: "Liouville's Theorem, Morera's Theorem" },
-        ],
-      },
-      {
-        id: "ca_ps",
-        name: "Power Series",
-        subtopics: [
-          { id: "ca_ps_1", name: "Taylor Series & Laurent Series" },
-          {
-            id: "ca_ps_2",
-            name: "Zeros of Analytic Functions, Identity Theorem",
-          },
-        ],
-      },
-      {
-        id: "ca_sr",
-        name: "Singularities & Residues",
-        subtopics: [
-          { id: "ca_sr_1", name: "Removable, Poles, Essential Singularities" },
-          { id: "ca_sr_2", name: "Residue Theorem" },
-          { id: "ca_sr_3", name: "Evaluation of Real Integrals" },
-          { id: "ca_sr_4", name: "Rouche's Theorem" },
-        ],
-      },
-      {
-        id: "ca_mt",
-        name: "Möbius Transformations",
-        subtopics: [
-          { id: "ca_mt_1", name: "Cross-ratio, Fixed Points" },
-          { id: "ca_mt_2", name: "Mapping of Circles and Lines" },
-        ],
-      },
-      {
-        id: "ca_mmp",
-        name: "Maximum Modulus Principle",
-        subtopics: [
-          { id: "ca_mmp_1", name: "Maximum & Minimum Modulus Theorems" },
-          { id: "ca_mmp_2", name: "Schwarz Lemma, Open Mapping Theorem" },
-        ],
-      },
-      {
-        id: "ca_cm",
-        name: "Conformal Mappings",
-        subtopics: [
-          { id: "ca_cm_1", name: "Angle Preservation, Standard Mappings" },
-          { id: "ca_cm_2", name: "Riemann Mapping Theorem (Statement)" },
-        ],
-      },
+      { id: "complex_analysis_t0", name: "Basic Definitions", subtopics: [
+        { id: "complex_analysis_0_0", name: "Basic Definitions" },
+      ]},
+      { id: "complex_analysis_t1", name: "Complex Valued Functions", subtopics: [
+        { id: "complex_analysis_1_0", name: "Complex Valued Functions" },
+      ]},
+      { id: "complex_analysis_t2", name: "Analytic Functions", subtopics: [
+        { id: "complex_analysis_2_0", name: "Limit, Continuity, Differentiability, Analytic Functions, Liouville Theorem" },
+        { id: "complex_analysis_2_1", name: "Open mapping theorem" },
+        { id: "complex_analysis_2_2", name: "Rouche Theorem" },
+        { id: "complex_analysis_2_3", name: "Schwarz Lemma" },
+        { id: "complex_analysis_2_4", name: "Results on polynomials" },
+      ]},
+      { id: "complex_analysis_t3", name: "Complex Integration", subtopics: [
+        { id: "complex_analysis_3_0", name: "Contour integration" },
+        { id: "complex_analysis_3_1", name: "Cauchy integral formula" },
+        { id: "complex_analysis_3_2", name: "Polar form of integration" },
+        { id: "complex_analysis_3_3", name: "ML Inequality" },
+      ]},
+      { id: "complex_analysis_t4", name: "Taylor Series and Laurent Series", subtopics: [
+        { id: "complex_analysis_4_0", name: "Taylor Series and Laurent Series" },
+      ]},
+      { id: "complex_analysis_t5", name: "Residues and Poles", subtopics: [
+        { id: "complex_analysis_5_0", name: "Singularity and its types" },
+        { id: "complex_analysis_5_1", name: "Types of poles" },
+        { id: "complex_analysis_5_2", name: "Types of zeroes and method of evaluation" },
+      ]},
+      { id: "complex_analysis_t6", name: "Complex Mapping", subtopics: [
+        { id: "complex_analysis_6_0", name: "Some important maps" },
+        { id: "complex_analysis_6_1", name: "Mobius Transformation" },
+        { id: "complex_analysis_6_2", name: "Mapping on disc" },
+        { id: "complex_analysis_6_3", name: "Conformal Mapping" },
+      ]},
     ],
   },
   {
@@ -364,64 +276,16 @@ export const SYLLABUS: Subject[] = [
   },
   {
     id: "pde",
-    name: "Partial Differential Equations",
+    name: "PDE",
     netOnly: true,
     topics: [
-      {
-        id: "pde_fo",
-        name: "First Order PDEs",
-        subtopics: [
-          { id: "pde_fo_1", name: "Method of Characteristics" },
-          { id: "pde_fo_2", name: "Lagrange-Charpit Method, Cauchy Problem" },
-        ],
-      },
-      {
-        id: "pde_class",
-        name: "Classification of 2nd Order PDEs",
-        subtopics: [
-          { id: "pde_class_1", name: "Elliptic, Parabolic, Hyperbolic" },
-          { id: "pde_class_2", name: "Canonical Forms" },
-        ],
-      },
-      {
-        id: "pde_wave",
-        name: "Wave Equation",
-        subtopics: [
-          { id: "pde_wave_1", name: "D'Alembert's Solution" },
-          { id: "pde_wave_2", name: "Separation of Variables" },
-        ],
-      },
-      {
-        id: "pde_heat",
-        name: "Heat Equation",
-        subtopics: [
-          {
-            id: "pde_heat_1",
-            name: "Separation of Variables, Fundamental Solution",
-          },
-          { id: "pde_heat_2", name: "Maximum Principle" },
-        ],
-      },
-      {
-        id: "pde_lap",
-        name: "Laplace Equation",
-        subtopics: [
-          { id: "pde_lap_1", name: "Harmonic Functions, Mean Value Property" },
-          { id: "pde_lap_2", name: "Green's Identities, Dirichlet & Neumann" },
-        ],
-      },
-      {
-        id: "pde_four",
-        name: "Fourier Methods",
-        subtopics: [
-          { id: "pde_four_1", name: "Fourier Series, Dirichlet Conditions" },
-          {
-            id: "pde_four_2",
-            name: "Parseval's Identity, Sine & Cosine Series",
-          },
-          { id: "pde_four_3", name: "Fourier Transform & Convolution Theorem" },
-        ],
-      },
+      { id: "pde_t0", name: "Partial Differential Equations", subtopics: [
+        { id: "pde_0_0", name: "PDE of First Order" },
+        { id: "pde_0_1", name: "Lagrange's Method" },
+        { id: "pde_0_2", name: "Charpit's Method" },
+        { id: "pde_0_3", name: "PDE of Second Order" },
+        { id: "pde_0_4", name: "Heat, Wave and Laplace Equations" },
+      ]},
     ],
   },
   {
@@ -429,49 +293,34 @@ export const SYLLABUS: Subject[] = [
     name: "Numerical Analysis",
     netOnly: true,
     topics: [
-      {
-        id: "na_rf",
-        name: "Root Finding",
-        subtopics: [
-          { id: "na_rf_1", name: "Bisection, Regula Falsi, Newton-Raphson" },
-          { id: "na_rf_2", name: "Secant Method, Fixed Point Iteration" },
-          { id: "na_rf_3", name: "Convergence Analysis" },
-        ],
-      },
-      {
-        id: "na_interp",
-        name: "Interpolation",
-        subtopics: [
-          { id: "na_interp_1", name: "Newton Forward & Backward Differences" },
-          { id: "na_interp_2", name: "Lagrange & Divided Differences" },
-          { id: "na_interp_3", name: "Hermite & Spline Interpolation" },
-        ],
-      },
-      {
-        id: "na_ni",
-        name: "Numerical Integration",
-        subtopics: [
-          { id: "na_ni_1", name: "Trapezoidal Rule, Simpson's Rules" },
-          { id: "na_ni_2", name: "Gaussian Quadrature, Error Bounds" },
-        ],
-      },
-      {
-        id: "na_nla",
-        name: "Numerical Linear Algebra",
-        subtopics: [
-          { id: "na_nla_1", name: "Gaussian Elimination, LU Decomposition" },
-          { id: "na_nla_2", name: "Jacobi & Gauss-Seidel Methods" },
-        ],
-      },
-      {
-        id: "na_node",
-        name: "Numerical ODEs",
-        subtopics: [
-          { id: "na_node_1", name: "Euler, Modified Euler Methods" },
-          { id: "na_node_2", name: "Runge-Kutta Methods (RK2, RK4)" },
-          { id: "na_node_3", name: "Multistep Methods, Stability" },
-        ],
-      },
+      { id: "numerical_analysis_t0", name: "Solution of Algebraic and Transcendental Equations", subtopics: [
+        { id: "numerical_analysis_0_0", name: "Bisection Method, Regula-Falsi Method, Secant Method" },
+        { id: "numerical_analysis_0_1", name: "Newton-Raphson Method (Formula, Rate/Order of Convergence)" },
+        { id: "numerical_analysis_0_2", name: "Fixed-Point Iteration Method" },
+      ]},
+      { id: "numerical_analysis_t1", name: "Solutions of Linear Systems", subtopics: [
+        { id: "numerical_analysis_1_0", name: "Direct Methods - Gauss Elimination, Gauss-Jordan, LU Decomposition" },
+        { id: "numerical_analysis_1_1", name: "Iterative Methods - Jacobi Method, Gauss-Seidel Method" },
+      ]},
+      { id: "numerical_analysis_t2", name: "Interpolation", subtopics: [
+        { id: "numerical_analysis_2_0", name: "Lagrange's Interpolation, Newton's Divided Difference" },
+        { id: "numerical_analysis_2_1", name: "Newton's Forward/Backward Difference" },
+        { id: "numerical_analysis_2_2", name: "Central Difference Formulas (Gauss, Stirling, Bessel)" },
+        { id: "numerical_analysis_2_3", name: "Hermite Interpolation and Piecewise Spline Interpolation" },
+        { id: "numerical_analysis_2_4", name: "Error bounds in interpolation formulas" },
+      ]},
+      { id: "numerical_analysis_t3", name: "Numerical Differentiation and Integration", subtopics: [
+        { id: "numerical_analysis_3_0", name: "Numerical Differentiation using Newton's formulas" },
+        { id: "numerical_analysis_3_1", name: "Newton-Cotes Quadrature - Trapezoidal, Simpson's 1/3, Simpson's 3/8" },
+        { id: "numerical_analysis_3_2", name: "Errors in Quadrature formulas" },
+        { id: "numerical_analysis_3_3", name: "Gauss Quadrature Formulas" },
+      ]},
+      { id: "numerical_analysis_t4", name: "Numerical Solution of ODEs", subtopics: [
+        { id: "numerical_analysis_4_0", name: "Picard's Method" },
+        { id: "numerical_analysis_4_1", name: "Euler's Method and Modified Euler's Method" },
+        { id: "numerical_analysis_4_2", name: "Runge-Kutta Methods (2nd and 4th order)" },
+        { id: "numerical_analysis_4_3", name: "Predictor-Corrector Methods (Milne's, Adams-Bashforth)" },
+      ]},
     ],
   },
   {
@@ -683,22 +532,32 @@ export const SYLLABUS: Subject[] = [
     name: "Calculus of Variations",
     netOnly: true,
     topics: [
-      {
-        id: "cov_euler",
-        name: "Euler-Lagrange Equation",
-        subtopics: [
-          { id: "cov_euler_1", name: "Functional, Variation, Euler-Lagrange" },
-          { id: "cov_euler_2", name: "Fixed & Free Endpoint Problems" },
-        ],
-      },
-      {
-        id: "cov_special",
-        name: "Special Problems",
-        subtopics: [
-          { id: "cov_special_1", name: "Brachistochrone, Geodesics" },
-          { id: "cov_special_2", name: "Isoperimetric Problems" },
-        ],
-      },
+      { id: "calculus_of_variations_t0", name: "Functionals and Extremals", subtopics: [
+        { id: "calculus_of_variations_0_0", name: "Definition of functionals" },
+        { id: "calculus_of_variations_0_1", name: "Continuous functionals" },
+        { id: "calculus_of_variations_0_2", name: "Concept of variation (δy)" },
+      ]},
+      { id: "calculus_of_variations_t1", name: "Euler-Lagrange Equations", subtopics: [
+        { id: "calculus_of_variations_1_0", name: "Functional depends on x, y, y'" },
+        { id: "calculus_of_variations_1_1", name: "Functional independent of x, y, or y'" },
+        { id: "calculus_of_variations_1_2", name: "Higher-order derivatives" },
+        { id: "calculus_of_variations_1_3", name: "Multiple dependent variables" },
+      ]},
+      { id: "calculus_of_variations_t2", name: "Variational Problems with Constraints", subtopics: [
+        { id: "calculus_of_variations_2_0", name: "Isoperimetric problems - Lagrange multipliers" },
+      ]},
+      { id: "calculus_of_variations_t3", name: "Boundary Conditions", subtopics: [
+        { id: "calculus_of_variations_3_0", name: "Fixed boundary conditions" },
+        { id: "calculus_of_variations_3_1", name: "Moving/Variable boundary conditions (Natural and Transversality conditions)" },
+      ]},
+      { id: "calculus_of_variations_t4", name: "Sufficient Conditions for Extremum", subtopics: [
+        { id: "calculus_of_variations_4_0", name: "Jacobi's condition and Conjugate points" },
+        { id: "calculus_of_variations_4_1", name: "Weierstrass condition and Legendre condition (Weak and Strong extrema)" },
+      ]},
+      { id: "calculus_of_variations_t5", name: "Variational Methods", subtopics: [
+        { id: "calculus_of_variations_5_0", name: "Ritz method" },
+        { id: "calculus_of_variations_5_1", name: "Galerkin method" },
+      ]},
     ],
   },
   {
@@ -739,13 +598,32 @@ export const SYLLABUS: Subject[] = [
     name: "Integral Equations",
     netOnly: true,
     topics: [
-      { id: "ie_intro", name: "Introduction to Integral Equations", subtopics: [
-        { id: "ie_intro_1", name: "Fredholm and Volterra Equations" },
-        { id: "ie_intro_2", name: "Classification - First and Second Kind" },
+      { id: "integral_equations_t0", name: "Classification of Integral Equations", subtopics: [
+        { id: "integral_equations_0_0", name: "Linear vs Non-linear" },
+        { id: "integral_equations_0_1", name: "Volterra Integral Equations (1st and 2nd kind)" },
+        { id: "integral_equations_0_2", name: "Fredholm Integral Equations (1st and 2nd kind)" },
+        { id: "integral_equations_0_3", name: "Singular and Regular integral equations" },
       ]},
-      { id: "ie_methods", name: "Solution Methods", subtopics: [
-        { id: "ie_methods_1", name: "Method of Successive Approximations" },
-        { id: "ie_methods_2", name: "Relation to ODEs and Boundary Value Problems" },
+      { id: "integral_equations_t1", name: "Conversion of Differential Equations to Integral Equations", subtopics: [
+        { id: "integral_equations_1_0", name: "Converting IVP to Volterra equations" },
+        { id: "integral_equations_1_1", name: "Converting BVP to Fredholm equations (using Green's Function)" },
+      ]},
+      { id: "integral_equations_t2", name: "Methods of Solving Fredholm Integral Equations (2nd Kind)", subtopics: [
+        { id: "integral_equations_2_0", name: "Separable/Degenerate Kernels" },
+        { id: "integral_equations_2_1", name: "Resolvent Kernel method (Neumann Series)" },
+      ]},
+      { id: "integral_equations_t3", name: "Methods of Solving Volterra Integral Equations (2nd Kind)", subtopics: [
+        { id: "integral_equations_3_0", name: "Method of Successive Approximations" },
+        { id: "integral_equations_3_1", name: "Resolvent Kernel method" },
+        { id: "integral_equations_3_2", name: "Laplace Transform method" },
+      ]},
+      { id: "integral_equations_t4", name: "Eigenvalues and Eigenfunctions", subtopics: [
+        { id: "integral_equations_4_0", name: "Characteristic values and eigenfunctions for homogeneous Fredholm equations" },
+      ]},
+      { id: "integral_equations_t5", name: "Symmetric Kernels", subtopics: [
+        { id: "integral_equations_5_0", name: "Hilbert-Schmidt Theory" },
+        { id: "integral_equations_5_1", name: "Orthogonal eigenfunctions" },
+        { id: "integral_equations_5_2", name: "Expansion of symmetric kernels" },
       ]},
     ],
   },
@@ -918,6 +796,127 @@ export const SYLLABUS: Subject[] = [
       ]},
     ],
   },
+  {
+    id: "linear_algebra_net",
+    name: "Linear Algebra",
+    netOnly: true,
+    topics: [
+      { id: "linear_algebra_net_t0", name: "System of Linear Equations", subtopics: [
+        { id: "linear_algebra_net_0_0", name: "Consistent and Inconsistent system" },
+        { id: "linear_algebra_net_0_1", name: "Homogeneous system" },
+        { id: "linear_algebra_net_0_2", name: "Method of solution" },
+      ]},
+      { id: "linear_algebra_net_t1", name: "Matrices and Determinants", subtopics: [
+        { id: "linear_algebra_net_1_0", name: "Types of Matrices" },
+        { id: "linear_algebra_net_1_1", name: "Determinant and its properties" },
+      ]},
+      { id: "linear_algebra_net_t2", name: "Vector Spaces", subtopics: [
+        { id: "linear_algebra_net_2_0", name: "Definition and Examples" },
+        { id: "linear_algebra_net_2_1", name: "Subspace" },
+        { id: "linear_algebra_net_2_2", name: "Span" },
+        { id: "linear_algebra_net_2_3", name: "Linear independence" },
+        { id: "linear_algebra_net_2_4", name: "Basis and dimension" },
+        { id: "linear_algebra_net_2_5", name: "Investigation on subspaces – Union, intersection and Sum" },
+      ]},
+      { id: "linear_algebra_net_t3", name: "Linear Transformations", subtopics: [
+        { id: "linear_algebra_net_3_0", name: "Definition" },
+        { id: "linear_algebra_net_3_1", name: "Matrix representation" },
+        { id: "linear_algebra_net_3_2", name: "Range space, null space" },
+        { id: "linear_algebra_net_3_3", name: "Rank nullity theorem" },
+        { id: "linear_algebra_net_3_4", name: "One-one and onto transformation" },
+        { id: "linear_algebra_net_3_5", name: "Composition and inverse" },
+        { id: "linear_algebra_net_3_6", name: "Change of Basis" },
+      ]},
+      { id: "linear_algebra_net_t4", name: "Eigenvalues and Eigenvectors", subtopics: [
+        { id: "linear_algebra_net_4_0", name: "Eigenvalue problem" },
+        { id: "linear_algebra_net_4_1", name: "Properties of eigenvalues and eigenvectors" },
+        { id: "linear_algebra_net_4_2", name: "Algebraic and Geometric Multiplicity" },
+        { id: "linear_algebra_net_4_3", name: "Diagonalization" },
+        { id: "linear_algebra_net_4_4", name: "Eigenvalues of special matrices" },
+        { id: "linear_algebra_net_4_5", name: "Annihilating and Minimal Polynomial" },
+      ]},
+      { id: "linear_algebra_net_t5", name: "Inner Product Spaces", subtopics: [
+        { id: "linear_algebra_net_5_0", name: "Definition" },
+        { id: "linear_algebra_net_5_1", name: "Norm of vector space" },
+      ]},
+      { id: "linear_algebra_net_t6", name: "Jordan Canonical Forms", subtopics: [
+        { id: "linear_algebra_net_6_0", name: "Definition and Method of Solution" },
+      ]},
+      { id: "linear_algebra_net_t7", name: "Bilinear and Quadratic Forms", subtopics: [
+        { id: "linear_algebra_net_7_0", name: "Triangular form" },
+        { id: "linear_algebra_net_7_1", name: "Matrix representation" },
+      ]},
+    ],
+  },
+  {
+    id: "real_analysis_net",
+    name: "Real Analysis",
+    netOnly: true,
+    topics: [
+      { id: "real_analysis_net_t0", name: "Set Theory", subtopics: [
+        { id: "real_analysis_net_0_0", name: "Set Theory" },
+      ]},
+      { id: "real_analysis_net_t1", name: "Sequences of Real Numbers", subtopics: [
+        { id: "real_analysis_net_1_0", name: "Methods of Convergence" },
+        { id: "real_analysis_net_1_1", name: "Cauchy Sequences" },
+        { id: "real_analysis_net_1_2", name: "Contractive Sequences" },
+        { id: "real_analysis_net_1_3", name: "Cauchy's Theorem" },
+      ]},
+      { id: "real_analysis_net_t2", name: "Series of Real Numbers", subtopics: [
+        { id: "real_analysis_net_2_0", name: "Series of Positive Terms" },
+        { id: "real_analysis_net_2_1", name: "Infinite Series" },
+        { id: "real_analysis_net_2_2", name: "Power Series" },
+      ]},
+      { id: "real_analysis_net_t3", name: "Sequences & Series of Functions", subtopics: [
+        { id: "real_analysis_net_3_0", name: "Pointwise vs Uniform Convergence" },
+        { id: "real_analysis_net_3_1", name: "Tests for Uniform Convergence" },
+        { id: "real_analysis_net_3_2", name: "Term-by-term Differentiation/Integration" },
+      ]},
+    ],
+  },
+  {
+    id: "ode_net",
+    name: "ODE",
+    netOnly: true,
+    topics: [
+      { id: "ode_net_t0", name: "Ordinary Differential Equations", subtopics: [
+        { id: "ode_net_0_0", name: "Existence and Uniqueness Theorem" },
+        { id: "ode_net_0_1", name: "Equations of First Order and First Degree" },
+        { id: "ode_net_0_2", name: "Methods for First Order Equations" },
+        { id: "ode_net_0_3", name: "Orthogonal Trajectories" },
+        { id: "ode_net_0_4", name: "2nd Order ODE" },
+        { id: "ode_net_0_5", name: "Solution of 2nd Order ODE" },
+        { id: "ode_net_0_6", name: "Cauchy-Euler Equation" },
+        { id: "ode_net_0_7", name: "Wronskian" },
+        { id: "ode_net_0_8", name: "Variation of Parameters" },
+        { id: "ode_net_0_9", name: "System of ODEs" },
+        { id: "ode_net_0_10", name: "Sturm-Liouville Problem" },
+        { id: "ode_net_0_11", name: "Green's Function" },
+      ]},
+    ],
+  },
+  {
+    id: "differential_calculus_net",
+    name: "Differential Calculus",
+    netOnly: true,
+    topics: [
+      { id: "differential_calculus_net_t0", name: "Function of One Variable", subtopics: [
+        { id: "differential_calculus_net_0_0", name: "Function, Limit, Continuity" },
+        { id: "differential_calculus_net_0_1", name: "Properties of Continuity" },
+        { id: "differential_calculus_net_0_2", name: "Differentiability" },
+        { id: "differential_calculus_net_0_3", name: "Mean Value Theorems" },
+        { id: "differential_calculus_net_0_4", name: "Increasing/Decreasing Functions" },
+        { id: "differential_calculus_net_0_5", name: "Maxima & Minima" },
+      ]},
+      { id: "differential_calculus_net_t1", name: "Function of Several Variables", subtopics: [
+        { id: "differential_calculus_net_1_0", name: "Limit, Continuity" },
+        { id: "differential_calculus_net_1_1", name: "Partial Derivatives" },
+        { id: "differential_calculus_net_1_2", name: "Differentiability" },
+        { id: "differential_calculus_net_1_3", name: "Maxima & Minima" },
+        { id: "differential_calculus_net_1_4", name: "Inverse and Implicit Function Theorem" },
+      ]},
+    ],
+  },
 ];
 
 /* ─── Status config ────────────────────── */
@@ -1078,24 +1077,28 @@ function TickButton({
 const SUBJECT_HOURS: Record<string, number> = {
   linear_algebra: 70,
   real_analysis: 70,
-  abstract_algebra: 50,
+  abstract_algebra: 60,
   group_theory: 50,
   functions_of_one_variable: 50,
   multiple_variable_calculus: 25,
   miscellaneous: 25,
-  complex_analysis: 50,
+  complex_analysis: 80,
   ode: 40,
   pde: 40,
   differential_calculus: 50,
   integration: 30,
-  numerical_analysis: 30,
-  calculus_of_variations: 30,
+  numerical_analysis: 40,
+  calculus_of_variations: 40,
+  linear_algebra_net: 80,
+  real_analysis_net: 80,
+  ode_net: 40,
+  differential_calculus_net: 60,
   linear_programming: 30,
   statistics: 30,
   topology: 30,
   functional_analysis: 30,
   mechanics: 33,
-  integral_equations: 30,
+  integral_equations: 40,
 };
 
 // Map syllabus subject IDs to roadmap calendar subject IDs
@@ -1103,6 +1106,10 @@ const SYLLABUS_TO_CAL_ID: Record<string, string> = {
   linear_algebra: "la",
   real_analysis: "ra",
   differential_calculus: "dc",
+  linear_algebra_net: "la",
+  real_analysis_net: "ra",
+  ode_net: "ode",
+  differential_calculus_net: "dc",
   abstract_algebra: "aa",
   complex_analysis: "ca",
   ode: "ode",

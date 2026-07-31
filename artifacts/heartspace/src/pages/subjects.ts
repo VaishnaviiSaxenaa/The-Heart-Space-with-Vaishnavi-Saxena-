@@ -19,19 +19,16 @@ export const JAM_SUBJECTS: Subject[] = [
 ];
 
 export const NET_SUBJECTS: Subject[] = [
-  { id: "la", syllabusId: "linear_algebra", name: "Linear Algebra", totalHours: 60, studyWeeks: 4, assignmentWeeks: 0.5 },
-  { id: "aa", syllabusId: "abstract_algebra", name: "Group Theory + Ring & Field", totalHours: 90, studyWeeks: 5, assignmentWeeks: 1 },
-  { id: "ra", syllabusId: "real_analysis", name: "Real Analysis", totalHours: 75, studyWeeks: 5, assignmentWeeks: 0.5 },
-  { id: "ca", syllabusId: "complex_analysis", name: "Complex Analysis", totalHours: 50, studyWeeks: 3, assignmentWeeks: 0.5 },
-  { id: "ode", syllabusId: "ode", name: "ODE", totalHours: 40, studyWeeks: 2, assignmentWeeks: 0.5 },
+  { id: "la", syllabusId: "linear_algebra_net", name: "Linear Algebra", totalHours: 80, studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "ca", syllabusId: "complex_analysis", name: "Complex Analysis", totalHours: 80, studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "ra", syllabusId: "real_analysis_net", name: "Real Analysis", totalHours: 80, studyWeeks: 4, assignmentWeeks: 0.5 },
+  { id: "dc", syllabusId: "differential_calculus_net", name: "Differential Calculus", totalHours: 60, studyWeeks: 3, assignmentWeeks: 0.5 },
+  { id: "aa", syllabusId: "abstract_algebra", name: "Modern Algebra", totalHours: 60, studyWeeks: 3, assignmentWeeks: 0.5 },
+  { id: "ie", syllabusId: "integral_equations", name: "Integral Equations", totalHours: 40, studyWeeks: 2, assignmentWeeks: 0.5 },
+  { id: "cv", syllabusId: "calculus_of_variations", name: "Calculus of Variations", totalHours: 40, studyWeeks: 2, assignmentWeeks: 0.5 },
+  { id: "ode", syllabusId: "ode_net", name: "ODE", totalHours: 40, studyWeeks: 2, assignmentWeeks: 0.5 },
   { id: "pde", syllabusId: "pde", name: "PDE", totalHours: 40, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "ie", syllabusId: "integral_equations", name: "Integral Equations", totalHours: 30, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "cv", syllabusId: "calculus_of_variations", name: "Calculus of Variations", totalHours: 30, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "na", syllabusId: "numerical_analysis", name: "Numerical Analysis", totalHours: 30, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "topo", syllabusId: "topology", name: "Topology", totalHours: 44, studyWeeks: 3, assignmentWeeks: 0.5 },
-  { id: "fa", syllabusId: "functional_analysis", name: "Functional Analysis", totalHours: 22, studyWeeks: 1.5, assignmentWeeks: 0.5 },
-  { id: "lp", syllabusId: "linear_programming", name: "Linear Programming", totalHours: 28, studyWeeks: 2, assignmentWeeks: 0.5 },
-  { id: "sp", syllabusId: "statistics", name: "Statistics & Probability", totalHours: 44, studyWeeks: 3, assignmentWeeks: 0.5 },
+  { id: "na", syllabusId: "numerical_analysis", name: "Numerical Analysis", totalHours: 40, studyWeeks: 2, assignmentWeeks: 0.5 },
 ];
 
 export function getSubjectsForExamType(examType: string): Subject[] {
