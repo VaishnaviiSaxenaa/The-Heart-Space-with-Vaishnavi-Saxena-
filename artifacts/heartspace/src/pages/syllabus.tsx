@@ -58,6 +58,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "linear_algebra",
     name: "Linear Algebra",
+    jamOnly: true,
     topics: [
       { id: "linear_algebra_t0", name: "SOLE", subtopics: [
         { id: "linear_algebra_0_0", name: "Simultaneous Eq." },
@@ -104,6 +105,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "real_analysis",
     name: "Real Analysis",
+    jamOnly: true,
     topics: [
       { id: "real_analysis_t0", name: "Set Theory & Point Set Topology", subtopics: [
         { id: "real_analysis_0_0", name: "Sets & some terminologies" },
@@ -259,6 +261,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "ode",
     name: "Ordinary Differential Equations",
+    jamOnly: true,
     topics: [
       { id: "ode_t0", name: "First Order ODEs", subtopics: [
         { id: "ode_0_0", name: "Separable, Exact, Integrating Factors" },
@@ -393,6 +396,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "group_theory",
     name: "Group Theory",
+    jamOnly: true,
     topics: [
       { id: "group_theory_t0", name: "Groups & Cyclic Groups", subtopics: [
         { id: "group_theory_0_0", name: "Group and its Properties" },
@@ -449,6 +453,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "functions_of_one_variable",
     name: "Functions of One Variable",
+    jamOnly: true,
     topics: [
       { id: "functions_of_one_variable_t0", name: "Functions", subtopics: [
         { id: "functions_of_one_variable_0_0", name: "Relation" },
@@ -494,6 +499,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "multiple_variable_calculus",
     name: "Multiple Variable Calculus",
+    jamOnly: true,
     topics: [
       { id: "multiple_variable_calculus_t0", name: "LCD (2 Variables)", subtopics: [
         { id: "multiple_variable_calculus_0_0", name: "Existence of Limits" },
@@ -528,6 +534,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "integration",
     name: "Integration",
+    jamOnly: true,
     topics: [
       { id: "integration_t0", name: "Double Integrals", subtopics: [
         { id: "integration_0_0", name: "Double Integrals - Cartesian Form" },
@@ -548,6 +555,7 @@ export const SYLLABUS: Subject[] = [
   {
     id: "miscellaneous",
     name: "Miscellaneous",
+    jamOnly: true,
     topics: [
       { id: "miscellaneous_t0", name: "Miscellaneous Topics", subtopics: [
         { id: "miscellaneous_0_0", name: "SOR/VOR" },
