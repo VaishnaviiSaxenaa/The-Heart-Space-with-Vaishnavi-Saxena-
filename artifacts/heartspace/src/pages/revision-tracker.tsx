@@ -1267,7 +1267,7 @@ export default function RevisionTracker() {
                         style={{ width: "100%", textAlign: "left", padding: "0.6rem 1.25rem", background: `${BORDER}33`, fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
                       >
                         {topicGroup.name}
-                        <span>{tgOpen ? "−" : "+"}</span>
+                        {tgOpen ? <ChevronUp size={16} color={MUTED} /> : <ChevronDown size={16} color={MUTED} />}
                       </button>
                       {tgOpen && topicGroup.subtopics.map((topic) => {
                     const topicKey = `${subject.key}::${topic}`;
