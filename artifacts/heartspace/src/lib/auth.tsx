@@ -66,15 +66,26 @@ async function resolveSupabaseUser(
       console.warn(
         "[HeartSpace auth] Profile fetch timed out — using fallback",
       );
+      let cachedExamType = "JAM";
+      let cachedSpace = "zenith";
+      let cachedPlan = "zenith";
+      try {
+        const cached = JSON.parse(localStorage.getItem("heartspace_user") ?? "null");
+        if (cached && cached.id === supabaseUser.id) {
+          if (cached.exam_type) cachedExamType = cached.exam_type;
+          if (cached.space) cachedSpace = cached.space;
+          if (cached.plan) cachedPlan = cached.plan;
+        }
+      } catch {}
       return {
         user: {
           id: supabaseUser.id as any,
           email: supabaseUser.email ?? "",
           name: supabaseUser.email?.split("@")[0] ?? "User",
           role: "student" as any,
-          space: "zenith",
-          plan: "zenith",
-          exam_type: "JAM",
+          space: cachedSpace,
+          plan: cachedPlan,
+          exam_type: cachedExamType,
           avatarUrl: null,
         } as any,
         token: accessToken,
@@ -91,15 +102,26 @@ async function resolveSupabaseUser(
 
     if (profileError && profileError.code !== "PGRST116") {
       console.warn("[HeartSpace auth] Profile error — using fallback");
+      let cachedExamType2 = "JAM";
+      let cachedSpace2 = "zenith";
+      let cachedPlan2 = "zenith";
+      try {
+        const cached = JSON.parse(localStorage.getItem("heartspace_user") ?? "null");
+        if (cached && cached.id === supabaseUser.id) {
+          if (cached.exam_type) cachedExamType2 = cached.exam_type;
+          if (cached.space) cachedSpace2 = cached.space;
+          if (cached.plan) cachedPlan2 = cached.plan;
+        }
+      } catch {}
       return {
         user: {
           id: supabaseUser.id as any,
           email: supabaseUser.email ?? "",
           name: supabaseUser.email?.split("@")[0] ?? "User",
           role: "student" as any,
-          space: "zenith",
-          plan: "zenith",
-          exam_type: "JAM",
+          space: cachedSpace2,
+          plan: cachedPlan2,
+          exam_type: cachedExamType2,
           avatarUrl: null,
         } as any,
         token: accessToken,
