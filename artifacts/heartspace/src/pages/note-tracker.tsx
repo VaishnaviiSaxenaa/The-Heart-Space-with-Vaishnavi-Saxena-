@@ -1114,13 +1114,27 @@ export default function NoteTracker() {
                     const tgOpen = expandedTopicGroups.has(tgKey);
                     return (
                     <div key={topicGroup.name}>
-                      <button
-                        onClick={() => toggleTopicGroup(tgKey)}
-                        style={{ width: "100%", textAlign: "left", padding: "0.6rem 1.25rem", background: `${BORDER}33`, fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                      >
-                        {topicGroup.name}
-                        {tgOpen ? <ChevronUp size={16} color={MUTED} /> : <ChevronDown size={16} color={MUTED} />}
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1.25rem", background: `${BORDER}33` }}>
+                        <button
+                          onClick={() => toggleTopicGroup(tgKey)}
+                          style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em" }}
+                        >
+                          {topicGroup.name}
+                          {tgOpen ? <ChevronUp size={16} color={MUTED} /> : <ChevronDown size={16} color={MUTED} />}
+                        </button>
+                        {(() => {
+                          const tgNote = getNote(subject.key, topicGroup.name);
+                          const tgDone = tgNote?.done ?? false;
+                          return (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleNote(subject.key, subject.name, topicGroup.name); }}
+                              style={{ fontSize: "0.68rem", fontWeight: 700, padding: "0.25rem 0.5rem", borderRadius: 8, flexShrink: 0, cursor: "pointer", background: tgDone ? "#E8F5E9" : "#F8F5F0", color: tgDone ? "#6E8B6B" : MUTED, border: `1px solid ${tgDone ? "#6E8B6B" : BORDER}` }}
+                            >
+                              {tgDone ? "✓ Done" : "Mark Done"}
+                            </button>
+                          );
+                        })()}
+                      </div>
                       {tgOpen && topicGroup.subtopics.map((topic) => {
                     const note = getNote(subject.key, topic);
                     const done = note?.done ?? false;

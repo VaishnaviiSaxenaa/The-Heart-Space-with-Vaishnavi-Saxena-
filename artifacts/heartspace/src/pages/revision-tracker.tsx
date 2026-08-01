@@ -1262,13 +1262,41 @@ export default function RevisionTracker() {
                     const tgOpen = expandedTopicGroups.has(tgKey);
                     return (
                     <div key={topicGroup.name}>
-                      <button
-                        onClick={() => toggleTopicGroup(tgKey)}
-                        style={{ width: "100%", textAlign: "left", padding: "0.6rem 1.25rem", background: `${BORDER}33`, fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                      >
-                        {topicGroup.name}
-                        {tgOpen ? <ChevronUp size={16} color={MUTED} /> : <ChevronDown size={16} color={MUTED} />}
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 1.25rem", background: `${BORDER}33` }}>
+                        <button
+                          onClick={() => toggleTopicGroup(tgKey)}
+                          style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.02em" }}
+                        >
+                          {topicGroup.name}
+                          {tgOpen ? <ChevronUp size={16} color={MUTED} /> : <ChevronDown size={16} color={MUTED} />}
+                        </button>
+                        {(() => {
+                          const tgRevised = getLastRevised(subject.key, topicGroup.name);
+                          return (
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const topicKey = `${subject.key}::${topicGroup.name}`;
+                                const { data } = await supabase
+                                  .from("revision_logs")
+                                  .insert({
+                                    student_id: userId,
+                                    topic_key: topicKey,
+                                    subject: subject.name,
+                                    topic: topicGroup.name,
+                                    confidence: "somewhat_confident",
+                                  })
+                                  .select()
+                                  .single();
+                                if (data) setLogs((prev) => [data as RevisionLog, ...prev]);
+                              }}
+                              style={{ fontSize: "0.68rem", fontWeight: 700, padding: "0.25rem 0.5rem", borderRadius: 8, flexShrink: 0, cursor: "pointer", background: tgRevised ? "#E8F5E9" : "#F8F5F0", color: tgRevised ? OLIVE : MUTED, border: `1px solid ${tgRevised ? OLIVE : BORDER}` }}
+                            >
+                              {tgRevised ? "✓ Revised" : "Mark Revised"}
+                            </button>
+                          );
+                        })()}
+                      </div>
                       {tgOpen && topicGroup.subtopics.map((topic) => {
                     const topicKey = `${subject.key}::${topic}`;
                     const topicLogs = getTopicLogs(subject.key, topic);
