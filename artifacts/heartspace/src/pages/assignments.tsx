@@ -1046,22 +1046,6 @@ function SubjectBlock({
               >
                 {subject.name}
               </span>
-              {subject.jamOnly && (
-                <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: `${PROGRESS_PURPLE}22`, color: SIDEBAR }}
-                >
-                  JAM only
-                </span>
-              )}
-              {subject.netOnly && (
-                <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: `${ROSE}33`, color: "#8B3A3A" }}
-                >
-                  NET / GATE
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-3 pl-7">
               <div
