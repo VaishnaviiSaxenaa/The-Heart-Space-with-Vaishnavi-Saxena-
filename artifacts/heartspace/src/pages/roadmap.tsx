@@ -1285,12 +1285,12 @@ export function MyProgressTab({
       return hours;
     } catch { return {}; }
   })();
-  const SUBJ_HOURS: Record<string, number> = { la: 60, ra: 60, gt: 50, ca: 50, ode: 40, pde: 40, dc: 50, na: 30, cv: 30 };
-  const SYLLABUS_CAL_MAP: Record<string, string> = {
-    linear_algebra: "la", real_analysis: "ra", abstract_algebra: "gt",
-    complex_analysis: "ca", ode: "ode", pde: "pde", differential_calculus: "dc",
-    numerical_analysis: "na", calculus_of_variations: "cv", integration: "dc",
-  };
+  const SUBJ_HOURS: Record<string, number> = isJAM
+    ? { la: 70, ra: 70, fov: 50, gt: 50, mvc: 25, ode: 40, int: 30, misc: 25 }
+    : { la: 80, ca: 80, ra: 80, dc: 60, aa: 60, ie: 40, cv: 40, ode: 40, pde: 40, na: 40 };
+  const SYLLABUS_CAL_MAP: Record<string, string> = isJAM
+    ? { linear_algebra: "la", real_analysis: "ra", functions_of_one_variable: "fov", group_theory: "gt", multiple_variable_calculus: "mvc", ode: "ode", integration: "int", miscellaneous: "misc" }
+    : { linear_algebra_net: "la", complex_analysis: "ca", real_analysis_net: "ra", differential_calculus_net: "dc", abstract_algebra: "aa", integral_equations: "ie", calculus_of_variations: "cv", ode_net: "ode", pde: "pde", numerical_analysis: "na" };
   useEffect(() => {
     const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
     if (!viewAsId) return;
