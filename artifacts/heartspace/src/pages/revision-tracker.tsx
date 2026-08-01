@@ -350,27 +350,299 @@ function flatSubtopics(s) {
   return s.topics.flatMap((t) => t.subtopics);
 }
 
-const NET_EXTRA = [
+const NET_SUBJECTS = [
   {
-    key: "topology",
-    name: "Topology",
+    key: "linear_algebra_net",
+    name: "Linear Algebra",
     topics: [
-      "Metric Spaces",
-      "Topological Spaces",
-      "Connectedness",
-      "Compactness",
-      "Continuity",
+      { name: "System of Linear Equations", subtopics: [
+        "Consistent and Inconsistent system",
+        "Homogeneous system",
+        "Method of solution",
+      ]},
+      { name: "Matrices and Determinants", subtopics: [
+        "Types of Matrices",
+        "Determinant and its properties",
+      ]},
+      { name: "Vector Spaces", subtopics: [
+        "Definition and Examples",
+        "Subspace",
+        "Span",
+        "Linear independence",
+        "Basis and dimension",
+        "Investigation on subspaces - Union, intersection and Sum",
+      ]},
+      { name: "Linear Transformations", subtopics: [
+        "Definition",
+        "Matrix representation",
+        "Range space, null space",
+        "Rank nullity theorem",
+        "One-one and onto transformation",
+        "Composition and inverse",
+        "Change of Basis",
+      ]},
+      { name: "Eigenvalues and Eigenvectors", subtopics: [
+        "Eigenvalue problem",
+        "Properties of eigenvalues and eigenvectors",
+        "Algebraic and Geometric Multiplicity",
+        "Diagonalization",
+        "Eigenvalues of special matrices",
+        "Annihilating and Minimal Polynomial",
+      ]},
+      { name: "Inner Product Spaces", subtopics: [
+        "Definition",
+        "Norm of vector space",
+      ]},
+      { name: "Jordan Canonical Forms", subtopics: [
+        "Definition and Method of Solution",
+      ]},
+      { name: "Bilinear and Quadratic Forms", subtopics: [
+        "Triangular form",
+        "Matrix representation",
+      ]},
     ],
   },
   {
-    key: "functional_analysis",
-    name: "Functional Analysis",
+    key: "complex_analysis",
+    name: "Complex Analysis",
     topics: [
-      "Normed Spaces",
-      "Banach Spaces",
-      "Hilbert Spaces",
-      "Linear Operators",
-      "Spectral Theory",
+      { name: "Basic Definitions", subtopics: [
+        "Basic Definitions",
+      ]},
+      { name: "Complex Valued Functions", subtopics: [
+        "Complex Valued Functions",
+      ]},
+      { name: "Analytic Functions", subtopics: [
+        "Limit, Continuity, Differentiability, Analytic Functions, Liouville Theorem",
+        "Open mapping theorem",
+        "Rouche Theorem",
+        "Schwarz Lemma",
+        "Results on polynomials",
+      ]},
+      { name: "Complex Integration", subtopics: [
+        "Contour integration",
+        "Cauchy integral formula",
+        "Polar form of integration",
+        "ML Inequality",
+      ]},
+      { name: "Taylor Series and Laurent Series", subtopics: [
+        "Taylor Series and Laurent Series",
+      ]},
+      { name: "Residues and Poles", subtopics: [
+        "Singularity and its types",
+        "Types of poles",
+        "Types of zeroes and method of evaluation",
+      ]},
+      { name: "Complex Mapping", subtopics: [
+        "Some important maps",
+        "Mobius Transformation",
+        "Mapping on disc",
+        "Conformal Mapping",
+      ]},
+    ],
+  },
+  {
+    key: "real_analysis_net",
+    name: "Real Analysis",
+    topics: [
+      { name: "Set Theory", subtopics: [
+        "Set Theory",
+      ]},
+      { name: "Sequences of Real Numbers", subtopics: [
+        "Methods of Convergence",
+        "Cauchy Sequences",
+        "Contractive Sequences",
+        "Cauchy's Theorem",
+      ]},
+      { name: "Series of Real Numbers", subtopics: [
+        "Series of Positive Terms",
+        "Infinite Series",
+        "Power Series",
+      ]},
+      { name: "Sequences & Series of Functions", subtopics: [
+        "Pointwise vs Uniform Convergence",
+        "Tests for Uniform Convergence",
+        "Term-by-term Differentiation/Integration",
+      ]},
+    ],
+  },
+  {
+    key: "differential_calculus_net",
+    name: "Differential Calculus",
+    topics: [
+      { name: "Function of One Variable", subtopics: [
+        "Function, Limit, Continuity",
+        "Properties of Continuity",
+        "Differentiability",
+        "Mean Value Theorems",
+        "Increasing/Decreasing Functions",
+        "Maxima & Minima",
+      ]},
+      { name: "Function of Several Variables", subtopics: [
+        "Limit, Continuity",
+        "Partial Derivatives",
+        "Differentiability",
+        "Maxima & Minima",
+        "Inverse and Implicit Function Theorem",
+      ]},
+    ],
+  },
+  {
+    key: "abstract_algebra",
+    name: "Modern Algebra",
+    topics: [
+      { name: "Group Theory", subtopics: [
+        "Cyclic Groups",
+        "Isomorphism",
+        "Cosets and Lagrange's Theorem",
+        "External Direct Product",
+        "Sylow's Theorems",
+        "Homomorphism",
+      ]},
+      { name: "Ring Theory", subtopics: [
+        "Rings and Subrings",
+        "Integral Domain",
+        "Ring Homomorphism",
+        "Ideals",
+        "Polynomial Rings - Irreducibility Criteria, Eisenstein Criterion, Test of Degree 2 and 3, Gauss Test, Tests on Z",
+        "UFD, PID and ED",
+      ]},
+      { name: "Field Theory", subtopics: [
+        "Field Extensions - Algebraic and Transcendental Extension, Finite Field and its Properties",
+        "Galois Theory",
+      ]},
+    ],
+  },
+  {
+    key: "integral_equations",
+    name: "Integral Equations",
+    topics: [
+      { name: "Classification of Integral Equations", subtopics: [
+        "Linear vs Non-linear",
+        "Volterra Integral Equations (1st and 2nd kind)",
+        "Fredholm Integral Equations (1st and 2nd kind)",
+        "Singular and Regular integral equations",
+      ]},
+      { name: "Conversion of Differential Equations to Integral Equations", subtopics: [
+        "Converting IVP to Volterra equations",
+        "Converting BVP to Fredholm equations (using Green's Function)",
+      ]},
+      { name: "Methods of Solving Fredholm Integral Equations (2nd Kind)", subtopics: [
+        "Separable/Degenerate Kernels",
+        "Resolvent Kernel method (Neumann Series)",
+      ]},
+      { name: "Methods of Solving Volterra Integral Equations (2nd Kind)", subtopics: [
+        "Method of Successive Approximations",
+        "Resolvent Kernel method",
+        "Laplace Transform method",
+      ]},
+      { name: "Eigenvalues and Eigenfunctions", subtopics: [
+        "Characteristic values and eigenfunctions for homogeneous Fredholm equations",
+      ]},
+      { name: "Symmetric Kernels", subtopics: [
+        "Hilbert-Schmidt Theory",
+        "Orthogonal eigenfunctions",
+        "Expansion of symmetric kernels",
+      ]},
+    ],
+  },
+  {
+    key: "calculus_of_variations",
+    name: "Calculus of Variations",
+    topics: [
+      { name: "Functionals and Extremals", subtopics: [
+        "Definition of functionals",
+        "Continuous functionals",
+        "Concept of variation (δy)",
+      ]},
+      { name: "Euler-Lagrange Equations", subtopics: [
+        "Functional depends on x, y, y'",
+        "Functional independent of x, y, or y'",
+        "Higher-order derivatives",
+        "Multiple dependent variables",
+      ]},
+      { name: "Variational Problems with Constraints", subtopics: [
+        "Isoperimetric problems - Lagrange multipliers",
+      ]},
+      { name: "Boundary Conditions", subtopics: [
+        "Fixed boundary conditions",
+        "Moving/Variable boundary conditions (Natural and Transversality conditions)",
+      ]},
+      { name: "Sufficient Conditions for Extremum", subtopics: [
+        "Jacobi's condition and Conjugate points",
+        "Weierstrass condition and Legendre condition (Weak and Strong extrema)",
+      ]},
+      { name: "Variational Methods", subtopics: [
+        "Ritz method",
+        "Galerkin method",
+      ]},
+    ],
+  },
+  {
+    key: "ode_net",
+    name: "ODE",
+    topics: [
+      { name: "Ordinary Differential Equations", subtopics: [
+        "Existence and Uniqueness Theorem",
+        "Equations of First Order and First Degree",
+        "Methods for First Order Equations",
+        "Orthogonal Trajectories",
+        "2nd Order ODE",
+        "Solution of 2nd Order ODE",
+        "Cauchy-Euler Equation",
+        "Wronskian",
+        "Variation of Parameters",
+        "System of ODEs",
+        "Sturm-Liouville Problem",
+        "Green's Function",
+      ]},
+    ],
+  },
+  {
+    key: "pde",
+    name: "PDE",
+    topics: [
+      { name: "Partial Differential Equations", subtopics: [
+        "PDE of First Order",
+        "Lagrange's Method",
+        "Charpit's Method",
+        "PDE of Second Order",
+        "Heat, Wave and Laplace Equations",
+      ]},
+    ],
+  },
+  {
+    key: "numerical_analysis",
+    name: "Numerical Analysis",
+    topics: [
+      { name: "Solution of Algebraic and Transcendental Equations", subtopics: [
+        "Bisection Method, Regula-Falsi Method, Secant Method",
+        "Newton-Raphson Method (Formula, Rate/Order of Convergence)",
+        "Fixed-Point Iteration Method",
+      ]},
+      { name: "Solutions of Linear Systems", subtopics: [
+        "Direct Methods - Gauss Elimination, Gauss-Jordan, LU Decomposition",
+        "Iterative Methods - Jacobi Method, Gauss-Seidel Method",
+      ]},
+      { name: "Interpolation", subtopics: [
+        "Lagrange's Interpolation, Newton's Divided Difference",
+        "Newton's Forward/Backward Difference",
+        "Central Difference Formulas (Gauss, Stirling, Bessel)",
+        "Hermite Interpolation and Piecewise Spline Interpolation",
+        "Error bounds in interpolation formulas",
+      ]},
+      { name: "Numerical Differentiation and Integration", subtopics: [
+        "Numerical Differentiation using Newton's formulas",
+        "Newton-Cotes Quadrature - Trapezoidal, Simpson's 1/3, Simpson's 3/8",
+        "Errors in Quadrature formulas",
+        "Gauss Quadrature Formulas",
+      ]},
+      { name: "Numerical Solution of ODEs", subtopics: [
+        "Picard's Method",
+        "Euler's Method and Modified Euler's Method",
+        "Runge-Kutta Methods (2nd and 4th order)",
+        "Predictor-Corrector Methods (Milne's, Adams-Bashforth)",
+      ]},
     ],
   },
 ];
@@ -419,7 +691,7 @@ export default function RevisionTracker() {
   }, [viewAsId]);
   const examType = (isViewMode ? viewedExamType : (user as any)?.exam_type) ?? "JAM";
   const subjects =
-    examType === "NET_GATE" ? [...JAM_SUBJECTS, ...NET_EXTRA] : JAM_SUBJECTS;
+    examType === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
 
   /* Revision calendar setup: 40% of each subject's study hours */
   const roadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET : ROADMAP_SUBJECTS_JAM;
