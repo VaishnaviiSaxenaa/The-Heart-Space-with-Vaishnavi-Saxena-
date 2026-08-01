@@ -658,7 +658,7 @@ export default function NoteTracker() {
   const viewAsId = new URLSearchParams(window.location.search).get("viewAs");
   const userId = viewAsId ?? rawUserId;
   const isViewMode = !!viewAsId;
-  const examType = (user as any)?.examType ?? "JAM";
+  const examType = (user as any)?.exam_type ?? "JAM";
   const subjects =
     examType === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
 
