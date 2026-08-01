@@ -31,6 +31,7 @@ const CHARCOAL = "#2D2A25";
 const GOLD = "#C9A84C";
 const MUTED = "#7A7267";
 const BORDER = "#E5DDD0";
+const OLIVE = "#6E8B6B";
 
 type SourceType = "study" | "revision" | "practice";
 
