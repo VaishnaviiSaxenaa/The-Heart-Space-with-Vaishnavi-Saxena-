@@ -2,7 +2,7 @@ import { useState, useMemo, Component, ReactNode, useEffect, useRef } from "reac
 import { useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
-import { JAM_SUBJECTS, NET_EXTRA } from "./note-tracker";
+import { JAM_SUBJECTS, NET_SUBJECTS } from "./note-tracker";
 import {
   useGetDashboardSummary,
   useListMoods,
@@ -988,7 +988,7 @@ export default function StudentDashboard() {
               const totalPrac = dashPracticeSubjects.reduce((a,s) => a + s.totalHours, 0);
               const covPrac = dashPracticeSubjects.reduce((a,s) => a + (pracHrs[s.id] ?? 0), 0);
               const examTypeLocal = (user as any)?.exam_type ?? "JAM";
-              const subjectsLocal = examTypeLocal === "NET_GATE" ? [...JAM_SUBJECTS, ...NET_EXTRA] : JAM_SUBJECTS;
+              const subjectsLocal = examTypeLocal === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
               const subjectTotals2 = subjectsLocal.map((s: any) => ({ name: s.name, total: s.topics.length }));
               const totalNotes = subjectTotals2.reduce((a,s) => a + s.total, 0);
               const covNotes = notes.filter((n: any) => n.done).length;
