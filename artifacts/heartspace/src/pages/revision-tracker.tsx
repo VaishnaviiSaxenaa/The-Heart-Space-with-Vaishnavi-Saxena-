@@ -1271,24 +1271,15 @@ export default function RevisionTracker() {
                           {tgOpen ? <ChevronUp size={16} color={MUTED} /> : <ChevronDown size={16} color={MUTED} />}
                         </button>
                         {(() => {
+                          const tgKey2 = `${subject.key}::${topicGroup.name}`;
                           const tgRevised = getLastRevised(subject.key, topicGroup.name);
+                          const tgIsRevising = revising === tgKey2;
                           return (
                             <button
-                              onClick={async (e) => {
+                              onClick={(e) => {
                                 e.stopPropagation();
-                                const topicKey = `${subject.key}::${topicGroup.name}`;
-                                const { data } = await supabase
-                                  .from("revision_logs")
-                                  .insert({
-                                    student_id: userId,
-                                    topic_key: topicKey,
-                                    subject: subject.name,
-                                    topic: topicGroup.name,
-                                    confidence: "somewhat_confident",
-                                  })
-                                  .select()
-                                  .single();
-                                if (data) setLogs((prev) => [data as RevisionLog, ...prev]);
+                                setRevising(tgIsRevising ? null : tgKey2);
+                                setConfidence("");
                               }}
                               style={{ fontSize: "0.68rem", fontWeight: 700, padding: "0.25rem 0.5rem", borderRadius: 8, flexShrink: 0, cursor: "pointer", background: tgRevised ? "#E8F5E9" : "#F8F5F0", color: tgRevised ? OLIVE : MUTED, border: `1px solid ${tgRevised ? OLIVE : BORDER}` }}
                             >
@@ -1297,6 +1288,44 @@ export default function RevisionTracker() {
                           );
                         })()}
                       </div>
+                      {revising === `${subject.key}::${topicGroup.name}` && (
+                        <div style={{ margin: "0 1.25rem 0.75rem", background: CREAM, borderRadius: 10, padding: "0.75rem", border: `1px solid ${BORDER}` }}>
+                          <p style={{ fontSize: "0.8rem", fontWeight: 600, color: CHARCOAL, margin: "0 0 0.5rem" }}>
+                            How confident are you after revising?
+                          </p>
+                          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+                            {CONFIDENCE.map((c) => (
+                              <button
+                                key={c.key}
+                                onClick={() => setConfidence(c.key)}
+                                style={{
+                                  background: confidence === c.key ? c.bg : CARD,
+                                  color: confidence === c.key ? c.color : MUTED,
+                                  border: `1.5px solid ${confidence === c.key ? c.color : BORDER}`,
+                                  borderRadius: 8, padding: "0.35rem 0.65rem", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer",
+                                }}
+                              >
+                                {c.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            <button
+                              onClick={() => logRevision(subject.key, subject.name, topicGroup.name)}
+                              disabled={!confidence}
+                              style={{ background: confidence ? OLIVE : BORDER, color: "#fff", border: "none", borderRadius: 8, padding: "0.4rem 0.85rem", fontSize: "0.8rem", fontWeight: 600, cursor: confidence ? "pointer" : "default" }}
+                            >
+                              Log Revision
+                            </button>
+                            <button
+                              onClick={() => { setRevising(null); setConfidence(""); }}
+                              style={{ background: CREAM, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0.4rem 0.75rem", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       {tgOpen && topicGroup.subtopics.map((topic) => {
                     const topicKey = `${subject.key}::${topic}`;
                     const topicLogs = getTopicLogs(subject.key, topic);
