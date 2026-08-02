@@ -695,6 +695,7 @@ export default function RevisionTracker() {
 
   /* Revision calendar setup: 40% of each subject's study hours */
   const roadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET : ROADMAP_SUBJECTS_JAM;
+  const _effectiveUid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   useEffect(() => {
     if (!_effectiveUid) return;
     let revProgress: any = {};
@@ -716,7 +717,6 @@ export default function RevisionTracker() {
     });
     if (changed) saveGenericCalendar("revision", _effectiveUid, cleaned);
   }, [_effectiveUid, examType]);
-  const _effectiveUid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
   const SPEED_OPTS = [["gentle","🐢","Gentle +40%"],["steady","🌿","Steady +30%"],["standard","⚖️","Standard"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;
   const [studySpeedMap, setStudySpeedMap] = useState<Record<string,string>>(() => { try { return JSON.parse(localStorage.getItem(`hs_topic_speed_${_effectiveUid}`) ?? "{}"); } catch { return {}; } });
