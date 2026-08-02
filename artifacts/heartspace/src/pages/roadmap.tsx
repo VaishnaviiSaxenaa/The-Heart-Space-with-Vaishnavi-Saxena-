@@ -25,7 +25,7 @@ import {
   Circle,
   PlayCircle,
 } from "lucide-react";
-import RoadmapCalendar, { loadCalendar, saveCalendarLocal } from "./roadmap-calendar-view";
+import RoadmapCalendar, { loadCalendar, saveCalendarLocal, autoGenerateCalendar } from "./roadmap-calendar-view";
 import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
 import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
 import {
@@ -2800,7 +2800,21 @@ function CalendarTabWrapper({
       if (filtered.length !== entries.length) changed = true;
       if (filtered.length > 0) cleaned[dateKey] = filtered;
     });
-    if (changed) saveCalendarLocal(effectiveUserId, cleaned);
+    if (!changed) return;
+    const inputs = loadScheduleInputs(effectiveUserId);
+    const paceHours = inputs.hoursPerDay ?? 2;
+    const paceDays = inputs.selectedDays ?? [1, 2, 3, 4, 5];
+    const consumedBySubject: Record<string, number> = {};
+    Object.entries(cleaned).forEach(([dateKey, entries]) => {
+      if (dateKey >= todayStr) return;
+      entries.forEach((e) => { consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours; });
+    });
+    const freshRemaining: Record<string, number> = {};
+    rawSubjects.forEach((s) => {
+      freshRemaining[s.id] = doneSubjectIds.has(s.id) ? 0 : Math.max(0, ((s as any).totalHours ?? 0) - (consumedBySubject[s.id] ?? 0));
+    });
+    const regenerated = autoGenerateCalendar(rawSubjects as any, freshRemaining, todayStr, paceHours, paceDays, [], [], [], cleaned);
+    saveCalendarLocal(effectiveUserId, regenerated);
   }, [effectiveUserId, JSON.stringify(syllabusPercs)]);
 
   const savedSimSlots = loadStudyPeriods(effectiveUserId);

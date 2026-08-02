@@ -16,7 +16,7 @@ import {
   History,
 } from "lucide-react";
 import { SYLLABUS } from "./syllabus";
-import GenericCalendar, { GenericSubjectDef, loadGenericCalendar, saveGenericCalendar } from "./generic-calendar";
+import GenericCalendar, { GenericSubjectDef, loadGenericCalendar, saveGenericCalendar, autoGenerateGeneric } from "./generic-calendar";
 import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
 import { MyProgressTab, getSyllabusPercents } from "./roadmap";
 
@@ -1266,7 +1266,24 @@ export default function QuestionPractice() {
       if (filtered.length !== entries.length) changed = true;
       if (filtered.length > 0) cleaned[dateKey] = filtered;
     });
-    if (changed) saveGenericCalendar("practice", effectiveUserId, cleaned);
+    if (!changed) return;
+    let paceHours = 2;
+    let paceDays: number[] = [1, 2, 3, 4, 5];
+    try {
+      const pace = JSON.parse(localStorage.getItem(`hs_cal_pace_practice_${effectiveUserId}`) || "null");
+      if (pace) { paceHours = pace.hoursPerDay ?? paceHours; paceDays = pace.selectedDays ?? paceDays; }
+    } catch {}
+    const consumedBySubject: Record<string, number> = {};
+    Object.entries(cleaned).forEach(([dateKey, entries]) => {
+      if (dateKey >= todayStr) return;
+      entries.forEach((e) => { consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours; });
+    });
+    const remainingHoursBySubject: Record<string, number> = {};
+    qpRoadmapSubjects.forEach((s: any) => {
+      remainingHoursBySubject[s.id] = doneShortIds.has(s.id) ? 0 : Math.max(0, (s.totalHours ?? 0) - (consumedBySubject[s.id] ?? 0));
+    });
+    const regenerated = autoGenerateGeneric(qpRoadmapSubjects as any, remainingHoursBySubject, todayStr, paceHours, paceDays, [], cleaned);
+    saveGenericCalendar("practice", effectiveUserId, regenerated);
   }, [effectiveUserId, examType]);
   const _effectiveUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const QP_SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };

@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { loadRevisionSpeedFromDB, saveRevisionSpeedToDB, loadTopicSpeedFromDB } from "../lib/supabase-sync";
 import { format, differenceInDays } from "date-fns";
 import { ChevronDown, ChevronUp, RotateCcw, Send } from "lucide-react";
-import GenericCalendar, { GenericSubjectDef, loadGenericCalendarFromDB, calendarKey, loadGenericCalendar, saveGenericCalendar } from "./generic-calendar";
+import GenericCalendar, { GenericSubjectDef, loadGenericCalendarFromDB, calendarKey, loadGenericCalendar, saveGenericCalendar, autoGenerateGeneric } from "./generic-calendar";
 import { JAM_SUBJECTS as ROADMAP_SUBJECTS_JAM, NET_SUBJECTS as ROADMAP_SUBJECTS_NET } from "./subjects";
 import { MyProgressTab, getSyllabusPercents } from "./roadmap";
 
@@ -715,7 +715,24 @@ export default function RevisionTracker() {
       if (filtered.length !== entries.length) changed = true;
       if (filtered.length > 0) cleaned[dateKey] = filtered;
     });
-    if (changed) saveGenericCalendar("revision", _effectiveUid, cleaned);
+    if (!changed) return;
+    let paceHours = 2;
+    let paceDays: number[] = [1, 2, 3, 4, 5];
+    try {
+      const pace = JSON.parse(localStorage.getItem(`hs_cal_pace_revision_${_effectiveUid}`) || "null");
+      if (pace) { paceHours = pace.hoursPerDay ?? paceHours; paceDays = pace.selectedDays ?? paceDays; }
+    } catch {}
+    const consumedBySubject: Record<string, number> = {};
+    Object.entries(cleaned).forEach(([dateKey, entries]) => {
+      if (dateKey >= todayStr) return;
+      entries.forEach((e) => { consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours; });
+    });
+    const remainingHoursBySubject: Record<string, number> = {};
+    roadmapSubjects.forEach((s: any) => {
+      remainingHoursBySubject[s.id] = doneShortIds.has(s.id) ? 0 : Math.max(0, (s.totalHours ?? 0) - (consumedBySubject[s.id] ?? 0));
+    });
+    const regenerated = autoGenerateGeneric(roadmapSubjects as any, remainingHoursBySubject, todayStr, paceHours, paceDays, [], cleaned);
+    saveGenericCalendar("revision", _effectiveUid, regenerated);
   }, [_effectiveUid, examType]);
   const SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
   const SPEED_OPTS = [["gentle","🐢","Gentle +40%"],["steady","🌿","Steady +30%"],["standard","⚖️","Standard"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;

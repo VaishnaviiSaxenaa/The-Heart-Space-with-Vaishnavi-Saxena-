@@ -119,7 +119,7 @@ function isDateInPeriod(dateStr: string, p: PeriodBase): boolean {
   return dateStr >= p.startDate && dateStr <= p.endDate;
 }
 
-function autoGenerateCalendar(
+export function autoGenerateCalendar(
   subjects: CalendarSubjectDef[],
   remainingHoursBySubject: Record<string, number>,
   startDate: string,
