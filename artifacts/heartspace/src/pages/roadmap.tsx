@@ -436,7 +436,7 @@ const NET_WEEK_BREAKDOWN: Record<string, string[]> = {
 };
 
 /* ─── Syllabus % per subject ─────────────── */
-function getSyllabusPercents(
+export function getSyllabusPercents(
   syllabusProgress: SyllabusProgress,
   examType: string,
 ): Record<string, number> {

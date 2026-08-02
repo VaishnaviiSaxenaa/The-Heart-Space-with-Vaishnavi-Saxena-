@@ -4,9 +4,9 @@ import { supabase } from "../lib/supabase";
 import { loadRevisionSpeedFromDB, saveRevisionSpeedToDB, loadTopicSpeedFromDB } from "../lib/supabase-sync";
 import { format, differenceInDays } from "date-fns";
 import { ChevronDown, ChevronUp, RotateCcw, Send } from "lucide-react";
-import GenericCalendar, { GenericSubjectDef, loadGenericCalendarFromDB, calendarKey } from "./generic-calendar";
+import GenericCalendar, { GenericSubjectDef, loadGenericCalendarFromDB, calendarKey, loadGenericCalendar, saveGenericCalendar } from "./generic-calendar";
 import { JAM_SUBJECTS as ROADMAP_SUBJECTS_JAM, NET_SUBJECTS as ROADMAP_SUBJECTS_NET } from "./subjects";
-import { MyProgressTab } from "./roadmap";
+import { MyProgressTab, getSyllabusPercents } from "./roadmap";
 
 const CREAM = "#F8F5F0";
 const CHARCOAL = "#2D2A25";
@@ -695,6 +695,27 @@ export default function RevisionTracker() {
 
   /* Revision calendar setup: 40% of each subject's study hours */
   const roadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET : ROADMAP_SUBJECTS_JAM;
+  useEffect(() => {
+    if (!_effectiveUid) return;
+    let revProgress: any = {};
+    try { revProgress = JSON.parse(localStorage.getItem(`hs_rev_syllabus_${_effectiveUid}`) || "{}"); } catch {}
+    const revPercs = getSyllabusPercents(revProgress, examType);
+    const doneShortIds = new Set(
+      roadmapSubjects.filter((s: any) => revPercs[s.syllabusId] === 100).map((s: any) => s.id)
+    );
+    if (doneShortIds.size === 0) return;
+    const todayStr = new Date().toISOString().split("T")[0];
+    const cal = loadGenericCalendar("revision", _effectiveUid);
+    let changed = false;
+    const cleaned: typeof cal = {};
+    Object.entries(cal).forEach(([dateKey, entries]) => {
+      if (dateKey < todayStr) { cleaned[dateKey] = entries; return; }
+      const filtered = entries.filter((e) => !doneShortIds.has(e.subjectId));
+      if (filtered.length !== entries.length) changed = true;
+      if (filtered.length > 0) cleaned[dateKey] = filtered;
+    });
+    if (changed) saveGenericCalendar("revision", _effectiveUid, cleaned);
+  }, [_effectiveUid, examType]);
   const _effectiveUid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
   const SPEED_OPTS = [["gentle","🐢","Gentle +40%"],["steady","🌿","Steady +30%"],["standard","⚖️","Standard"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;

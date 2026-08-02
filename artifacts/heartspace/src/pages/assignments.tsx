@@ -16,9 +16,9 @@ import {
   History,
 } from "lucide-react";
 import { SYLLABUS } from "./syllabus";
-import GenericCalendar, { GenericSubjectDef } from "./generic-calendar";
+import GenericCalendar, { GenericSubjectDef, loadGenericCalendar, saveGenericCalendar } from "./generic-calendar";
 import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
-import { MyProgressTab } from "./roadmap";
+import { MyProgressTab, getSyllabusPercents } from "./roadmap";
 
 /* ─── Brand tokens ─────────────────────── */
 const CREAM = "#F8F5F0";
@@ -1247,6 +1247,27 @@ export default function QuestionPractice() {
 
   /* Question Practice calendar setup: 70% of each subject's study hours */
   const qpRoadmapSubjects = examType === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    let qpProgress: any = {};
+    try { qpProgress = JSON.parse(localStorage.getItem(`hs_qp_syllabus_${effectiveUserId}`) || "{}"); } catch {}
+    const qpPercs = getSyllabusPercents(qpProgress, examType);
+    const doneShortIds = new Set(
+      qpRoadmapSubjects.filter((s: any) => qpPercs[s.syllabusId] === 100).map((s: any) => s.id)
+    );
+    if (doneShortIds.size === 0) return;
+    const todayStr = new Date().toISOString().split("T")[0];
+    const cal = loadGenericCalendar("practice", effectiveUserId);
+    let changed = false;
+    const cleaned: typeof cal = {};
+    Object.entries(cal).forEach(([dateKey, entries]) => {
+      if (dateKey < todayStr) { cleaned[dateKey] = entries; return; }
+      const filtered = entries.filter((e) => !doneShortIds.has(e.subjectId));
+      if (filtered.length !== entries.length) changed = true;
+      if (filtered.length > 0) cleaned[dateKey] = filtered;
+    });
+    if (changed) saveGenericCalendar("practice", effectiveUserId, cleaned);
+  }, [effectiveUserId, examType]);
   const _effectiveUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const QP_SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
   const QP_SPEED_OPTS = [["gentle","🐢","+40%"],["steady","🌿","+30%"],["standard","⚖️","Std"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;
