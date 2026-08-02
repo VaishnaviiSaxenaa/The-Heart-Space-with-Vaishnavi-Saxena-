@@ -1288,6 +1288,37 @@ export default function RevisionTracker() {
                           );
                         })()}
                       </div>
+                      {(() => {
+                        const tgKey3 = `${subject.key}::${topicGroup.name}`;
+                        const tgLogs = getTopicLogs(subject.key, topicGroup.name);
+                        if (tgLogs.length === 0) return null;
+                        return (
+                          <div style={{ margin: "0 1.25rem 0.5rem", fontSize: "0.75rem", color: MUTED }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                              <button onClick={() => setExpandedHistory(prev => { const n = new Set(prev); n.has(tgKey3) ? n.delete(tgKey3) : n.add(tgKey3); return n; })}
+                                style={{ background: "none", border: "none", padding: 0, fontSize: "0.75rem", color: PROGRESS_PURPLE, cursor: "pointer", fontWeight: 600, textDecoration: "underline" }}>
+                                Revised {tgLogs.length}×
+                              </button>
+                              <span>· Last: {format(new Date(tgLogs[0].revised_at), "MMM d, yyyy")}</span>
+                            </span>
+                            {expandedHistory.has(tgKey3) && (
+                              <div style={{ marginTop: "0.5rem", background: CREAM, borderRadius: 8, padding: "0.5rem 0.75rem", border: `1px solid ${BORDER}` }}>
+                                <div style={{ fontSize: "0.72rem", fontWeight: 600, color: MUTED, marginBottom: "0.3rem", textTransform: "uppercase" }}>Revision History</div>
+                                {tgLogs.map((log, i) => {
+                                  const conf = CONFIDENCE.find(cc => cc.key === log.confidence);
+                                  return (
+                                    <div key={log.id} style={{ fontSize: "0.78rem", color: CHARCOAL, display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0" }}>
+                                      <span style={{ color: MUTED }}>#{tgLogs.length - i}</span>
+                                      <span>{format(new Date(log.revised_at), "MMM d, yyyy · h:mm a")}</span>
+                                      {conf && <span style={{ background: conf.bg, color: conf.color, borderRadius: 20, padding: "0.1rem 0.4rem", fontSize: "0.7rem", fontWeight: 600 }}>{conf.label}</span>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {revising === `${subject.key}::${topicGroup.name}` && (
                         <div style={{ margin: "0 1.25rem 0.75rem", background: CREAM, borderRadius: 10, padding: "0.75rem", border: `1px solid ${BORDER}` }}>
                           <p style={{ fontSize: "0.8rem", fontWeight: 600, color: CHARCOAL, margin: "0 0 0.5rem" }}>
