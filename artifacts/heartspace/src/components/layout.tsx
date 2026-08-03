@@ -301,6 +301,8 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   );
 }
 
+import HelpWidget from "./help-widget";
+
 export function Layout({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -345,6 +347,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <main className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-6xl mx-auto w-full">
           {children}
         </main>
+        <HelpWidget />
         <footer
           className="px-8 py-5 text-xs text-center"
           style={{ color: MUTED, borderTop: `1px solid ${BORDER}` }}
