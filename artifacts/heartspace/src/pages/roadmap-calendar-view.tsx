@@ -371,6 +371,7 @@ export default function RoadmapCalendar({
       baseData,
     );
     persist(generated);
+    window.location.reload();
   }
 
   function getTotalHoursForSubject(subjectId: string): number {
