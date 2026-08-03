@@ -2729,6 +2729,11 @@ function CalendarTabWrapper({
   variableWeeks: VariableWeek[];
 }) {
   const uid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
+  const [calendarTick, setCalendarTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setCalendarTick((t) => t + 1), 2000);
+    return () => clearInterval(iv);
+  }, []);
   const inputs = loadScheduleInputs(uid);
   const rawSubjectsBase = examType === "JAM" ? JAM_SUBJECTS : NET_SUBJECTS;
   const defaultOrder = rawSubjectsBase.map((s) => s.id);
