@@ -1247,6 +1247,11 @@ export default function QuestionPractice() {
 
   /* Question Practice calendar setup: 70% of each subject's study hours */
   const qpRoadmapSubjects = examType === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
+  const [qpSyllabusTick, setQpSyllabusTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setQpSyllabusTick((t) => t + 1), 2000);
+    return () => clearInterval(iv);
+  }, []);
   useEffect(() => {
     if (!effectiveUserId) return;
     let qpProgress: any = {};
@@ -1281,7 +1286,7 @@ export default function QuestionPractice() {
     });
     const regenerated = autoGenerateGeneric(qpRoadmapSubjects as any, remainingHoursBySubject, todayStr, paceHours, paceDays, [], pastOnly);
     saveGenericCalendar("practice", effectiveUserId, regenerated);
-  }, [effectiveUserId, examType]);
+  }, [effectiveUserId, examType, qpSyllabusTick]);
   const _effectiveUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const QP_SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };
   const QP_SPEED_OPTS = [["gentle","🐢","+40%"],["steady","🌿","+30%"],["standard","⚖️","Std"],["accelerated","⚡","-30%"],["rapid","🚀","-40%"]] as const;
