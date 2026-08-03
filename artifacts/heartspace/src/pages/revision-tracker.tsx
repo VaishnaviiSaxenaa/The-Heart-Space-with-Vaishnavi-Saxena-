@@ -707,15 +707,13 @@ export default function RevisionTracker() {
     if (doneShortIds.size === 0) return;
     const todayStr = new Date().toISOString().split("T")[0];
     const cal = loadGenericCalendar("revision", _effectiveUid);
-    let changed = false;
-    const cleaned: typeof cal = {};
+    let hadFutureDone = false;
+    const pastOnly: typeof cal = {};
     Object.entries(cal).forEach(([dateKey, entries]) => {
-      if (dateKey < todayStr) { cleaned[dateKey] = entries; return; }
-      const filtered = entries.filter((e) => !doneShortIds.has(e.subjectId));
-      if (filtered.length !== entries.length) changed = true;
-      if (filtered.length > 0) cleaned[dateKey] = filtered;
+      if (dateKey < todayStr) { pastOnly[dateKey] = entries; return; }
+      if (entries.some((e) => doneShortIds.has(e.subjectId))) hadFutureDone = true;
     });
-    if (!changed) return;
+    if (!hadFutureDone) return;
     let paceHours = 2;
     let paceDays: number[] = [1, 2, 3, 4, 5];
     try {
@@ -723,15 +721,14 @@ export default function RevisionTracker() {
       if (pace) { paceHours = pace.hoursPerDay ?? paceHours; paceDays = pace.selectedDays ?? paceDays; }
     } catch {}
     const consumedBySubject: Record<string, number> = {};
-    Object.entries(cleaned).forEach(([dateKey, entries]) => {
-      if (dateKey >= todayStr) return;
+    Object.entries(pastOnly).forEach(([, entries]) => {
       entries.forEach((e) => { consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours; });
     });
     const remainingHoursBySubject: Record<string, number> = {};
     roadmapSubjects.forEach((s: any) => {
       remainingHoursBySubject[s.id] = doneShortIds.has(s.id) ? 0 : Math.max(0, (s.totalHours ?? 0) - (consumedBySubject[s.id] ?? 0));
     });
-    const regenerated = autoGenerateGeneric(roadmapSubjects as any, remainingHoursBySubject, todayStr, paceHours, paceDays, [], cleaned);
+    const regenerated = autoGenerateGeneric(roadmapSubjects as any, remainingHoursBySubject, todayStr, paceHours, paceDays, [], pastOnly);
     saveGenericCalendar("revision", _effectiveUid, regenerated);
   }, [_effectiveUid, examType]);
   const SPEED_MULTS: Record<string, number> = { gentle: 1.40, steady: 1.30, standard: 1.00, accelerated: 0.70, rapid: 0.60 };

@@ -1258,15 +1258,13 @@ export default function QuestionPractice() {
     if (doneShortIds.size === 0) return;
     const todayStr = new Date().toISOString().split("T")[0];
     const cal = loadGenericCalendar("practice", effectiveUserId);
-    let changed = false;
-    const cleaned: typeof cal = {};
+    let hadFutureDone = false;
+    const pastOnly: typeof cal = {};
     Object.entries(cal).forEach(([dateKey, entries]) => {
-      if (dateKey < todayStr) { cleaned[dateKey] = entries; return; }
-      const filtered = entries.filter((e) => !doneShortIds.has(e.subjectId));
-      if (filtered.length !== entries.length) changed = true;
-      if (filtered.length > 0) cleaned[dateKey] = filtered;
+      if (dateKey < todayStr) { pastOnly[dateKey] = entries; return; }
+      if (entries.some((e) => doneShortIds.has(e.subjectId))) hadFutureDone = true;
     });
-    if (!changed) return;
+    if (!hadFutureDone) return;
     let paceHours = 2;
     let paceDays: number[] = [1, 2, 3, 4, 5];
     try {
@@ -1274,15 +1272,14 @@ export default function QuestionPractice() {
       if (pace) { paceHours = pace.hoursPerDay ?? paceHours; paceDays = pace.selectedDays ?? paceDays; }
     } catch {}
     const consumedBySubject: Record<string, number> = {};
-    Object.entries(cleaned).forEach(([dateKey, entries]) => {
-      if (dateKey >= todayStr) return;
+    Object.entries(pastOnly).forEach(([, entries]) => {
       entries.forEach((e) => { consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours; });
     });
     const remainingHoursBySubject: Record<string, number> = {};
     qpRoadmapSubjects.forEach((s: any) => {
       remainingHoursBySubject[s.id] = doneShortIds.has(s.id) ? 0 : Math.max(0, (s.totalHours ?? 0) - (consumedBySubject[s.id] ?? 0));
     });
-    const regenerated = autoGenerateGeneric(qpRoadmapSubjects as any, remainingHoursBySubject, todayStr, paceHours, paceDays, [], cleaned);
+    const regenerated = autoGenerateGeneric(qpRoadmapSubjects as any, remainingHoursBySubject, todayStr, paceHours, paceDays, [], pastOnly);
     saveGenericCalendar("practice", effectiveUserId, regenerated);
   }, [effectiveUserId, examType]);
   const _effectiveUid = effectiveUserId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
