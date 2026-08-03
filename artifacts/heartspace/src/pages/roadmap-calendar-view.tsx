@@ -353,14 +353,15 @@ export default function RoadmapCalendar({
         consumedBySubject[e.subjectId] = (consumedBySubject[e.subjectId] ?? 0) + e.hours;
       });
     });
-    const remainingHoursBySubject: Record<string, number> = {};
+    const freshRemainingHoursBySubject: Record<string, number> = {};
     subjects.forEach((s) => {
+      const isDone = (remainingHoursBySubject[s.id] ?? 0) === 0;
       const consumed = consumedBySubject[s.id] ?? 0;
-      remainingHoursBySubject[s.id] = Math.max(0, s.totalHours - consumed);
+      freshRemainingHoursBySubject[s.id] = isDone ? 0 : Math.max(0, s.totalHours - consumed);
     });
     const generated = autoGenerateCalendar(
       subjects,
-      remainingHoursBySubject,
+      freshRemainingHoursBySubject,
       startDate,
       hoursPerDay,
       selectedDays,
