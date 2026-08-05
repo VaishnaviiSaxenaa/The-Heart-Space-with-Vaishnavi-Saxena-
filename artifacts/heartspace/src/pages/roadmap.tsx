@@ -2844,6 +2844,7 @@ function CalendarTabWrapper({
       <StudySchedulePlanner uid={effectiveUserId} examType={examType} />
       <RoadmapCalendar
         uid={effectiveUserId}
+        examType={examType}
         subjects={subjects}
         remainingHoursBySubject={remainingHoursBySubject}
         startDate={startDate}
