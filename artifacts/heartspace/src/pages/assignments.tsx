@@ -16,7 +16,7 @@ import {
   History,
 } from "lucide-react";
 import { SYLLABUS } from "./syllabus";
-import GenericCalendar, { GenericSubjectDef, loadGenericCalendar, saveGenericCalendar, autoGenerateGeneric } from "./generic-calendar";
+import GenericCalendar, { GenericSubjectDef, loadGenericCalendar, saveGenericCalendar, autoGenerateGeneric, PeriodBase } from "./generic-calendar";
 import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
 import { MyProgressTab, getSyllabusPercents } from "./roadmap";
 
@@ -1247,6 +1247,24 @@ export default function QuestionPractice() {
 
   /* Question Practice calendar setup: 70% of each subject's study hours */
   const qpRoadmapSubjects = examType === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
+  const [qpUnavailPeriods, setQpUnavailPeriods] = useState<{id:string;label:string;startDate:string;endDate:string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem(`hs_unavail_practice_${effectiveUserId}`) || "[]"); } catch { return []; }
+  });
+  const [showQpUnavailForm, setShowQpUnavailForm] = useState(false);
+  const [qpUnavailForm, setQpUnavailForm] = useState({ label: "", startDate: "", endDate: "" });
+  function addQpUnavail() {
+    if (!qpUnavailForm.label || !qpUnavailForm.startDate || !qpUnavailForm.endDate) return;
+    const next = [...qpUnavailPeriods, { id: `${Date.now()}`, ...qpUnavailForm }];
+    setQpUnavailPeriods(next);
+    localStorage.setItem(`hs_unavail_practice_${effectiveUserId}`, JSON.stringify(next));
+    setQpUnavailForm({ label: "", startDate: "", endDate: "" });
+    setShowQpUnavailForm(false);
+  }
+  function removeQpUnavail(id: string) {
+    const next = qpUnavailPeriods.filter((p) => p.id !== id);
+    setQpUnavailPeriods(next);
+    localStorage.setItem(`hs_unavail_practice_${effectiveUserId}`, JSON.stringify(next));
+  }
   const [qpSyllabusTick, setQpSyllabusTick] = useState(0);
   useEffect(() => {
     const iv = setInterval(() => setQpSyllabusTick((t) => t + 1), 2000);
@@ -1496,6 +1514,36 @@ export default function QuestionPractice() {
               ))}
             </div>
           </div>
+          <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", textTransform: "uppercase", letterSpacing: "0.05em" }}>Unavailable Periods</p>
+              {!showQpUnavailForm && (
+                <button onClick={() => setShowQpUnavailForm(true)} style={{ fontSize: "0.7rem", fontWeight: 700, padding: "0.2rem 0.5rem", borderRadius: 6, background: "#C0392B22", color: "#8B3A3A", border: "none", cursor: "pointer" }}>+ Add</button>
+              )}
+            </div>
+            {qpUnavailPeriods.length === 0 && !showQpUnavailForm && (
+              <p style={{ fontSize: "0.72rem", color: "#7A7267" }}>No unavailable periods added.</p>
+            )}
+            {qpUnavailPeriods.map((p) => (
+              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", fontSize: "0.75rem", color: "#2D2A25" }}>
+                <span>{p.label}: {p.startDate} to {p.endDate}</span>
+                <button onClick={() => removeQpUnavail(p.id)} style={{ background: "none", border: "none", color: "#C0392B", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700 }}>Remove</button>
+              </div>
+            ))}
+            {showQpUnavailForm && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+                <input placeholder="Label (e.g. Holiday)" value={qpUnavailForm.label} onChange={(e) => setQpUnavailForm({ ...qpUnavailForm, label: e.target.value })} style={{ padding: "0.4rem", borderRadius: 6, border: "1px solid #E5DDD0", fontSize: "0.78rem" }} />
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  <input type="date" value={qpUnavailForm.startDate} onChange={(e) => setQpUnavailForm({ ...qpUnavailForm, startDate: e.target.value })} style={{ flex: 1, padding: "0.4rem", borderRadius: 6, border: "1px solid #E5DDD0", fontSize: "0.78rem" }} />
+                  <input type="date" value={qpUnavailForm.endDate} onChange={(e) => setQpUnavailForm({ ...qpUnavailForm, endDate: e.target.value })} style={{ flex: 1, padding: "0.4rem", borderRadius: 6, border: "1px solid #E5DDD0", fontSize: "0.78rem" }} />
+                </div>
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  <button onClick={addQpUnavail} style={{ flex: 1, padding: "0.4rem", borderRadius: 6, background: "#6B568F", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>Save</button>
+                  <button onClick={() => setShowQpUnavailForm(false)} style={{ flex: 1, padding: "0.4rem", borderRadius: 6, background: "#F8F5F0", color: "#7A7267", border: "1px solid #E5DDD0", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
           <GenericCalendar
             namespace="practice"
             uid={effectiveUserId}
@@ -1503,6 +1551,7 @@ export default function QuestionPractice() {
             startDate={practiceStartDate}
             hoursPerDay={practiceHoursPerDay}
             daysPerWeek={practiceDaysPerWeek}
+            unavailablePeriods={qpUnavailPeriods.map((p) => ({ startDate: p.startDate, endDate: p.endDate }))}
             title="📅 Question Practice Calendar (70% of study hours)"
           />
         </div>
