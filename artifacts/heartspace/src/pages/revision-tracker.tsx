@@ -806,7 +806,7 @@ export default function RevisionTracker() {
     if (inputs.hoursPerDay) revisionHoursPerDay = inputs.hoursPerDay;
     if (inputs.daysPerWeek) revisionDaysPerWeek = inputs.daysPerWeek;
   } catch {}
-  const [activeTab, setActiveTab] = useState<"log" | "calendar" | "progress">("log");
+  const [activeTab, setActiveTab] = useState<"log" | "calendar" | "progress" | "schedule">("log");
 
   const [logs, setLogs] = useState<RevisionLog[]>([]);
   const [methodResponses, setMethodResponses] = useState<string[]>([]);
@@ -957,7 +957,7 @@ export default function RevisionTracker() {
 
         {/* Tab Switcher */}
         <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1.5rem" }}>
-          {(["log", "calendar", "progress"] as const).map((tab) => (
+          {(["log", "calendar", "schedule", "progress"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -972,7 +972,7 @@ export default function RevisionTracker() {
                 cursor: "pointer",
               }}
             >
-              {tab === "log" ? "📝 Revision Log" : tab === "calendar" ? "📅 Calendar" : "📊 My Progress"}
+              {tab === "log" ? "📝 Revision Log" : tab === "calendar" ? "📅 Calendar" : tab === "schedule" ? "⚙️ Schedule" : "📊 My Progress"}
             </button>
           ))}
         </div>
@@ -994,6 +994,20 @@ export default function RevisionTracker() {
         )}
 
         {activeTab === "calendar" && userId && (
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem" }}>
+            <GenericCalendar
+              namespace="revision"
+              uid={userId}
+              subjects={revisionSubjects}
+              startDate={revisionStartDate}
+              hoursPerDay={revisionHoursPerDay}
+              daysPerWeek={revisionDaysPerWeek}
+              unavailablePeriods={revUnavailPeriods.map((p) => ({ startDate: p.startDate, endDate: p.endDate }))}
+              title="📅 Revision Calendar (40% of study hours)"
+            />
+          </div>
+        )}
+        {activeTab === "schedule" && userId && (
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1.25rem" }}>
         {/* Revision Speed Picker - Topic-wise */}
         <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
@@ -1057,16 +1071,6 @@ export default function RevisionTracker() {
                 </div>
               )}
             </div>
-            <GenericCalendar
-              namespace="revision"
-              uid={userId}
-              subjects={revisionSubjects}
-              startDate={revisionStartDate}
-              hoursPerDay={revisionHoursPerDay}
-              daysPerWeek={revisionDaysPerWeek}
-              unavailablePeriods={revUnavailPeriods.map((p) => ({ startDate: p.startDate, endDate: p.endDate }))}
-              title="📅 Revision Calendar (40% of study hours)"
-            />
           </div>
         )}
 
