@@ -1243,7 +1243,7 @@ export default function QuestionPractice() {
   const examType = isViewMode ? viewedExamType : ((user as any)?.exam_type as string | null);
   const isJAM = examType === "JAM";
 
-  const [activeMainTab, setActiveMainTab] = useState<"log" | "calendar" | "progress">("log");
+  const [activeMainTab, setActiveMainTab] = useState<"log" | "calendar" | "progress" | "schedule">("log");
 
   /* Question Practice calendar setup: 70% of each subject's study hours */
   const qpRoadmapSubjects = examType === "NET_GATE" ? NET_SUBJECTS : JAM_SUBJECTS;
@@ -1464,7 +1464,7 @@ export default function QuestionPractice() {
 
       {/* Tab Switcher */}
       <div className="flex gap-2">
-        {(["log", "calendar", "progress"] as const).map((tab) => (
+        {(["log", "calendar", "schedule", "progress"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveMainTab(tab)}
@@ -1475,7 +1475,7 @@ export default function QuestionPractice() {
                 : { background: `${BORDER}88`, color: MUTED }
             }
           >
-            {tab === "log" ? "📝 Practice Log" : tab === "calendar" ? "📅 Calendar" : "📊 My Progress"}
+            {tab === "log" ? "📝 Practice Log" : tab === "calendar" ? "📅 Calendar" : tab === "schedule" ? "⚙️ Schedule" : "📊 My Progress"}
           </button>
         ))}
       </div>
@@ -1484,6 +1484,20 @@ export default function QuestionPractice() {
       )}
 
       {activeMainTab === "calendar" && effectiveUserId && (
+        <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          <GenericCalendar
+            namespace="practice"
+            uid={effectiveUserId}
+            subjects={practiceSubjects}
+            startDate={practiceStartDate}
+            hoursPerDay={practiceHoursPerDay}
+            daysPerWeek={practiceDaysPerWeek}
+            unavailablePeriods={qpUnavailPeriods.map((p) => ({ startDate: p.startDate, endDate: p.endDate }))}
+            title="📅 Question Practice Calendar (70% of study hours)"
+          />
+        </div>
+      )}
+      {activeMainTab === "schedule" && effectiveUserId && (
         <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
           {/* Practice Speed Picker */}
           <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
@@ -1544,16 +1558,6 @@ export default function QuestionPractice() {
               </div>
             )}
           </div>
-          <GenericCalendar
-            namespace="practice"
-            uid={effectiveUserId}
-            subjects={practiceSubjects}
-            startDate={practiceStartDate}
-            hoursPerDay={practiceHoursPerDay}
-            daysPerWeek={practiceDaysPerWeek}
-            unavailablePeriods={qpUnavailPeriods.map((p) => ({ startDate: p.startDate, endDate: p.endDate }))}
-            title="📅 Question Practice Calendar (70% of study hours)"
-          />
         </div>
       )}
 
