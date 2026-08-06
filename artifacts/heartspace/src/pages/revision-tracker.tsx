@@ -695,6 +695,24 @@ export default function RevisionTracker() {
 
   /* Revision calendar setup: 40% of each subject's study hours */
   const roadmapSubjects = examType === "NET_GATE" ? ROADMAP_SUBJECTS_NET : ROADMAP_SUBJECTS_JAM;
+  const [revUnavailPeriods, setRevUnavailPeriods] = useState<{id:string;label:string;startDate:string;endDate:string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem(`hs_unavail_revision_${userId}`) || "[]"); } catch { return []; }
+  });
+  const [showRevUnavailForm, setShowRevUnavailForm] = useState(false);
+  const [revUnavailForm, setRevUnavailForm] = useState({ label: "", startDate: "", endDate: "" });
+  function addRevUnavail() {
+    if (!revUnavailForm.label || !revUnavailForm.startDate || !revUnavailForm.endDate) return;
+    const next = [...revUnavailPeriods, { id: `${Date.now()}`, ...revUnavailForm }];
+    setRevUnavailPeriods(next);
+    localStorage.setItem(`hs_unavail_revision_${userId}`, JSON.stringify(next));
+    setRevUnavailForm({ label: "", startDate: "", endDate: "" });
+    setShowRevUnavailForm(false);
+  }
+  function removeRevUnavail(id: string) {
+    const next = revUnavailPeriods.filter((p) => p.id !== id);
+    setRevUnavailPeriods(next);
+    localStorage.setItem(`hs_unavail_revision_${userId}`, JSON.stringify(next));
+  }
   const _effectiveUid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const [revSyllabusTick, setRevSyllabusTick] = useState(0);
   useEffect(() => {
@@ -1009,6 +1027,36 @@ export default function RevisionTracker() {
         </div>
 
 
+            <div style={{ background: "#FFFDF9", border: "1px solid #E5DDD0", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#7A7267", textTransform: "uppercase", letterSpacing: "0.05em" }}>Unavailable Periods</p>
+                {!showRevUnavailForm && (
+                  <button onClick={() => setShowRevUnavailForm(true)} style={{ fontSize: "0.7rem", fontWeight: 700, padding: "0.2rem 0.5rem", borderRadius: 6, background: "#C0392B22", color: "#8B3A3A", border: "none", cursor: "pointer" }}>+ Add</button>
+                )}
+              </div>
+              {revUnavailPeriods.length === 0 && !showRevUnavailForm && (
+                <p style={{ fontSize: "0.72rem", color: "#7A7267" }}>No unavailable periods added.</p>
+              )}
+              {revUnavailPeriods.map((p) => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", fontSize: "0.75rem", color: "#2D2A25" }}>
+                  <span>{p.label}: {p.startDate} to {p.endDate}</span>
+                  <button onClick={() => removeRevUnavail(p.id)} style={{ background: "none", border: "none", color: "#C0392B", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700 }}>Remove</button>
+                </div>
+              ))}
+              {showRevUnavailForm && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+                  <input placeholder="Label (e.g. Holiday)" value={revUnavailForm.label} onChange={(e) => setRevUnavailForm({ ...revUnavailForm, label: e.target.value })} style={{ padding: "0.4rem", borderRadius: 6, border: "1px solid #E5DDD0", fontSize: "0.78rem" }} />
+                  <div style={{ display: "flex", gap: "0.4rem" }}>
+                    <input type="date" value={revUnavailForm.startDate} onChange={(e) => setRevUnavailForm({ ...revUnavailForm, startDate: e.target.value })} style={{ flex: 1, padding: "0.4rem", borderRadius: 6, border: "1px solid #E5DDD0", fontSize: "0.78rem" }} />
+                    <input type="date" value={revUnavailForm.endDate} onChange={(e) => setRevUnavailForm({ ...revUnavailForm, endDate: e.target.value })} style={{ flex: 1, padding: "0.4rem", borderRadius: 6, border: "1px solid #E5DDD0", fontSize: "0.78rem" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: "0.4rem" }}>
+                    <button onClick={addRevUnavail} style={{ flex: 1, padding: "0.4rem", borderRadius: 6, background: "#6B568F", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>Save</button>
+                    <button onClick={() => setShowRevUnavailForm(false)} style={{ flex: 1, padding: "0.4rem", borderRadius: 6, background: "#F8F5F0", color: "#7A7267", border: "1px solid #E5DDD0", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
             <GenericCalendar
               namespace="revision"
               uid={userId}
@@ -1016,6 +1064,7 @@ export default function RevisionTracker() {
               startDate={revisionStartDate}
               hoursPerDay={revisionHoursPerDay}
               daysPerWeek={revisionDaysPerWeek}
+              unavailablePeriods={revUnavailPeriods.map((p) => ({ startDate: p.startDate, endDate: p.endDate }))}
               title="📅 Revision Calendar (40% of study hours)"
             />
           </div>
