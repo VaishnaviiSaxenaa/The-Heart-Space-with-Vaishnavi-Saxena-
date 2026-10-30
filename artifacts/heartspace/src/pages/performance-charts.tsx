@@ -129,8 +129,22 @@ export default function PerformanceCharts() {
   }, [uid]);
 
   const range = viewMode === "week" ? 7 : 30;
+  const [calTick, setCalTick] = useState(0);
+  useEffect(() => {
+    supabase.from("calendar_data").select("data").eq("user_id", uid).single()
+      .then(({ data: cd }) => {
+        const d: any = cd?.data;
+        if (!d) return;
+        try {
+          if (d.revision) localStorage.setItem(`hs_cal_revision_${uid}`, JSON.stringify(d.revision));
+          if (d.practice) localStorage.setItem(`hs_cal_practice_${uid}`, JSON.stringify(d.practice));
+        } catch {}
+        setCalTick((t) => t + 1);
+      });
+  }, [uid]);
   const revCalAll = JSON.parse(localStorage.getItem(`hs_cal_revision_${uid}`) ?? "{}");
   const pracCalAll = JSON.parse(localStorage.getItem(`hs_cal_practice_${uid}`) ?? "{}");
+  void calTick;
   const allDates = Array.from(new Set([...Object.keys(daily), ...Object.keys(revCalAll), ...Object.keys(pracCalAll)])).sort();
   // Calculate date window based on offset
   const windowEnd = new Date();
