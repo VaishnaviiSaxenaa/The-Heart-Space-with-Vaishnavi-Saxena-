@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { supabase } from "../lib/supabase";
 import {
   format,
   addDays,
@@ -58,6 +59,7 @@ function saveStudyCalendar(uid: string, data: CalendarData) {
   try {
     localStorage.setItem(`hs_calendar_${uid}`, JSON.stringify(data));
   } catch {}
+  supabase.from("roadmap_calendar").upsert({ user_id: uid, data, updated_at: new Date().toISOString() }, { onConflict: "user_id" }).then(() => {});
 }
 
 interface MergedEntry extends DayEntry {
@@ -98,6 +100,13 @@ export default function DashboardCalendar({
     setLoaded(true);
     let cancelled = false;
     (async () => {
+      try {
+        const { data: sd } = await supabase.from("roadmap_calendar").select("data").eq("user_id", uid).single();
+        if (!cancelled && sd?.data && Object.keys(sd.data as object).length > 0) {
+          setStudyCal(sd.data as CalendarData);
+          try { localStorage.setItem(`hs_calendar_${uid}`, JSON.stringify(sd.data)); } catch {}
+        }
+      } catch {}
       const [rev, prac] = await Promise.all([
         loadGenericCalendarFromDB("revision", uid),
         loadGenericCalendarFromDB("practice", uid),
