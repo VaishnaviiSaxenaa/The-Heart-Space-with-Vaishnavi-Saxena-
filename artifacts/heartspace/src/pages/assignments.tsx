@@ -45,6 +45,7 @@ interface PracticeAttempt {
   speed: number;
   mistakeCount: number;
   mistakes: string[];
+  mistakeCats?: string[];
   note?: string;
 }
 interface PracticeEntry {
@@ -138,6 +139,13 @@ function AttemptForm({
   const [mistakes, setMistakes] = useState<string[]>([]);
   const [activeParam, setActiveParam] = useState<"concept"|"accuracy"|"speed"|"mistakes"|null>(null);
 
+  const [mistakeCats, setMistakeCats] = useState<string[]>([]);
+  const mistakeRows = () => {
+    const n = Math.max(mistakeCount, mistakes.length);
+    const out: { t: string; c: string }[] = [];
+    for (let i = 0; i < n; i++) { const t = mistakes[i] ?? ""; const c = mistakeCats[i] ?? ""; if (t || c) out.push({ t, c }); }
+    return out;
+  };
   const updateMistake = (i: number, val: string) => {
     const next = [...mistakes];
     next[i] = val;
@@ -230,6 +238,19 @@ function AttemptForm({
                     className="flex-1 px-2 py-1.5 rounded-lg text-xs outline-none"
                     style={{ background: CARD, border: `1px solid ${BORDER}` }}
                   />
+                  <select
+                    value={mistakeCats[i] ?? ""}
+                    onChange={e => { const n = [...mistakeCats]; n[i] = e.target.value; setMistakeCats(n); }}
+                    className="px-1.5 py-1.5 rounded-lg text-[10px] outline-none"
+                    style={{ background: CARD, border: `1px solid ${BORDER}`, color: CHARCOAL }}
+                  >
+                    <option value="">Type…</option>
+                    <option value="concept">Concept gap</option>
+                    <option value="calculation">Calculation error</option>
+                    <option value="time">Time pressure</option>
+                    <option value="misread">Misread question</option>
+                    <option value="guess">Guess</option>
+                  </select>
                 </div>
               ))}
               {mistakeCount === 5 && (
@@ -250,7 +271,7 @@ function AttemptForm({
           style={{ background: CREAM, color: MUTED, border: `1px solid ${BORDER}` }}>
           Cancel
         </button>
-        <button onClick={() => onSave({ accuracy, concept, speed, mistakeCount: Math.max(mistakeCount, mistakes.filter(Boolean).length), mistakes: mistakes.filter(Boolean), note: "" })}
+        <button onClick={() => onSave({ accuracy, concept, speed, mistakeCount: Math.max(mistakeCount, mistakes.filter(Boolean).length), mistakes: mistakeRows().map((r) => r.t), mistakeCats: mistakeRows().map((r) => r.c), note: "" })}
           className="flex-1 py-2 rounded-xl text-xs font-bold text-white"
           style={{ background: PROGRESS_PURPLE }}>
           Save

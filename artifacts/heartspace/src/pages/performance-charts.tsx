@@ -306,6 +306,29 @@ export default function PerformanceCharts() {
     pRow("Practice planned", curP.prac, prevP.prac, "h", 1),
   ];
 
+  const MISTAKE_TYPES: { key: string; label: string; color: string }[] = [
+    { key: "concept", label: "Concept gap", color: "#C0392B" },
+    { key: "calculation", label: "Calculation error", color: "#E07A28" },
+    { key: "time", label: "Time pressure", color: "#E0B428" },
+    { key: "misread", label: "Misread question", color: "#9B7BB0" },
+    { key: "guess", label: "Guess", color: "#6E8B6B" },
+    { key: "none", label: "Uncategorised", color: "#B8AFA0" },
+  ];
+  const countMistakes = (a: string, b: string) => {
+    const out: Record<string, number> = { concept: 0, calculation: 0, time: 0, misread: 0, guess: 0, none: 0 };
+    Object.values(practice as Record<string, any>).forEach((en: any) => (en?.attempts ?? []).forEach((x: any) => {
+      const d = x?.date ? String(x.date).slice(0, 10) : "";
+      if (!d || d < a || d > b) return;
+      const cats: string[] = (x.mistakeCats ?? []).filter(Boolean);
+      cats.forEach((c) => { out[c in out ? c : "none"]++; });
+      const total = Math.max(x.mistakeCount ?? 0, (x.mistakes ?? []).filter(Boolean).length, cats.length);
+      out.none += total - cats.length;
+    }));
+    return out;
+  };
+  const mistakeNow = countMistakes(windowStartStr, windowEndStr);
+  const mistakeTotal = Object.values(mistakeNow).reduce((t, v) => t + v, 0);
+  const topMistake = MISTAKE_TYPES.filter((t) => t.key !== "none").sort((x, y) => mistakeNow[y.key] - mistakeNow[x.key])[0];
   const noDaily = sortedDates.length === 0;
 
   return (
@@ -405,6 +428,34 @@ export default function PerformanceCharts() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* ── Mistake breakdown ── */}
+        <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          <p className="text-sm font-bold mb-1" style={{ color: DARK }}>🔍 Mistake Breakdown</p>
+          <p className="text-xs mb-4" style={{ color: MUTED }}>
+            {mistakeTotal === 0
+              ? "No mistakes logged in this period."
+              : `${mistakeTotal} mistake${mistakeTotal !== 1 ? "s" : ""} in this period${topMistake && mistakeNow[topMistake.key] > 0 ? ` · most common: ${topMistake.label} (${mistakeNow[topMistake.key]})` : ""}`}
+          </p>
+          {mistakeTotal > 0 && (
+            <div className="space-y-2">
+              {MISTAKE_TYPES.filter((t) => mistakeNow[t.key] > 0).map((t) => {
+                const pct = Math.round((mistakeNow[t.key] / mistakeTotal) * 100);
+                return (
+                  <div key={t.key}>
+                    <div className="flex justify-between text-xs mb-0.5" style={{ color: CHARCOAL }}>
+                      <span>{t.label}</span>
+                      <span>{mistakeNow[t.key]} · {pct}%</span>
+                    </div>
+                    <div className="h-2.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: t.color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* ── 2. Mood + Stress Line Chart ── */}
