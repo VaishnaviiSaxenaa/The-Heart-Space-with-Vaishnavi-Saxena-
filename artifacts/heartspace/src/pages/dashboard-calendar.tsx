@@ -124,6 +124,61 @@ export default function DashboardCalendar({
     return () => { cancelled = true; };
   }, [uid]);
 
+  const [unavail, setUnavail] = useState<{ revision: any[]; practice: any[]; study: any[]; hasRm: boolean }>({ revision: [], practice: [], study: [], hasRm: false });
+  async function loadUnavailLists() {
+    const out: { revision: any[]; practice: any[]; study: any[]; rm: any } = { revision: [], practice: [], study: [], rm: null };
+    for (const ns of ["revision", "practice"] as const) {
+      let list: any[] | null = null;
+      try {
+        const { data: d } = await supabase.from("calendar_pace").select("data").eq("user_id", uid).eq("namespace", `unavail_${ns}`).single();
+        if (Array.isArray(d?.data)) list = d!.data as any[];
+      } catch {}
+      if (!list) { try { list = JSON.parse(localStorage.getItem(`hs_unavail_${ns}_${uid}`) || "[]"); } catch { list = []; } }
+      out[ns] = list ?? [];
+    }
+    let rm: any = null;
+    try {
+      const { data: d } = await supabase.from("roadmap_data").select("data").eq("user_id", uid).single();
+      if (d?.data) rm = d.data;
+    } catch {}
+    if (!rm) { try { rm = JSON.parse(localStorage.getItem(`hs_roadmap_${uid}`) || "null"); } catch {} }
+    out.rm = rm;
+    out.study = Array.isArray(rm?.unavailablePeriods) ? rm.unavailablePeriods : [];
+    return out;
+  }
+  useEffect(() => {
+    if (!uid) return;
+    let c = false;
+    loadUnavailLists().then((r) => { if (!c) setUnavail({ revision: r.revision, practice: r.practice, study: r.study, hasRm: !!r.rm }); });
+    return () => { c = true; };
+  }, [uid]);
+  async function toggleDayUnavailable(day: string) {
+    if (new URLSearchParams(window.location.search).get("viewAs")) return;
+    const cur = await loadUnavailLists();
+    const cov = (p: any) => p.startDate <= day && day <= p.endDate;
+    const mine = (p: any) => p.label === "Unavailable" && p.startDate === day && p.endDate === day;
+    const allCover = cur.revision.some(cov) && cur.practice.some(cov) && (cur.study.some(cov) || !cur.rm);
+    const mk = () => ({ id: `${Date.now()}${Math.random().toString(36).slice(2, 6)}`, label: "Unavailable", startDate: day, endDate: day });
+    const upd = (l: any[]) => allCover ? l.filter((p) => !mine(p)) : (l.some(cov) ? l : [...l, mk()]);
+    const rev = upd(cur.revision);
+    const prac = upd(cur.practice);
+    const now = new Date().toISOString();
+    try { localStorage.setItem(`hs_unavail_revision_${uid}`, JSON.stringify(rev)); } catch {}
+    try { localStorage.setItem(`hs_unavail_practice_${uid}`, JSON.stringify(prac)); } catch {}
+    try {
+      await supabase.from("calendar_pace").upsert({ user_id: uid, namespace: "unavail_revision", data: rev, updated_at: now }, { onConflict: "user_id,namespace" });
+      await supabase.from("calendar_pace").upsert({ user_id: uid, namespace: "unavail_practice", data: prac, updated_at: now }, { onConflict: "user_id,namespace" });
+    } catch {}
+    let study = cur.study;
+    if (cur.rm) {
+      study = upd(cur.study);
+      const rm2 = { ...cur.rm, unavailablePeriods: study };
+      try { localStorage.setItem(`hs_roadmap_${uid}`, JSON.stringify(rm2)); } catch {}
+      try { await supabase.from("roadmap_data").upsert({ user_id: uid, data: rm2, updated_at: now }, { onConflict: "user_id" }); } catch {}
+    }
+    setUnavail({ revision: rev, practice: prac, study, hasRm: !!cur.rm });
+  }
+
   // Load today's plan tasks from localStorage
   const todayTasks = useMemo(() => {
     try {
@@ -595,6 +650,36 @@ export default function DashboardCalendar({
                 ✕
               </button>
             </div>
+
+            {(() => {
+              const cov = (p: any) => p.startDate <= editingDay && editingDay <= p.endDate;
+              const allCover = unavail.revision.some(cov) && unavail.practice.some(cov) && (unavail.study.some(cov) || !unavail.hasRm);
+              const viewing = !!new URLSearchParams(window.location.search).get("viewAs");
+              return (
+                <div style={{ marginBottom: "0.8rem" }}>
+                  <button
+                    disabled={viewing}
+                    onClick={() => toggleDayUnavailable(editingDay)}
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: 10,
+                      border: "1px solid #E0D8CC",
+                      background: allCover ? "#6E8B6B" : "#F4EFE6",
+                      color: allCover ? "#fff" : "#3A3A3A",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: viewing ? "default" : "pointer",
+                    }}
+                  >
+                    {allCover ? "✅ Marked unavailable — tap to undo" : "🚫 Mark this day unavailable"}
+                  </button>
+                  <p style={{ fontSize: "0.68rem", color: "#7A7267", margin: "0.3rem 0 0" }}>
+                    Applies to Syllabus Tracker, Revision and Question Practice.
+                  </p>
+                </div>
+              );
+            })()}
 
             <div
               style={{
