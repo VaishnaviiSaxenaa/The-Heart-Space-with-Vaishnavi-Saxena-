@@ -194,7 +194,7 @@ export default function PerformanceCharts() {
     const total = allSubtopicIds.length || 1;
     const done = allSubtopicIds.filter((id) => syllabus[id]?.status === "done").length;
     return {
-      name: s.name.split(" ")[0],
+      name: s.name,
       fullName: s.name,
       pct: Math.round((done / total) * 100),
       done,
@@ -390,7 +390,7 @@ export default function PerformanceCharts() {
               margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: MUTED }} />
+              <XAxis dataKey="name" interval={0} angle={-30} textAnchor="end" height={80} tick={{ fontSize: 10, fill: MUTED }} />
               <YAxis
                 tick={{ fontSize: 10, fill: MUTED }}
                 unit="%"
