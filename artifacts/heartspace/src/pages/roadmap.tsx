@@ -28,6 +28,7 @@ import {
 import RoadmapCalendar, { loadCalendar, saveCalendarLocal, autoGenerateCalendar } from "./roadmap-calendar-view";
 import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
 import { format, addWeeks, differenceInWeeks, parseISO } from "date-fns";
+import SyllabusOverview from "./syllabus-overview";
 import {
   loadSyllabusProgress,
   SYLLABUS,
@@ -4353,8 +4354,8 @@ function RoadmapView({
   const [expandPhase, setExpandPhase] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "progress" | "calendar" | "schedule"
-  >("progress");
+    "overview" | "progress" | "calendar" | "schedule"
+  >("overview");
 
   const syllabusProgress: SyllabusProgress = (() => { try { return JSON.parse(localStorage.getItem(`hs_topic_syllabus_${effectiveUserId}`) ?? "{}"); } catch { return {}; } })();
   const examType = rm.examType;
@@ -4433,7 +4434,7 @@ function RoadmapView({
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
-        {(["progress", "calendar", "schedule"] as const).map((tab) => (
+        {(["overview", "progress", "calendar", "schedule"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -4444,7 +4445,9 @@ function RoadmapView({
                 : { background: `${BORDER}88`, color: MUTED }
             }
           >
-            {tab === "progress"
+            {tab === "overview"
+                ? "🧭 Overview"
+                : tab === "progress"
                 ? "📊 My Progress"
                 : tab === "calendar"
                   ? "🗓️ Calendar"
@@ -4452,6 +4455,10 @@ function RoadmapView({
           </button>
         ))}
       </div>
+
+      {activeTab === "overview" && (
+        <SyllabusOverview userId={effectiveUserId} examType={examType} startDate={rm.startDate} totalMonths={rm.totalMonths} unavailablePeriods={rm.unavailablePeriods} />
+      )}
 
       {/* MY PROGRESS TAB */}
       {activeTab === "progress" && (
