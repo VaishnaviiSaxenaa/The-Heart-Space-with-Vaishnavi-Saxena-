@@ -18,11 +18,11 @@ const FAQ_EN: Record<string, QA[]> = {
     { q: "What is the Dashboard?", a: "Your home base — it shows today's schedule pulled from all your trackers in one place, so you always know what to study next." },
     { q: "What are the small task chips for?", a: "Quick one-off to-dos you add yourself, separate from your regular study plan. Tap the circle to mark them done." },
     { q: "What are 'Added Tasks'?", a: "Tasks you added from the calendar popup on a specific day — they show up here too so you don't miss them." },
-    { q: "Why is something missing from today's plan?", a: "If you haven't set up your syllabus tracker calendar yet, or a tracker has no pace set, nothing will show. Check Topic Completion first." },
+    { q: "Why is something missing from today's plan?", a: "If you haven't set up your syllabus tracker calendar yet, or a tracker has no pace set, nothing will show. Check Syllabus Tracker first." },
   ],
   "/roadmap": [
-    { q: "What is Topic Completion?", a: "This is where you go through new topics for the first time — lectures, concepts, the actual learning. It's the foundation everything else builds on." },
-    { q: "How do I use Topic Completion?", a: "Open a subject, pick a topic, and work through its subtopics one by one. Tick each subtopic off as you finish it — your progress bar updates automatically." },
+    { q: "What is Syllabus Tracker?", a: "This is where you go through new topics for the first time — lectures, concepts, the actual learning. It's the foundation everything else builds on." },
+    { q: "How do I use Syllabus Tracker?", a: "Open a subject, pick a topic, and work through its subtopics one by one. Tick each subtopic off as you finish it — your progress bar updates automatically." },
     { q: "How is my calendar generated?", a: "Based on how many hours per day and which days you chose during setup, the app spreads your subjects' total hours across your available days automatically." },
     { q: "Why did my calendar change on its own?", a: "Once a subject reaches 100% complete, its future study time gets freed up automatically and the rest of your schedule shifts earlier to fill the gap — no wasted days." },
     { q: "What's the 'My Progress' tab?", a: "A checklist of every subtopic in your syllabus. Tick things off here as you actually learn them — this is what drives your subject completion percentage." },
@@ -33,8 +33,8 @@ const FAQ_EN: Record<string, QA[]> = {
     { q: "How do I log an attempt?", a: "Open a topic or subtopic, tap the log button, and record your accuracy, concept understanding, speed, and any mistakes you made." },
     { q: "What's the difference between topic-level and subtopic-level logging?", a: "Subtopic-level tracks a single concept (like 'Consistent and Inconsistent Systems'). Topic-level tracks the whole group (like 'System of Linear Equations') — they're independent, so use whichever matches what you actually practiced." },
     { q: "What does the '5+' mistake option do?", a: "It opens extra boxes so you can list more than 5 mistakes if you made that many — just tap '+ Add another mistake'." },
-    { q: "What does marking a topic 'Done' do here?", a: "It's independent from Topic Completion — marking done here only affects your Question Practice schedule, not your lectures." },
-    { q: "Why does my Question Practice calendar have different days than Topic Completion?", a: "Each tracker has its own hours-per-day and days-per-week, set during onboarding — they run on separate, independent schedules." },
+    { q: "What does marking a topic 'Done' do here?", a: "It's independent from Syllabus Tracker — marking done here only affects your Question Practice schedule, not your lectures." },
+    { q: "Why does my Question Practice calendar have different days than Syllabus Tracker?", a: "Each tracker has its own hours-per-day and days-per-week, set during onboarding — they run on separate, independent schedules." },
   ],
   "/revision-tracker": [
     { q: "What is Revision Tracker?", a: "This is where you come back to what you've already learned and rate how confident you feel, so nothing gets forgotten before your exam." },
@@ -67,11 +67,11 @@ const FAQ_HI: Record<string, QA[]> = {
     { q: "डैशबोर्ड क्या है?", a: "यह आपका होम बेस है — यहाँ आपके सभी ट्रैकर्स से आज का पूरा शेड्यूल एक जगह दिखता है, ताकि आपको हमेशा पता रहे कि आगे क्या पढ़ना है।" },
     { q: "छोटे टास्क चिप्स किसलिए हैं?", a: "ये आपके खुद जोड़े हुए छोटे टास्क हैं, आपके नियमित स्टडी प्लान से अलग। पूरा होने पर गोल पर टैप करें।" },
     { q: "'Added Tasks' क्या हैं?", a: "ये वे टास्क हैं जो आपने कैलेंडर पॉपअप से किसी खास दिन जोड़े थे — ये यहाँ भी दिखते हैं ताकि आप उन्हें मिस न करें।" },
-    { q: "आज के प्लान में कुछ क्यों नहीं दिख रहा?", a: "अगर आपने अभी तक अपना रोडमैप कैलेंडर सेट नहीं किया है, या किसी ट्रैकर की पेस सेट नहीं है, तो कुछ नहीं दिखेगा। पहले Topic Completion चेक करें।" },
+    { q: "आज के प्लान में कुछ क्यों नहीं दिख रहा?", a: "अगर आपने अभी तक अपना रोडमैप कैलेंडर सेट नहीं किया है, या किसी ट्रैकर की पेस सेट नहीं है, तो कुछ नहीं दिखेगा। पहले Syllabus Tracker चेक करें।" },
   ],
   "/roadmap": [
-    { q: "Topic Completion क्या है?", a: "यहाँ आप नए विषयों को पहली बार पढ़ते हैं — लेक्चर, कॉन्सेप्ट्स, असली लर्निंग। यही बाकी सब चीज़ों की नींव है।" },
-    { q: "Topic Completion का इस्तेमाल कैसे करें?", a: "एक सब्जेक्ट खोलें, एक टॉपिक चुनें, और उसके सबटॉपिक्स को एक-एक करके पूरा करें। हर सबटॉपिक पूरा होने पर टिक करें — आपका प्रोग्रेस बार अपने आप अपडेट हो जाएगा।" },
+    { q: "Syllabus Tracker क्या है?", a: "यहाँ आप नए विषयों को पहली बार पढ़ते हैं — लेक्चर, कॉन्सेप्ट्स, असली लर्निंग। यही बाकी सब चीज़ों की नींव है।" },
+    { q: "Syllabus Tracker का इस्तेमाल कैसे करें?", a: "एक सब्जेक्ट खोलें, एक टॉपिक चुनें, और उसके सबटॉपिक्स को एक-एक करके पूरा करें। हर सबटॉपिक पूरा होने पर टिक करें — आपका प्रोग्रेस बार अपने आप अपडेट हो जाएगा।" },
     { q: "मेरा कैलेंडर कैसे बनता है?", a: "सेटअप के दौरान आपने जितने घंटे और जिन दिनों को चुना था, उसी हिसाब से ऐप आपके सब्जेक्ट्स के कुल घंटों को आपके उपलब्ध दिनों में अपने आप बाँट देता है।" },
     { q: "मेरा कैलेंडर खुद-ब-खुद क्यों बदल गया?", a: "जब कोई सब्जेक्ट 100% पूरा हो जाता है, तो उसका भविष्य का स्टडी टाइम अपने आप खाली हो जाता है और बाकी शेड्यूल उस खाली जगह को भरने के लिए आगे खिसक जाता है — कोई दिन बर्बाद नहीं होता।" },
     { q: "'My Progress' टैब क्या है?", a: "यह आपके सिलेबस के हर सबटॉपिक की चेकलिस्ट है। जैसे-जैसे आप असल में सीखते जाएँ, यहाँ टिक करते जाएँ — यही आपके सब्जेक्ट कम्प्लीशन प्रतिशत को तय करता है।" },
@@ -82,8 +82,8 @@ const FAQ_HI: Record<string, QA[]> = {
     { q: "मैं एक अटेम्प्ट कैसे लॉग करूँ?", a: "एक टॉपिक या सबटॉपिक खोलें, लॉग बटन दबाएँ, और अपनी एक्यूरेसी, कॉन्सेप्ट समझ, स्पीड, और गलतियाँ दर्ज करें।" },
     { q: "टॉपिक-लेवल और सबटॉपिक-लेवल लॉगिंग में क्या फर्क है?", a: "सबटॉपिक-लेवल एक अकेले कॉन्सेप्ट को ट्रैक करता है (जैसे 'Consistent and Inconsistent Systems')। टॉपिक-लेवल पूरे ग्रुप को ट्रैक करता है (जैसे 'System of Linear Equations') — दोनों अलग-अलग हैं, जो भी आपने असल में प्रैक्टिस किया हो वही इस्तेमाल करें।" },
     { q: "'5+' गलतियों वाला ऑप्शन क्या करता है?", a: "यह अतिरिक्त बॉक्स खोल देता है ताकि अगर आपने 5 से ज़्यादा गलतियाँ की हों तो आप उन्हें लिख सकें — बस '+ Add another mistake' पर टैप करें।" },
-    { q: "यहाँ किसी टॉपिक को 'Done' मार्क करने से क्या होता है?", a: "यह Topic Completion से अलग है — यहाँ Done मार्क करने से सिर्फ आपका Question Practice शेड्यूल प्रभावित होता है, आपके लेक्चर नहीं।" },
-    { q: "मेरे Question Practice के दिन Topic Completion से अलग क्यों हैं?", a: "हर ट्रैकर के अपने घंटे-प्रति-दिन और दिन-प्रति-हफ्ता होते हैं, जो ऑनबोर्डिंग के दौरान सेट किए गए थे — ये अलग-अलग, स्वतंत्र शेड्यूल पर चलते हैं।" },
+    { q: "यहाँ किसी टॉपिक को 'Done' मार्क करने से क्या होता है?", a: "यह Syllabus Tracker से अलग है — यहाँ Done मार्क करने से सिर्फ आपका Question Practice शेड्यूल प्रभावित होता है, आपके लेक्चर नहीं।" },
+    { q: "मेरे Question Practice के दिन Syllabus Tracker से अलग क्यों हैं?", a: "हर ट्रैकर के अपने घंटे-प्रति-दिन और दिन-प्रति-हफ्ता होते हैं, जो ऑनबोर्डिंग के दौरान सेट किए गए थे — ये अलग-अलग, स्वतंत्र शेड्यूल पर चलते हैं।" },
   ],
   "/revision-tracker": [
     { q: "Revision Tracker क्या है?", a: "यहाँ आप जो पहले से सीख चुके हैं उसे दोबारा देखते हैं और बताते हैं कि आपको कितना कॉन्फिडेंस है, ताकि एग्ज़ाम से पहले कुछ भी भूले नहीं।" },
@@ -112,11 +112,11 @@ const FAQ_HI: Record<string, QA[]> = {
 };
 
 const DEFAULT_EN: QA[] = [
-  { q: "How does PrepPilot work?", a: "Your prep is split across four trackers — Topic Completion (learning), Question Practice (solving), Revision (recalling), and Note Tracker (notes) — each with its own schedule, so nothing gets mixed up." },
+  { q: "How does PrepPilot work?", a: "Your prep is split across four trackers — Syllabus Tracker (learning), Question Practice (solving), Revision (recalling), and Note Tracker (notes) — each with its own schedule, so nothing gets mixed up." },
   { q: "Why do I have separate calendars?", a: "Learning, practicing, and revising take different amounts of time and happen on different days for most students — so each tracker paces itself independently." },
 ];
 const DEFAULT_HI: QA[] = [
-  { q: "PrepPilot कैसे काम करता है?", a: "आपकी तैयारी चार ट्रैकर्स में बँटी है — Topic Completion (सीखना), Question Practice (हल करना), Revision (दोहराना), और Note Tracker (नोट्स) — हर एक का अपना शेड्यूल है, ताकि कुछ भी गड़बड़ न हो।" },
+  { q: "PrepPilot कैसे काम करता है?", a: "आपकी तैयारी चार ट्रैकर्स में बँटी है — Syllabus Tracker (सीखना), Question Practice (हल करना), Revision (दोहराना), और Note Tracker (नोट्स) — हर एक का अपना शेड्यूल है, ताकि कुछ भी गड़बड़ न हो।" },
   { q: "मेरे अलग-अलग कैलेंडर क्यों हैं?", a: "सीखने, प्रैक्टिस करने, और रिवाइज़ करने में अलग-अलग समय लगता है और ज़्यादातर स्टूडेंट्स के लिए अलग दिनों पर होता है — इसलिए हर ट्रैकर अपनी पेस खुद तय करता है।" },
 ];
 

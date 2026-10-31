@@ -181,7 +181,7 @@ export default function Onboarding() {
                 Total study time
               </h1>
               <p style={{ fontSize: "0.8rem", color: MUTED, marginBottom: "1.25rem" }}>
-                Roughly how many hours a day can you give to studying overall? We'll split this across Topic Completion, Question Practice, and Revision next.
+                Roughly how many hours a day can you give to studying overall? We'll split this across Syllabus Tracker, Question Practice, and Revision next.
               </p>
               <HoursSlider label="Total hours/day" value={totalHours} onChange={setTotalHours} />
               <StepButtons onBack={() => setStep(1)} onNext={() => setStep(3)} />
@@ -191,7 +191,7 @@ export default function Onboarding() {
           {step === 3 && (
             <div>
               <h1 style={{ fontFamily: "serif", fontSize: "1.5rem", fontWeight: 700, color: CHARCOAL, marginBottom: "0.5rem" }}>
-                Topic Completion
+                Syllabus Tracker
               </h1>
               <p style={{ fontSize: "0.8rem", color: MUTED, marginBottom: "1.25rem" }}>
                 Out of your {totalHours}h, how much goes to learning new topics (lectures)?
