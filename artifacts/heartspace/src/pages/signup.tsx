@@ -151,7 +151,7 @@ const SERVICES: Service[] = [
       "1-on-1 sessions with Sagar Sir and Vaishnavi Ma'am",
       "Fully customized to your pace and schedule",
       "Syllabus & question practice tracking",
-      "Personalized roadmap & revision tracker",
+      "Personalized syllabus tracker & revision tracker",
       "Mood, sleep & daily habit tracking",
     ],
   },
@@ -166,7 +166,7 @@ const SERVICES: Service[] = [
     bullets: [
       "Syllabus & question practice tracking",
       "Fully customized to your pace and schedule",
-      "Personalized roadmap & revision tracker",
+      "Personalized syllabus tracker & revision tracker",
       "Daily tracker & progress reports",
       "Entirely self-paced, self-directed learning",
     ],

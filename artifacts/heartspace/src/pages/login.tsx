@@ -661,7 +661,7 @@ export default function Login() {
             in one intelligent space.
           </p>
           <p className="text-xs" style={{ color: MUTED }}>
-            Roadmaps &middot; Question Practice &middot; Studies &middot; Revision &middot; Notes
+            Syllabus Tracker &middot; Question Practice &middot; Studies &middot; Revision &middot; Notes
           </p>
           <p className="text-xs" style={{ color: MUTED }}>
             Mood Tracking &middot; Trends &middot; Reports &middot; And more.

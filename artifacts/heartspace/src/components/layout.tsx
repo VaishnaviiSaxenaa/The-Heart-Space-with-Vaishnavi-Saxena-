@@ -95,7 +95,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
         key: "home",
         href: "/dashboard",
       },
-      { icon: Map, label: "Topic Completion", key: "roadmap", href: "/roadmap" },
+      { icon: Map, label: "Syllabus Tracker", key: "roadmap", href: "/roadmap" },
       {
         icon: PenLine,
         label: "Question Practice",

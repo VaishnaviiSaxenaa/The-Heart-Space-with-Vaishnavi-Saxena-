@@ -157,7 +157,7 @@ export default function ExamSelect() {
             Which exam are you preparing for?
           </h2>
           <p className="text-sm" style={{ color: MUTED }}>
-            This helps us show you the right syllabus and roadmap. You can
+            This helps us show you the right syllabus tracker. You can
             change this later.
           </p>
         </div>

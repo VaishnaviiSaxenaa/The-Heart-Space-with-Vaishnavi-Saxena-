@@ -50,7 +50,7 @@ export function PrivacyPolicy() {
 
       <H2>How We Use Your Information</H2>
       <Ul>
-        <li>To provide and personalize your study roadmap, tracking tools, and counselling services</li>
+        <li>To provide and personalize your study syllabus tracker, tracking tools, and counselling services</li>
         <li>To process payments and manage your subscription or session bookings</li>
         <li>To communicate with you about your account, sessions, or platform updates</li>
         <li>To improve platform features based on aggregated, anonymized usage patterns</li>
@@ -95,7 +95,7 @@ export function TermsConditions() {
       </Ul>
 
       <H2>Academic Content</H2>
-      <P>PrepPilot provides study roadmaps, tracking tools, and practice resources for IIT JAM and CSIR NET/GATE Mathematics preparation. While we aim for accuracy, we do not guarantee specific exam outcomes or results.</P>
+      <P>PrepPilot provides syllabus tracker, tracking tools, and practice resources for IIT JAM and CSIR NET/GATE Mathematics preparation. While we aim for accuracy, we do not guarantee specific exam outcomes or results.</P>
 
       <H2>Counselling Services (HeartSpace)</H2>
       <P>Counselling sessions booked through HeartSpace are provided by Vaishnavi Saxena. These sessions are for personal support and are not a substitute for emergency mental health services. If you are in crisis, please contact a local emergency service or helpline immediately.</P>

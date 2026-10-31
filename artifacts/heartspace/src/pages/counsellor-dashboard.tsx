@@ -1565,7 +1565,7 @@ export default function CounsellorDashboard() {
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { label: "📊 Dashboard", path: "/dashboard" },
-                    { label: "🗺️ Roadmap", path: "/roadmap" },
+                    { label: "🗺️ Syllabus Tracker", path: "/roadmap" },
                     { label: "📚 Syllabus", path: "/syllabus" },
                     { label: "✏️ Practice", path: "/assignments" },
                     { label: "📓 Daily", path: "/daily-tracker" },

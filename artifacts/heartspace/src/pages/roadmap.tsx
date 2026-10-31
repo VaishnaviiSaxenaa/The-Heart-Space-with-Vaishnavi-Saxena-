@@ -1168,7 +1168,7 @@ function runAIEngine(roadmap: Roadmap): AICalc {
   let status: AICalc["status"], statusMessage: string, recommendation: string;
   if (weeksElapsed === 0) {
     status = "on_track";
-    statusMessage = "Roadmap created — ready to begin! 🌱";
+    statusMessage = "Syllabus Tracker created — ready to begin! 🌱";
     recommendation = "Start Phase 1 with consistent daily study.";
   } else if (diff >= 10) {
     status = "ahead";
@@ -4174,7 +4174,7 @@ function RoadmapSelector({
         </h1>
         <p className="mt-1 text-sm" style={{ color: MUTED }}>
           Set up your {examType === "JAM" ? "IIT JAM" : "CSIR NET / GATE"}{" "}
-          preparation roadmap.
+          preparation syllabus tracker.
         </p>
       </div>
       <div
@@ -4457,7 +4457,7 @@ function RoadmapView({
           className="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg z-50"
           style={{ background: OLIVE, color: "#fff" }}
         >
-          ✓ Roadmap saved
+          ✓ Syllabus Tracker saved
         </div>
       )}
     </div>
@@ -4648,7 +4648,7 @@ export default function Roadmap() {
   }
 
   function handleReset() {
-    if (!confirm("Reset your roadmap? Progress will be lost.")) return;
+    if (!confirm("Reset your syllabus tracker? Progress will be lost.")) return;
     localStorage.removeItem(lsKey(effectiveUserId));
     setRoadmap(null);
   }
@@ -4660,7 +4660,7 @@ export default function Roadmap() {
           className="text-3xl font-serif font-bold"
           style={{ color: CHARCOAL }}
         >
-          Roadmap
+          Syllabus Tracker
         </h1>
         <div
           className="text-center py-20 rounded-2xl"
@@ -4671,7 +4671,7 @@ export default function Roadmap() {
             style={{ color: PROGRESS_PURPLE }}
           />
           <p className="text-sm font-medium" style={{ color: CHARCOAL }}>
-            Roadmap not available for HeartSpace
+            Syllabus Tracker not available for HeartSpace
           </p>
           <p className="text-xs mt-1" style={{ color: MUTED }}>
             This feature is for academic preparation students.

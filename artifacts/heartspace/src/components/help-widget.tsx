@@ -18,7 +18,7 @@ const FAQ_EN: Record<string, QA[]> = {
     { q: "What is the Dashboard?", a: "Your home base — it shows today's schedule pulled from all your trackers in one place, so you always know what to study next." },
     { q: "What are the small task chips for?", a: "Quick one-off to-dos you add yourself, separate from your regular study plan. Tap the circle to mark them done." },
     { q: "What are 'Added Tasks'?", a: "Tasks you added from the calendar popup on a specific day — they show up here too so you don't miss them." },
-    { q: "Why is something missing from today's plan?", a: "If you haven't set up your roadmap calendar yet, or a tracker has no pace set, nothing will show. Check Topic Completion first." },
+    { q: "Why is something missing from today's plan?", a: "If you haven't set up your syllabus tracker calendar yet, or a tracker has no pace set, nothing will show. Check Topic Completion first." },
   ],
   "/roadmap": [
     { q: "What is Topic Completion?", a: "This is where you go through new topics for the first time — lectures, concepts, the actual learning. It's the foundation everything else builds on." },

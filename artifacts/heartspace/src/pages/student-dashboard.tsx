@@ -437,7 +437,7 @@ function TodaysOverview({ uid, studySubjects, revisionSubjects, practiceSubjects
       {allCalEntries.length === 0 && tasks.length === 0 && (
         <div className="text-center py-8" style={{ color: MUTED }}>
           <p className="text-sm">Nothing scheduled for today.</p>
-          <p className="text-xs mt-1">Set up your roadmap calendar to see today's plan here.</p>
+          <p className="text-xs mt-1">Set up your syllabus tracker calendar to see today's plan here.</p>
         </div>
       )}
 
