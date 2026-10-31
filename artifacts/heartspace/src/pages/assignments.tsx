@@ -144,7 +144,7 @@ function AttemptForm({
   const mistakeRows = () => {
     const n = Math.max(mistakeCount, mistakes.length);
     const out: { t: string; c: string }[] = [];
-    for (let i = 0; i < n; i++) { const t = mistakes[i] ?? ""; const c0 = mistakeCats[i] ?? ""; const cl = (customCats[i] ?? "").trim(); const c = c0 === "other" ? (cl ? `custom:${cl}` : "other") : c0; if (t || c) out.push({ t, c }); }
+    for (let i = 0; i < n; i++) { const t = mistakes[i] ?? ""; const c0 = mistakeCats[i] ?? ""; const cl = (customCats[i] ?? "").trim(); const c = c0 === "other" ? (cl ? `custom:${cl}` : "other") : c0; const lb = c.startsWith("custom:") ? c.slice(7) : ({ concept: "Concept gap", calculation: "Calculation error", time: "Time pressure", misread: "Misread question", guess: "Guess", other: "Other" } as Record<string, string>)[c] ?? ""; const t2 = t && lb ? `${lb}: ${t}` : (t || lb); if (t2 || c) out.push({ t: t2, c }); }
     return out;
   };
   const updateMistake = (i: number, val: string) => {
