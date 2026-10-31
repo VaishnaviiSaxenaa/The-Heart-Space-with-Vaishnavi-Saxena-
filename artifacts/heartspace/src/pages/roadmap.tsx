@@ -1299,6 +1299,37 @@ export function MyProgressTab({
         .then(({ data: sd }) => { if (sd?.data) setProgress(sd.data as SyllabusProgress); });
     });
   }, [userId]);
+  useEffect(() => {
+    if (storagePrefix !== "topic" || !userId) return;
+    if (new URLSearchParams(window.location.search).get("viewAs")) return;
+    let cancelled = false;
+    import("../lib/supabase").then(async ({ supabase }) => {
+      try {
+        const { data: sd } = await supabase.from("syllabus_progress").select("data").eq("user_id", userId).single();
+        if (cancelled) return;
+        const remote = ((sd?.data ?? {}) as SyllabusProgress);
+        const flag = `hs_topic_syllabus_synced_${userId}`;
+        let local: SyllabusProgress = {};
+        try { local = JSON.parse(localStorage.getItem(TC_SYLLABUS_KEY(userId)) ?? "{}"); } catch {}
+        let next: SyllabusProgress;
+        if (localStorage.getItem(flag)) {
+          next = Object.keys(remote).length ? remote : local;
+        } else {
+          const rank: Record<string, number> = { not_started: 0, in_progress: 1, done: 2 };
+          next = { ...remote };
+          Object.entries(local).forEach(([id, v]: [string, any]) => {
+            const r = (next as any)[id];
+            if (!r || (rank[v?.status] ?? 0) > (rank[r.status] ?? 0)) (next as any)[id] = v;
+          });
+        }
+        try { localStorage.setItem(TC_SYLLABUS_KEY(userId), JSON.stringify(next)); localStorage.setItem(flag, "1"); } catch {}
+        setProgress(next);
+        const m = await import("../lib/supabase-sync");
+        await m.saveSyllabusToDB(userId, next);
+      } catch {}
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
   const [expandedSubj, setExpandedSubj] = useState<Record<string, boolean>>({});
   const [expandedTopic, setExpandedTopic] = useState<Record<string, boolean>>(
     {},
@@ -1344,6 +1375,9 @@ export function MyProgressTab({
       localStorage.setItem(TC_SYLLABUS_KEY(userId), JSON.stringify(next));
     } catch {
       /* ignore */
+    }
+    if (storagePrefix === "topic" && !new URLSearchParams(window.location.search).get("viewAs")) {
+      import("../lib/supabase-sync").then((m) => m.saveSyllabusToDB(userId, next)).catch(() => {});
     }
   }
 
