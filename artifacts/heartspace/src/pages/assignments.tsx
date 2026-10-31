@@ -140,10 +140,11 @@ function AttemptForm({
   const [activeParam, setActiveParam] = useState<"concept"|"accuracy"|"speed"|"mistakes"|null>(null);
 
   const [mistakeCats, setMistakeCats] = useState<string[]>([]);
+  const [customCats, setCustomCats] = useState<string[]>([]);
   const mistakeRows = () => {
     const n = Math.max(mistakeCount, mistakes.length);
     const out: { t: string; c: string }[] = [];
-    for (let i = 0; i < n; i++) { const t = mistakes[i] ?? ""; const c = mistakeCats[i] ?? ""; if (t || c) out.push({ t, c }); }
+    for (let i = 0; i < n; i++) { const t = mistakes[i] ?? ""; const c0 = mistakeCats[i] ?? ""; const cl = (customCats[i] ?? "").trim(); const c = c0 === "other" ? (cl ? `custom:${cl}` : "other") : c0; if (t || c) out.push({ t, c }); }
     return out;
   };
   const updateMistake = (i: number, val: string) => {
@@ -250,7 +251,18 @@ function AttemptForm({
                     <option value="time">Time pressure</option>
                     <option value="misread">Misread question</option>
                     <option value="guess">Guess</option>
+                    <option value="other">Other (write your own)</option>
                   </select>
+                  {(mistakeCats[i] ?? "") === "other" && (
+                    <input
+                      type="text"
+                      placeholder="Your own type…"
+                      value={customCats[i] ?? ""}
+                      onChange={e => { const n = [...customCats]; n[i] = e.target.value; setCustomCats(n); }}
+                      className="w-28 px-2 py-1.5 rounded-lg text-[10px] outline-none"
+                      style={{ background: CARD, border: `1px solid ${BORDER}` }}
+                    />
+                  )}
                 </div>
               ))}
               {mistakeCount === 5 && (

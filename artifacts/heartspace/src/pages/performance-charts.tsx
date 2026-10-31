@@ -312,15 +312,16 @@ export default function PerformanceCharts() {
     { key: "time", label: "Time pressure", color: "#E0B428" },
     { key: "misread", label: "Misread question", color: "#9B7BB0" },
     { key: "guess", label: "Guess", color: "#6E8B6B" },
+    { key: "other", label: "Other", color: "#7A7267" },
     { key: "none", label: "Uncategorised", color: "#B8AFA0" },
   ];
   const countMistakes = (a: string, b: string) => {
-    const out: Record<string, number> = { concept: 0, calculation: 0, time: 0, misread: 0, guess: 0, none: 0 };
+    const out: Record<string, number> = { concept: 0, calculation: 0, time: 0, misread: 0, guess: 0, other: 0, none: 0 };
     Object.values(practice as Record<string, any>).forEach((en: any) => (en?.attempts ?? []).forEach((x: any) => {
       const d = x?.date ? String(x.date).slice(0, 10) : "";
       if (!d || d < a || d > b) return;
       const cats: string[] = (x.mistakeCats ?? []).filter(Boolean);
-      cats.forEach((c) => { out[c in out ? c : "none"]++; });
+      cats.forEach((c) => { const k = c.startsWith("custom:") ? c.toLowerCase() : (c in out ? c : "none"); out[k] = (out[k] ?? 0) + 1; });
       const total = Math.max(x.mistakeCount ?? 0, (x.mistakes ?? []).filter(Boolean).length, cats.length);
       out.none += total - cats.length;
     }));
@@ -328,7 +329,9 @@ export default function PerformanceCharts() {
   };
   const mistakeNow = countMistakes(windowStartStr, windowEndStr);
   const mistakeTotal = Object.values(mistakeNow).reduce((t, v) => t + v, 0);
-  const topMistake = MISTAKE_TYPES.filter((t) => t.key !== "none").sort((x, y) => mistakeNow[y.key] - mistakeNow[x.key])[0];
+  const customTypes = Object.keys(mistakeNow).filter((k) => k.startsWith("custom:")).map((k) => ({ key: k, label: k.slice(7).replace(/^./, (ch) => ch.toUpperCase()), color: "#7A7267" }));
+  const allTypes = [...MISTAKE_TYPES.filter((t) => t.key !== "none"), ...customTypes, MISTAKE_TYPES.filter((t) => t.key === "none")[0]];
+  const topMistake = allTypes.filter((t) => t.key !== "none").sort((x, y) => mistakeNow[y.key] - mistakeNow[x.key])[0];
   const noDaily = sortedDates.length === 0;
 
   return (
@@ -440,7 +443,7 @@ export default function PerformanceCharts() {
           </p>
           {mistakeTotal > 0 && (
             <div className="space-y-2">
-              {MISTAKE_TYPES.filter((t) => mistakeNow[t.key] > 0).map((t) => {
+              {allTypes.filter((t) => mistakeNow[t.key] > 0).map((t) => {
                 const pct = Math.round((mistakeNow[t.key] / mistakeTotal) * 100);
                 return (
                   <div key={t.key}>
