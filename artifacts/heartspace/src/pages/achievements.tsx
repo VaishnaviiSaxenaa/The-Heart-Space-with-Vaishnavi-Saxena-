@@ -15,6 +15,7 @@ export default function Achievements({ uid }: { uid: string }) {
   const [prac, setPrac] = useState<Record<string, any>>(() => readJSON(`hs_practice_${uid}`));
   const [goal, setGoal] = useState<number>(() => { const g = readJSON(`hs_weekly_goal_${uid}`); return typeof g?.hours === "number" ? g.hours : 20; });
   const [goalInput, setGoalInput] = useState<string>("");
+  const [showBadges, setShowBadges] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -119,7 +120,6 @@ export default function Achievements({ uid }: { uid: string }) {
     <div style={card}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 6 }}>
         <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: DARK }}>🏆 Achievements</h3>
-        <span style={{ fontSize: "0.72rem", color: MUTED }}>{earnedCount} of {badges.length} badges</span>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "0.75rem", marginTop: "1rem" }}>
@@ -165,7 +165,15 @@ export default function Achievements({ uid }: { uid: string }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))", gap: "0.5rem", marginTop: "1rem" }}>
+      <button
+        onClick={() => setShowBadges((v) => !v)}
+        style={{ marginTop: "1rem", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0.8rem", borderRadius: 12, border: `1px solid ${BORDER}`, background: CREAM, color: DARK, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}
+      >
+        <span>🏅 Badges · {earnedCount} of {badges.length} earned</span>
+        <span>{showBadges ? "▲" : "▼"}</span>
+      </button>
+      {showBadges && (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))", gap: "0.5rem", marginTop: "0.75rem" }}>
         {badges.map((b) => (
           <div key={b.name} title={b.desc}
             style={{ textAlign: "center", padding: "0.6rem 0.3rem", borderRadius: 12, border: `1px solid ${b.earned ? OLIVE : BORDER}`, background: b.earned ? "#EEF3EC" : CREAM, opacity: b.earned ? 1 : 0.55 }}>
@@ -175,6 +183,7 @@ export default function Achievements({ uid }: { uid: string }) {
           </div>
         ))}
       </div>
+      )}
       <p style={{ fontSize: "0.62rem", color: MUTED, margin: "0.7rem 0 0" }}>
         Points: 10 per study hour, 5 per subtopic done, 3 per practice attempt, 2 per day of your best streak.
       </p>
