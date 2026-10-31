@@ -152,6 +152,28 @@ export default function DashboardCalendar({
     loadUnavailLists().then((r) => { if (!c) setUnavail({ revision: r.revision, practice: r.practice, study: r.study, hasRm: !!r.rm }); });
     return () => { c = true; };
   }, [uid]);
+  function reflowCal(cal: CalendarData, day: string, periods: any[], addSlot: boolean): CalendarData {
+    const isUn = (k: string) => periods.some((p: any) => p.startDate <= k && k <= p.endDate);
+    const nextDay = (k: string) => { const d = new Date(k + "T12:00:00"); d.setDate(d.getDate() + 1); return format(d, "yyyy-MM-dd"); };
+    const keys = Object.keys(cal).filter((k) => k >= day && ((cal as any)[k] ?? []).length > 0).sort();
+    const wd = new Set(Object.keys(cal).filter((k) => ((cal as any)[k] ?? []).length > 0).map((k) => new Date(k + "T12:00:00").getDay()));
+    let slots = keys.filter((k) => !isUn(k));
+    if (addSlot && !isUn(day) && !keys.includes(day) && wd.has(new Date(day + "T12:00:00").getDay())) slots = [day, ...slots];
+    const contents = keys.map((k) => (cal as any)[k]);
+    if (contents.length === 0) return cal;
+    let last = keys[keys.length - 1];
+    while (slots.length < contents.length) {
+      last = nextDay(last);
+      if (isUn(last)) continue;
+      if (wd.size && !wd.has(new Date(last + "T12:00:00").getDay())) continue;
+      slots.push(last);
+    }
+    const next: any = { ...cal };
+    keys.forEach((k) => { delete next[k]; });
+    slots.forEach((k) => { delete next[k]; });
+    contents.forEach((c, i) => { next[slots[i]] = c; });
+    return next as CalendarData;
+  }
   async function toggleDayUnavailable(day: string) {
     if (new URLSearchParams(window.location.search).get("viewAs")) return;
     const cur = await loadUnavailLists();
@@ -176,6 +198,13 @@ export default function DashboardCalendar({
       try { localStorage.setItem(`hs_roadmap_${uid}`, JSON.stringify(rm2)); } catch {}
       try { await supabase.from("roadmap_data").upsert({ user_id: uid, data: rm2, updated_at: now }, { onConflict: "user_id" }); } catch {}
     }
+    const sPer = cur.rm ? study : rev;
+    const nStudy = reflowCal(studyCal, day, sPer, allCover);
+    const nRev = reflowCal(revisionCal, day, rev, allCover);
+    const nPrac = reflowCal(practiceCal, day, prac, allCover);
+    if (JSON.stringify(nStudy) !== JSON.stringify(studyCal)) persistType("study", nStudy);
+    if (JSON.stringify(nRev) !== JSON.stringify(revisionCal)) persistType("revision", nRev);
+    if (JSON.stringify(nPrac) !== JSON.stringify(practiceCal)) persistType("practice", nPrac);
     setUnavail({ revision: rev, practice: prac, study, hasRm: !!cur.rm });
   }
 
