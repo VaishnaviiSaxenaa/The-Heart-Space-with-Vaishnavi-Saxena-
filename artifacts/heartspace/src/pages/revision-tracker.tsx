@@ -699,12 +699,35 @@ export default function RevisionTracker() {
     try { return JSON.parse(localStorage.getItem(`hs_unavail_revision_${userId}`) || "[]"); } catch { return []; }
   });
   const [showRevUnavailForm, setShowRevUnavailForm] = useState(false);
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    import("../lib/supabase").then(async ({ supabase }) => {
+      try {
+        const { data: d } = await supabase.from("calendar_pace").select("data").eq("user_id", userId).eq("namespace", "unavail_revision").single();
+        if (cancelled) return;
+        const remote = Array.isArray(d?.data) ? (d!.data as any[]) : null;
+        if (remote) {
+          setRevUnavailPeriods(remote);
+          try { localStorage.setItem(`hs_unavail_revision_${userId}`, JSON.stringify(remote)); } catch {}
+        } else {
+          let local: any[] = [];
+          try { local = JSON.parse(localStorage.getItem(`hs_unavail_revision_${userId}`) || "[]"); } catch {}
+          if (local.length && !new URLSearchParams(window.location.search).get("viewAs")) {
+            await supabase.from("calendar_pace").upsert({ user_id: userId, namespace: "unavail_revision", data: local, updated_at: new Date().toISOString() }, { onConflict: "user_id,namespace" });
+          }
+        }
+      } catch {}
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
   const [revUnavailForm, setRevUnavailForm] = useState({ label: "", startDate: "", endDate: "" });
   function addRevUnavail() {
     if (!revUnavailForm.label || !revUnavailForm.startDate || !revUnavailForm.endDate) return;
     const next = [...revUnavailPeriods, { id: `${Date.now()}`, ...revUnavailForm }];
     setRevUnavailPeriods(next);
     localStorage.setItem(`hs_unavail_revision_${userId}`, JSON.stringify(next));
+    if (!new URLSearchParams(window.location.search).get("viewAs")) import("../lib/supabase").then(({ supabase }) => supabase.from("calendar_pace").upsert({ user_id: userId, namespace: "unavail_revision", data: next, updated_at: new Date().toISOString() }, { onConflict: "user_id,namespace" })).catch(() => {});
     setRevUnavailForm({ label: "", startDate: "", endDate: "" });
     setShowRevUnavailForm(false);
   }
@@ -712,6 +735,7 @@ export default function RevisionTracker() {
     const next = revUnavailPeriods.filter((p) => p.id !== id);
     setRevUnavailPeriods(next);
     localStorage.setItem(`hs_unavail_revision_${userId}`, JSON.stringify(next));
+    if (!new URLSearchParams(window.location.search).get("viewAs")) import("../lib/supabase").then(({ supabase }) => supabase.from("calendar_pace").upsert({ user_id: userId, namespace: "unavail_revision", data: next, updated_at: new Date().toISOString() }, { onConflict: "user_id,namespace" })).catch(() => {});
   }
   const _effectiveUid = userId || (() => { try { return JSON.parse(localStorage.getItem("heartspace_user")||"{}").id||""; } catch { return ""; } })();
   const [revSyllabusTick, setRevSyllabusTick] = useState(0);

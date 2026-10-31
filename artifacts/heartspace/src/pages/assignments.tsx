@@ -1251,12 +1251,35 @@ export default function QuestionPractice() {
     try { return JSON.parse(localStorage.getItem(`hs_unavail_practice_${effectiveUserId}`) || "[]"); } catch { return []; }
   });
   const [showQpUnavailForm, setShowQpUnavailForm] = useState(false);
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    let cancelled = false;
+    import("../lib/supabase").then(async ({ supabase }) => {
+      try {
+        const { data: d } = await supabase.from("calendar_pace").select("data").eq("user_id", effectiveUserId).eq("namespace", "unavail_practice").single();
+        if (cancelled) return;
+        const remote = Array.isArray(d?.data) ? (d!.data as any[]) : null;
+        if (remote) {
+          setQpUnavailPeriods(remote);
+          try { localStorage.setItem(`hs_unavail_practice_${effectiveUserId}`, JSON.stringify(remote)); } catch {}
+        } else {
+          let local: any[] = [];
+          try { local = JSON.parse(localStorage.getItem(`hs_unavail_practice_${effectiveUserId}`) || "[]"); } catch {}
+          if (local.length && !new URLSearchParams(window.location.search).get("viewAs")) {
+            await supabase.from("calendar_pace").upsert({ user_id: effectiveUserId, namespace: "unavail_practice", data: local, updated_at: new Date().toISOString() }, { onConflict: "user_id,namespace" });
+          }
+        }
+      } catch {}
+    });
+    return () => { cancelled = true; };
+  }, [effectiveUserId]);
   const [qpUnavailForm, setQpUnavailForm] = useState({ label: "", startDate: "", endDate: "" });
   function addQpUnavail() {
     if (!qpUnavailForm.label || !qpUnavailForm.startDate || !qpUnavailForm.endDate) return;
     const next = [...qpUnavailPeriods, { id: `${Date.now()}`, ...qpUnavailForm }];
     setQpUnavailPeriods(next);
     localStorage.setItem(`hs_unavail_practice_${effectiveUserId}`, JSON.stringify(next));
+    if (!new URLSearchParams(window.location.search).get("viewAs")) import("../lib/supabase").then(({ supabase }) => supabase.from("calendar_pace").upsert({ user_id: effectiveUserId, namespace: "unavail_practice", data: next, updated_at: new Date().toISOString() }, { onConflict: "user_id,namespace" })).catch(() => {});
     setQpUnavailForm({ label: "", startDate: "", endDate: "" });
     setShowQpUnavailForm(false);
   }
@@ -1264,6 +1287,7 @@ export default function QuestionPractice() {
     const next = qpUnavailPeriods.filter((p) => p.id !== id);
     setQpUnavailPeriods(next);
     localStorage.setItem(`hs_unavail_practice_${effectiveUserId}`, JSON.stringify(next));
+    if (!new URLSearchParams(window.location.search).get("viewAs")) import("../lib/supabase").then(({ supabase }) => supabase.from("calendar_pace").upsert({ user_id: effectiveUserId, namespace: "unavail_practice", data: next, updated_at: new Date().toISOString() }, { onConflict: "user_id,namespace" })).catch(() => {});
   }
   const [qpSyllabusTick, setQpSyllabusTick] = useState(0);
   useEffect(() => {
