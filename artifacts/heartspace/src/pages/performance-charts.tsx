@@ -259,6 +259,53 @@ export default function PerformanceCharts() {
     syllabusStats.reduce((s, x) => s + x.pct, 0) / syllabusStats.length,
   );
 
+  /* ── Period summary: current window vs previous window ── */
+  const isoD = (d: Date) => d.toISOString().split("T")[0];
+  const prevEndD = new Date(windowStart); prevEndD.setDate(prevEndD.getDate() - 1);
+  const prevStartD = new Date(prevEndD); prevStartD.setDate(prevEndD.getDate() - range + 1);
+  const prevStartStr = isoD(prevStartD), prevEndStr = isoD(prevEndD);
+  const calcPeriod = (a: string, b: string) => {
+    const inR = (d: string) => d >= a && d <= b;
+    const days = Object.keys(daily).filter(inR);
+    const nums = (f: string) => days.map((d) => (daily as any)[d]?.[f]).filter((v: any) => typeof v === "number" && v > 0) as number[];
+    const avg = (xs: number[]) => (xs.length ? xs.reduce((t, x) => t + x, 0) / xs.length : null);
+    const sum = (xs: number[]) => xs.reduce((t, x) => t + x, 0);
+    const calHrs = (cal: any) => Object.keys(cal).filter(inR).reduce((t, d) => t + ((cal[d] ?? []) as any[]).reduce((u: number, e: any) => u + (e.hours ?? 0), 0), 0);
+    const done = Object.values(syllabus as Record<string, any>).filter((v: any) => v?.status === "done" && v?.doneAt && inR(String(v.doneAt).slice(0, 10))).length;
+    const accs: number[] = [];
+    let attempts = 0;
+    Object.values(practice as Record<string, any>).forEach((en: any) => (en?.attempts ?? []).forEach((x: any) => {
+      if (x?.date && inR(String(x.date).slice(0, 10))) { attempts++; if (typeof x.accuracy === "number") accs.push(x.accuracy); }
+    }));
+    return { study: sum(nums("studyHours")), logged: days.length, mood: avg(nums("mood")), sleep: avg(nums("sleepHours")), stress: avg(nums("stressLevel")), rev: calHrs(revCalAll), prac: calHrs(pracCalAll), done, attempts, acc: avg(accs) };
+  };
+  const curP = calcPeriod(windowStartStr, windowEndStr);
+  const prevP = calcPeriod(prevStartStr, prevEndStr);
+  const pRow = (label: string, c: number | null, pv: number | null, unit: string, dec: number, lowerBetter = false) => {
+    const fmtV = (v: number | null) => (v == null ? "—" : `${v.toFixed(dec)}${unit}`);
+    let delta = "", tone: "good" | "bad" | "flat" = "flat";
+    if (c != null && pv != null) {
+      const diff = c - pv;
+      if (Math.abs(diff) >= Math.pow(10, -dec) / 2) {
+        delta = `${diff > 0 ? "↑" : "↓"} ${Math.abs(diff).toFixed(dec)}${unit}`;
+        tone = (diff > 0) !== lowerBetter ? "good" : "bad";
+      } else delta = "no change";
+    }
+    return { label, cur: fmtV(c), prev: fmtV(pv), delta, tone };
+  };
+  const periodRows = [
+    pRow("Study hours", curP.study, prevP.study, "h", 1),
+    pRow("Days logged", curP.logged, prevP.logged, "d", 0),
+    pRow("Avg mood", curP.mood, prevP.mood, "/5", 1),
+    pRow("Avg sleep", curP.sleep, prevP.sleep, "h", 1),
+    pRow("Avg stress", curP.stress, prevP.stress, "/5", 1, true),
+    pRow("Subtopics done", curP.done, prevP.done, "", 0),
+    pRow("Practice attempts", curP.attempts, prevP.attempts, "", 0),
+    pRow("Practice accuracy", curP.acc, prevP.acc, "%", 0),
+    pRow("Revision planned", curP.rev, prevP.rev, "h", 1),
+    pRow("Practice planned", curP.prac, prevP.prac, "h", 1),
+  ];
+
   const noDaily = sortedDates.length === 0;
 
   return (
@@ -337,6 +384,27 @@ export default function PerformanceCharts() {
               </p>
             </div>
           ))}
+        </div>
+
+        {/* ── Period summary ── */}
+        <div className="rounded-2xl p-5" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
+          <p className="text-sm font-bold mb-1" style={{ color: DARK }}>
+            📅 {viewMode === "week" ? "Weekly" : "Monthly"} Summary
+          </p>
+          <p className="text-xs mb-4" style={{ color: MUTED }}>
+            {windowStartStr} to {windowEndStr}, compared with {prevStartStr} to {prevEndStr}
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {periodRows.map((r) => (
+              <div key={r.label} className="rounded-xl p-3 text-center" style={{ background: CREAM, border: `1px solid ${BORDER}` }}>
+                <p className="text-lg font-bold" style={{ color: DARK }}>{r.cur}</p>
+                <p className="text-[11px] font-semibold mt-0.5" style={{ color: CHARCOAL }}>{r.label}</p>
+                <p className="text-[10px] mt-1" style={{ color: r.tone === "good" ? OLIVE : r.tone === "bad" ? "#B5533C" : MUTED }}>
+                  {r.delta ? `${r.delta} · before: ${r.prev}` : `before: ${r.prev}`}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* ── 2. Mood + Stress Line Chart ── */}
