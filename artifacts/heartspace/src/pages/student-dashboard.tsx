@@ -31,6 +31,7 @@ import { SYLLABUS, loadSyllabusProgress } from "./syllabus";
 import { JAM_SUBJECTS, NET_SUBJECTS } from "./subjects";
 import DashboardCalendar from "./dashboard-calendar";
 import StudyTimer from "./study-timer";
+import Achievements from "./achievements";
 import { loadGenericCalendarFromDB, calendarKey } from "./generic-calendar";
 import { loadTopicSpeedFromDB, loadRevisionSpeedFromDB, loadPracticeSpeedFromDB, saveTopicSpeedToDB, saveRevisionSpeedToDB, savePracticeSpeedToDB } from "../lib/supabase-sync";
 import { useToast } from "@/hooks/use-toast";
@@ -896,6 +897,7 @@ export default function StudentDashboard() {
       )}
 
       <StudyTimer uid={effectiveUserId} />
+      <Achievements uid={effectiveUserId} />
 
       {/* ── Today's Plan + Next Session ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
