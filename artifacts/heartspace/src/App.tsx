@@ -15,6 +15,7 @@ import Onboarding from "./pages/onboarding";
 import { PrivacyPolicy, TermsConditions, CancellationRefund, ShippingDelivery, ContactUs } from "./pages/legal";
 import StudentDashboard from "./pages/student-dashboard";
 import CounsellorDashboard from "./pages/counsellor-dashboard";
+import PaceMatching from "./pages/pace-matching";
 import MySessions from "./pages/my-sessions";
 import RevisionTracker from "./pages/revision-tracker";
 import NoteTracker from "./pages/note-tracker";
@@ -251,6 +252,9 @@ function Router() {
             component={CounsellorDashboard}
             allowedRole="counsellor"
           />
+        </Route>
+        <Route path="/pace-matching">
+          <ProtectedRoute component={PaceMatching} allowedRole="counsellor" />
         </Route>
         <Route path="/student/:id">
           <ProtectedRoute component={StudentDetail} allowedRole="counsellor" />

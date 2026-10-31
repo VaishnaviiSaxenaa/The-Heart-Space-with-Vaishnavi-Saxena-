@@ -82,6 +82,7 @@ function getNavItems(role: string, space: string | null): NavItem[] {
       { icon: CalendarRange, label: "My Calendar", key: "counsellor-sessions", href: "/counsellor-sessions" },
       { icon: Calendar, label: "Sessions with Sagar Sir", key: "sessions", href: "/sessions" },
       { icon: Users, label: "Students", key: "reports", href: "/counsellor" },
+      { icon: BarChart2, label: "Pace Matching", key: "pace", href: "/pace-matching" },
       { icon: ShieldCheck, label: "Access Control", key: "admin", href: "/admin" },
       { icon: BarChart2, label: "Analytics", key: "analytics", soon: true },
     ];
