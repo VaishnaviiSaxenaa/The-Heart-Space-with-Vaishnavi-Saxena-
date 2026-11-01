@@ -154,6 +154,7 @@ export default function PaceMatching() {
         <div style={card}>
           <p style={{ fontSize: "0.9rem", fontWeight: 700, color: DARK, margin: "0 0 0.7rem" }}>Suggested pairs</p>
           <p style={{ fontSize: "0.74rem", color: MUTED, margin: "0 0 0.8rem" }}>Pace bands (score out of 100): Fast 60+ · Steady 30–59 · Building below 30</p>
+          <p style={{ fontSize: "0.74rem", color: MUTED, margin: "0 0 0.8rem" }}>Score = syllabus progress 30% (100% done = full) + study hours in 14 days 25% (50h = full) + consistency 20% (studied all 14 days = full) + practice attempts in 14 days 15% (20 = full) + calendar coverage 10%.</p>
           {pairs.length === 0 ? (
             <p style={{ fontSize: "0.78rem", color: MUTED, margin: 0 }}>Not enough active students to pair.</p>
           ) : (
