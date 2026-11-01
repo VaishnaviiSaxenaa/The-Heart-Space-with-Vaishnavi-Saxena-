@@ -122,7 +122,7 @@ export default function PaceMatching() {
 
   const pairs: Row[][] = [];
   (["JAM", "NET"] as const).forEach((ex) => {
-    const g = activeRows.filter((r) => r.exam === ex);
+    const g = shown.slice().sort((x, y) => y.score - x.score).filter((r) => r.exam === ex);
     for (let i = 0; i < g.length; i += 2) {
       if (i + 1 >= g.length) {
         if (pairs.length && pairs[pairs.length - 1][0].exam === ex) pairs[pairs.length - 1].push(g[i]); else pairs.push([g[i]]);
